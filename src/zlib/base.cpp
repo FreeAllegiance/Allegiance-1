@@ -1,4 +1,5 @@
-#include "pch.h"
+#include "base.h"
+#include "zassert.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -41,14 +42,14 @@ ZFile::ZFile( )
 }
 
 
-ZFile::ZFile(const PathString& strPath, DWORD how) : 
+ZFile::ZFile(const PathString& strPath, uint32_t how) : 
     m_p(NULL),
 	m_pathString(strPath) // BT - STEAM
 {
 	// BT - CSS - 12/8/2011 - Fixing 128 character path limit.
-	DWORD dwDesiredAccess = GENERIC_READ;
-	DWORD dwShareMode = FILE_SHARE_WRITE;
-	DWORD dwCreationDisposition = OPEN_EXISTING;
+	uint32_t dwDesiredAccess = GENERIC_READ;
+	uint32_t dwShareMode = FILE_SHARE_WRITE;
+	uint32_t dwCreationDisposition = OPEN_EXISTING;
 
 	if((how & OF_WRITE) == OF_WRITE)
 		dwDesiredAccess = GENERIC_WRITE;
@@ -91,17 +92,17 @@ bool ZFile::IsValid()
      return m_handle != (HANDLE)HFILE_ERROR;
 }
 
-DWORD ZFile::Read(void* p, DWORD length)
+uint32_t ZFile::Read(void* p, uint32_t length)
 {
-    DWORD cbActual;
+    uint32_t cbActual;
 
     ReadFile(m_handle, p, length, (LPDWORD)&cbActual, NULL);
     return cbActual;
 }
 
-DWORD ZFile::Write(void* p, DWORD length)
+uint32_t ZFile::Write(void* p, uint32_t length)
 {
-    DWORD cbActual;
+    uint32_t cbActual;
 
     WriteFile(m_handle, p, length, (LPDWORD)&cbActual, NULL);
 
@@ -133,7 +134,7 @@ bool  ZFile::WriteAlignedString(const ZString& str)
 
 bool ZFile::WritePad(int length)
 {
-    static BYTE zeros[] = { 0, 0, 0 };
+    static uint8_t zeros[] = { 0, 0, 0 };
     int pad = 4 - (length & 3);
 
     if (pad != 4) {
@@ -143,7 +144,7 @@ bool ZFile::WritePad(int length)
     return true;
 }
 
-bool ZFile::Write(DWORD value)
+bool ZFile::Write(uint32_t value)
 {
     return (Write(&value, 4) != 0);
 }
@@ -163,7 +164,7 @@ int ZFile::GetLength()
     return GetFileSize(m_handle, NULL);
 }
 
-BYTE* ZFile::GetPointer(bool bWrite, bool bCopyOnWrite)
+uint8_t* ZFile::GetPointer(bool bWrite, bool bCopyOnWrite)
 {
     ZAssert(!bWrite || !bCopyOnWrite);
 
@@ -183,7 +184,7 @@ BYTE* ZFile::GetPointer(bool bWrite, bool bCopyOnWrite)
         ZAssert(m_hfileMapping != NULL);
 
         m_p = 
-            (BYTE*)MapViewOfFile(
+            (uint8_t*)MapViewOfFile(
                 m_hfileMapping, 
                 bWrite
                     ? FILE_MAP_WRITE
@@ -209,7 +210,7 @@ ZWriteFile::ZWriteFile(const PathString& strPath) :
 // KGJV 32B - added Tell and Seek
 long   ZFile::Tell()
 {
-    DWORD dwPtr = SetFilePointer(m_handle,0,NULL,FILE_CURRENT);
+    uint32_t dwPtr = SetFilePointer(m_handle,0,NULL,FILE_CURRENT);
     if (dwPtr != INVALID_SET_FILE_POINTER)
         return (long) dwPtr;
     else
@@ -217,7 +218,7 @@ long   ZFile::Tell()
 }
 int   ZFile::Seek(long offset, int origin)
 {
-    DWORD dwPtr = SetFilePointer(m_handle,offset,NULL,origin);
+    uint32_t dwPtr = SetFilePointer(m_handle,offset,NULL,origin);
     return (dwPtr != INVALID_SET_FILE_POINTER);
 }
 
@@ -228,14 +229,14 @@ ZString ZFile::GetSha1Hash()
 	const int bufsize = 1024;
 	const int sha1len = 20;
 
-	DWORD dwStatus = 0;
+	uint32_t dwStatus = 0;
 	BOOL bResult = FALSE;
 	HCRYPTPROV hProv = 0;
 	HCRYPTHASH hHash = 0;
-	BYTE rgbFile[bufsize];
-	DWORD cbRead = 0;
-	BYTE rgbHash[sha1len];
-	DWORD cbHash = 0;
+	uint8_t rgbFile[bufsize];
+	uint32_t cbRead = 0;
+	uint8_t rgbHash[sha1len];
+	uint32_t cbHash = 0;
 	CHAR rgbDigits[] = "0123456789abcdef";
 
 	char hexBuffer[3];
@@ -280,11 +281,11 @@ ZString ZFile::GetSha1Hash()
 
 
 	cbHash = sha1len;
-	if (CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHash, 0))
+	if (CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, LPDWORD(&cbHash), 0))
 	{
 		//ZDebugOutput(ZString("SHA1 hash of file ") + m_pathString.GetFilename() + " is: ");
 
-		for (DWORD i = 0; i < cbHash; i++)
+		for (uint32_t i = 0; i < cbHash; i++)
 		{
 			sprintf(hexBuffer, "%c%c", rgbDigits[rgbHash[i] >> 4],
 				rgbDigits[rgbHash[i] & 0xf]);

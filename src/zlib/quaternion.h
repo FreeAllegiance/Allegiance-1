@@ -7,6 +7,9 @@
 #ifndef _Quaternion_h_
 #define _Quaternion_h_
 
+#include "vector.h"
+#include "orientation.h"
+
 //
 // q = a + bi + cj + dk
 // i*i = j*j = k*k = -1

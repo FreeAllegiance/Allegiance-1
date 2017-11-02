@@ -25,6 +25,9 @@ class CAdminPageThreadWnd;
 
 class CPageChat : public CPropertyPage
 {
+private:
+	CAllSrvUISheet *m_mpSheet;
+
 // Declarations
 public:
   DECLARE_DYNAMIC(CPageChat)
@@ -32,7 +35,7 @@ public:
 
 // Construction
 public:
-  CPageChat();
+  CPageChat(CAllSrvUISheet *pSheet);
 
 // Attributes
 public:
@@ -45,6 +48,8 @@ public:
   public:
   virtual BOOL OnSetActive();
   virtual BOOL PreTranslateMessage(MSG* pMsg);
+
+
   protected:
   virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
   virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
@@ -52,10 +57,10 @@ public:
 
 // Implementation
 protected:
-  CAllSrvUISheet* GetSheet()
+ /* CAllSrvUISheet* GetSheet()
   {
     return reinterpret_cast<CAllSrvUISheet*>(GetParent());
-  }
+  }*/
   void LoadFromRegistry();
   void SaveToRegistry();
   void SaveChatListColumnOrderToRegistry();

@@ -25,7 +25,6 @@ protected:
     TRef<TopPaneSite> m_psite;
     TRef<Engine>      m_pengine;
     TRef<Surface>     m_psurface;
-    SurfaceType       m_stype;
     bool              m_bColorKey;
     bool              m_bNeedLayout;
 
@@ -44,7 +43,7 @@ protected:
     void  Paint(Surface* psurface);
 
 public:
-    TopPane(Engine* pengine, SurfaceType stype, bool bColorKey, TopPaneSite* psite, Pane* pchild = NULL);
+    TopPane(Engine* pengine, bool bColorKey, TopPaneSite* psite, Pane* pchild = NULL);
 
     //
     // Top Pane members

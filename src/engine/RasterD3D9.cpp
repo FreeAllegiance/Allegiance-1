@@ -272,8 +272,12 @@ public:
         switch (blendMode) {
  
             case BlendModeSource:
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHABLENDENABLE, false));
-                break;
+				CD3DDevice9::Get()->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+				CD3DDevice9::Get()->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHABLENDENABLE, true));
+				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR));
+				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR));
+				break;
 
             case BlendModeAdd:
                 D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHABLENDENABLE, true));
@@ -281,30 +285,16 @@ public:
                 D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE));
                 break;
 
-            case BlendModeSourceAlpha:
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHABLENDENABLE, true));
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE));
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA));
-                break;
-
-			case BlendModeSourceAlphaTest:
+			case BlendModeSourceAlpha:
+				CD3DDevice9::Get()->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+				CD3DDevice9::Get()->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
 				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHABLENDENABLE, true));
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE));
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA));
-				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATEREQUAL));
-				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHAREF, (DWORD)8));
-				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE)); 
+				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE));
+				D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA));
 				break;
 
-            case BlendModeAlphaStampThrough:
-				CD3DDevice9::Get()->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1 );
-				CD3DDevice9::Get()->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_ALPHABLENDENABLE, true));
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA));
-                D3DCall(CD3DDevice9::Get()->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA));
-                break;
-
             default:
+
                 ZError("Invalid BlendMode");
         }
     }

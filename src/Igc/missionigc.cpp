@@ -2709,6 +2709,8 @@ const float c_pointsBaseCapture = 25.0f;
 const float c_pointsFlags       = 10.0f;
 const float c_pointsArtifacts   = 10.0f;
 const float c_pointsRescues     = 5.0f;
+const float c_pointsProbeSpot   = 10.0f;
+const float c_pointsRepair		= 0.02f; //1 point for every 50 health restored
 
 const float c_crAdd             = 1.25f;
 const float c_crDivide          = 100.0f;
@@ -2761,6 +2763,8 @@ CstaticIGC::CstaticIGC(void)
     m_constants.floatConstants[c_fcidPointsFlags]           = c_pointsFlags;
     m_constants.floatConstants[c_fcidPointsArtifacts]       = c_pointsArtifacts;
     m_constants.floatConstants[c_fcidPointsRescues]         = c_pointsRescues;
+	//m_constants.floatConstants[c_fcidPointsProbeSpot]		= c_pointsProbeSpot;
+	//m_constants.floatConstants[c_fcidPointsRepair]			= c_pointsRepair;
     m_constants.floatConstants[c_fcidRatingAdd]             = c_crAdd;
     m_constants.floatConstants[c_fcidRatingDivide]          = c_crDivide;
 

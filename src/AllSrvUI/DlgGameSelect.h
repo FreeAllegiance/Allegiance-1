@@ -21,6 +21,9 @@ class CAllSrvUISheet;
 
 class CDlgGameSelect : public CDialog
 {
+private:
+	CAllSrvUISheet *m_mpSheet;
+
 // Declarations
 public:
   DECLARE_MESSAGE_MAP()
@@ -43,10 +46,10 @@ public:
 
 // Implementation
 protected:
-  CAllSrvUISheet* GetSheet()
+  /*CAllSrvUISheet* GetSheet()
   {
     return reinterpret_cast<CAllSrvUISheet*>(GetParent());
-  }
+  }*/
   void PopulateGamesList();
 
 // Message Handlers

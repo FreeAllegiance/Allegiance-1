@@ -29,27 +29,27 @@ public:
     virtual void   WriteReference(const ZString& str) = 0;
     virtual void   WriteApply()                       = 0;
     virtual ZFile* WriteBinary()                      = 0;
-    virtual void   WriteList(DWORD count)             = 0;
+    virtual void   WriteList(uint32_t count)          = 0;
     virtual void   WriteNumber(float value)           = 0;
     virtual void   WriteBoolean(bool value)           = 0;
     virtual void   WritePair()                        = 0;
     virtual void   WriteEnd()                         = 0;
 };
 
-#define MDLMagic   ((DWORD)0xdebadf00)
-#define MDLVersion ((DWORD)0x00010000)
+#define MDLMagic   (uint32_t(0xdebadf00))
+#define MDLVersion (uint32_t(0x00010000))
 
-const DWORD ObjectEnd        = 0;
-const DWORD ObjectFloat      = 1;
-const DWORD ObjectString     = 2;
-const DWORD ObjectTrue       = 3;
-const DWORD ObjectFalse      = 4;
-const DWORD ObjectList       = 5;
-const DWORD ObjectApply      = 6;
-const DWORD ObjectBinary     = 7;
-const DWORD ObjectReference  = 8;
-const DWORD ObjectImport     = 9;
-const DWORD ObjectPair       = 10;
+const uint32_t ObjectEnd        = 0;
+const uint32_t ObjectFloat      = 1;
+const uint32_t ObjectString     = 2;
+const uint32_t ObjectTrue       = 3;
+const uint32_t ObjectFalse      = 4;
+const uint32_t ObjectList       = 5;
+const uint32_t ObjectApply      = 6;
+const uint32_t ObjectBinary     = 7;
+const uint32_t ObjectReference  = 8;
+const uint32_t ObjectImport     = 9;
+const uint32_t ObjectPair       = 10;
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -395,6 +395,25 @@ public:
 };
 
 typedef TModifiableValue<Point, ModifiablePointName> ModifiablePointValue;
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// WinPoint Value
+//
+//////////////////////////////////////////////////////////////////////////////
+
+ZString GetString(int indent, const WinPoint& vec);
+void Write(IMDLBinaryFile* pmdlFile, const WinPoint& value);
+ZString GetFunctionName(const WinPoint& value);
+
+typedef TStaticValue<WinPoint> WinPointValue;
+
+class ModifiableWinPointName {
+public:
+	static ZString GetName() { return "ModifiableWinPoint"; }
+};
+
+typedef TModifiableValue<WinPoint, ModifiableWinPointName> ModifiableWinPointValue;
 
 //////////////////////////////////////////////////////////////////////////////
 //

@@ -278,7 +278,7 @@ public:
     private:
         class ImportData {
         public:
-            DWORD   m_indexNameSpaceTable;
+			uint32_t  m_indexNameSpaceTable;
             ZString m_str;
         };
 
@@ -423,7 +423,7 @@ public:
             return m_pfile;
         }
 
-        void WriteList(DWORD count)
+        void WriteList(uint32_t count)
         {
             m_pfile->Write(ObjectList);
             m_pfile->Write(count);
@@ -531,7 +531,7 @@ public:
 
             {
                 SymbolList::Iterator iter(m_pns->m_listSymbols);
-                DWORD index = 0;
+				uint32_t index = 0;
 
                 while (!iter.End()) {
                     Value* pvalue; CastTo(pvalue, iter.Value().m_pobject);

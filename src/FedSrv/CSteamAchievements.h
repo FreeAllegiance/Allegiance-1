@@ -30,12 +30,13 @@ enum EStats
 	SUM_SCORE = 5,
 	PLAYER_RANK = 6,
 	PLAYER_WINS = 7,
-	PLAYER_LOSS = 8
+	PLAYER_LOSS = 8,
+	REPAIR_AMOUNT = 9
 
 	// Don't forget to update g_nMaximumSteamStatCount and m_Stats!
 };
 const int g_nMaximumSteamAchievementCount = 11; // Always keep this in sync with the number of achievments in EAchievements!
-const int g_nMaximumSteamStatCount = 9; // Always keep this in sync with the number of stats in EStats!
+const int g_nMaximumSteamStatCount = 10; // Always keep this in sync with the number of stats in EStats!
 
 // BT - STEAM
                             // 0   1    2    3      4  
@@ -46,11 +47,12 @@ const int RANK_REQUIREMENTS[51] = { 0, 300, 690, 1197, 1856, 2713, 3827, 5275, 7
 class CSteamAchievements
 {
 private:
-	CSteamID m_steamID;
-	bool m_gotRequestStatsResponse;
-	bool m_gotSuccessfulRequestStatsResponse;
-	bool m_gotStatsStoredResponse;
-	bool m_gotSuccessfulStatsStoredResponse;
+	CSteamID	m_steamID;
+	char		m_szSteamID[64];
+	bool		m_gotRequestStatsResponse;
+	bool		m_gotSuccessfulRequestStatsResponse;
+	bool		m_gotStatsStoredResponse;
+	bool		m_gotSuccessfulStatsStoredResponse;
 
 	CCallResult< CSteamAchievements, GSStatsReceived_t > m_UserStatsRequestedCallResult;
 	CCallResult< CSteamAchievements, GSStatsStored_t > m_UserStatsStoredCallResult;
@@ -84,27 +86,24 @@ private:
 		"SUM_SCORE",
 		"PLAYER_RANK",
 		"PLAYER_WINS",
-		"PLAYER_LOSS"
+		"PLAYER_LOSS",
+		"REPAIR_AMOUNT"
 	};
-
-	
 
 	bool GetAchievement(EAchievements achievement);
 	bool SetAchievement(EAchievements achievement);
-	//bool GetStat(CSteamID &steamID, EStats theStat);
+
 	bool GetStat(EStats theStat, int * pVal);
 	bool SetStat(EStats theStat, int val);
+
 	bool InitiateStatsRequestAndWaitForStatsFromSteamServer();
 	bool CheckRank(int currentScore);
 
-	// Steam Callbacks
-	//STEAM_GAMESERVER_CALLBACK(CSteamAchievements, OnUserStatsReceived, GSStatsReceived_t);
-
 	
-
 
 public:
 	CSteamAchievements(CSteamID &steamID);
+
 
 	void InitiateStatsRequest();
 
@@ -118,7 +117,7 @@ public:
 	void AwardIGCAchievements(AchievementMask am);
 	void AwardRecoverTechAchievement();
 	
-	void AddUserStats(PlayerScoreObject*  ppso);
+	void AddUserStats(PlayerScoreObject*  ppso, IshipIGC* pIship);
 	void UpdateLeaderboard(PlayerScoreObject*  ppso);
 	
 	bool SaveStats();

@@ -1,6 +1,10 @@
 #ifndef _message_H_
 #define _message_H_
 
+#include "tlist.h"
+#include "tref.h"
+#include "zstring.h"
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Event

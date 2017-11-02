@@ -39,9 +39,10 @@ TRef<Screen> CreateTrainingSlideshow (Modeler* pmodeler, const ZString& strNames
 TRef<Screen> CreatePostTrainingSlideshow (Modeler* pmodeler, const ZString& strNamespace);
 TRef<Screen> CreateGameStartingScreen(Modeler* pmodeler);
 
-#if (DIRECT3D_VERSION < 0x0800)
-	TRef<Screen> CreateVideoScreen(Modeler* pmodeler, bool bIntroOnly);
-#endif
+// BUILD_DX9
+// Taken out of D3D9 build for now, movies not supported at the moment.  //Imago use DDVideo
+// TRef<Screen> CreateVideoScreen(Modeler* pmodeler, bool bIntroOnly);
+// BUILD_DX9
 
 TRef<IPopup> CreateMissionParametersPopup(Modeler* pmodeler);
 

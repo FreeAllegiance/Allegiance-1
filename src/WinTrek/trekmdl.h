@@ -75,6 +75,7 @@ public:
     virtual void ResetChannels()                   = 0;
     virtual void PageUp()                          = 0;
     virtual void PageDown()                        = 0;
+	virtual void SetChatLines(int lines)		   = 0; // #294 - Turkey
 };
 
 class ChatListPaneFactory : public IFunction

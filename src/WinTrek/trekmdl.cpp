@@ -676,14 +676,17 @@ class ImageComboPaneFactory : public IFunction {
 private:
     TRef<Modeler>         m_pmodeler;
     TRef<IPopupContainer> m_ppopupContainer;
+    TRef<ModifiablePointValue> m_pMousePosition;
 
 public:
     ImageComboPaneFactory(
         Modeler*         pmodeler,
-        IPopupContainer* ppopupContainer
+        IPopupContainer* ppopupContainer,
+        ModifiablePointValue* pmousePosition
     ) :
         m_pmodeler(pmodeler),
-        m_ppopupContainer(ppopupContainer)
+        m_ppopupContainer(ppopupContainer),
+        m_pMousePosition(pmousePosition)
     {
     }
 
@@ -698,7 +701,8 @@ public:
                 m_ppopupContainer,
                 pfont->GetValue(),
                 WinPoint(0, 0),
-                CreateImageComboFacePane(pimage)
+                CreateImageComboFacePane(pimage),
+                m_pMousePosition
             );
 
         pcombo->GetMouseEnterWhileEnabledEventSource()->AddSink(new SoundIDEventSink(mouseoverSound));
@@ -718,14 +722,17 @@ class StringComboPaneFactory : public IFunction {
 private:
     TRef<Modeler>         m_pmodeler;
     TRef<IPopupContainer> m_ppopupContainer;
+    TRef<ModifiablePointValue> m_pMousePosition;
 
 public:
     StringComboPaneFactory(
         Modeler*         pmodeler,
-        IPopupContainer* ppopupContainer
+        IPopupContainer* ppopupContainer,
+        ModifiablePointValue* pmousePosition
     ) :
         m_pmodeler(pmodeler),
-        m_ppopupContainer(ppopupContainer)
+        m_ppopupContainer(ppopupContainer),
+        m_pMousePosition(pmousePosition)
     {
     }
 
@@ -747,7 +754,8 @@ public:
                     pfont->GetValue(),
                     pcolor->GetValue(),
                     false
-                )
+                ),
+                m_pMousePosition
             );
 
         pcombo->GetMouseEnterWhileEnabledEventSource()->AddSink(new SoundIDEventSink(mouseoverSound));
@@ -767,14 +775,17 @@ class StringColorComboPaneFactory : public IFunction {
 private:
     TRef<Modeler>         m_pmodeler;
     TRef<IPopupContainer> m_ppopupContainer;
+    TRef<ModifiablePointValue> m_pMousePosition;
 
 public:
     StringColorComboPaneFactory(
         Modeler*         pmodeler,
-        IPopupContainer* ppopupContainer
+        IPopupContainer* ppopupContainer,
+        ModifiablePointValue* pmousePosition
     ) :
         m_pmodeler(pmodeler),
-        m_ppopupContainer(ppopupContainer)
+        m_ppopupContainer(ppopupContainer),
+        m_pMousePosition(pmousePosition)
     {
     }
 
@@ -796,7 +807,8 @@ public:
                     pfont->GetValue(),
                     pcolor->GetValue(),
                     true
-                )
+                ),
+                m_pMousePosition
             );
 
         pcombo->GetMouseEnterWhileEnabledEventSource()->AddSink(new SoundIDEventSink(mouseoverSound));
@@ -939,9 +951,9 @@ void ExportPaneFactories(INameSpace* pns)
     pns->AddMember("ButtonPane",   new ButtonPaneFactory(GetModeler()));
     pns->AddMember("SoundButtonPane",   new SoundButtonPaneFactory(GetModeler()));
     pns->AddMember("ButtonBarPane",new ButtonBarPaneFactory(GetModeler()));
-    pns->AddMember("ImageComboPane",         new ImageComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer()));
-    pns->AddMember("StringComboPane",        new StringComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer()));
-    pns->AddMember("StringColorComboPane",   new StringColorComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer()));
+    pns->AddMember("ImageComboPane", new ImageComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetWindow()->GetMousePositionModifiable()));
+    pns->AddMember("StringComboPane", new StringComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetWindow()->GetMousePositionModifiable()));
+    pns->AddMember("StringColorComboPane", new StringColorComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetWindow()->GetMousePositionModifiable()));
 
     // add our 'specialty' panes
 #ifndef MARKCU1

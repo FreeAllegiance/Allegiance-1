@@ -17,6 +17,7 @@
  * Copyright 1986-2000 Microsoft Corporation, All Rights Reserved
  *-----------------------------------------------------------------------*/
 
+#include <cstdlib>
 
 //
 //  IFTPSessionUpdateSink is used to receive events about the transfer.  

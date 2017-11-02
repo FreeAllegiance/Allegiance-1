@@ -524,9 +524,7 @@ public:
 	// DrawString()
 	//
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	void DrawString(	Surface *			pSurface,			// TBD: REMOVE THIS PARAM - NO LONGER USED OR VALID.
-						const WinPoint &	point,
-						const WinRect &		rectClip,
+	void DrawString(	const WinPoint &	point,
 						const ZString &		str,
 						const Color &		colour )
 	{

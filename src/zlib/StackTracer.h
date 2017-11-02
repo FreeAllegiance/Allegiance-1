@@ -17,8 +17,10 @@
 */
 
 #pragma once
-#include <vector>
+
 #include <map>
+#include <vector>
+#include <Windows.h>
 
 struct FunctionCall 
 {
@@ -40,7 +42,7 @@ public:
 
 	// Return exception code and call stack data structure so that 
 	// user could customize their own message format
-	static DWORD GetExceptionCode();
+	static uint32_t GetExceptionCode();
 	static std::vector<FunctionCall> GetExceptionCallStack();
 
 private:
@@ -57,13 +59,13 @@ private:
 	void TraceCallStack(CONTEXT* pContext);
 
 private:
-	DWORD m_dwExceptionCode;
+	uint32_t m_dwExceptionCode;
 
 	std::vector<FunctionCall> m_vecCallStack;
 
-	typedef std::map<DWORD,const char*> CodeDescMap;
+	typedef std::map<uint32_t,const char*> CodeDescMap;
 	CodeDescMap m_mapCodeDesc;
 
-	DWORD m_dwMachineType; // Machine type matters when trace the call stack (StackWalk64)
+	uint32_t m_dwMachineType; // Machine type matters when trace the call stack (StackWalk64)
 
 };

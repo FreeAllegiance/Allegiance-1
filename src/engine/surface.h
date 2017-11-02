@@ -114,9 +114,6 @@ public:
     virtual Color GetColor(const WinPoint& point)                     = 0;
     virtual void  SetColor(const WinPoint& point, const Color& color) = 0;
 
-    // KGJV 32B - this is public now
-    virtual Surface* GetConvertedSurface(PixelFormat* ppf)            = 0;
-
 	virtual TEXHANDLE		GetTexHandle()							  = 0;
 
     //

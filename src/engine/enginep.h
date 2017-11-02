@@ -394,8 +394,7 @@ public:
     virtual PrivateSurface* GetSurface()     = 0;
 };
 
-//TRef<PrivateContext> CreateContextImpl(PrivateSurface* psurface);
-TRef<PrivateContext> CreateContextImpl( PrivateSurface* psurface, WinPoint screenRes );
+TRef<PrivateContext> CreateContextImpl( PrivateSurface* psurface );
 
 //////////////////////////////////////////////////////////////////////////////
 //

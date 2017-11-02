@@ -2,6 +2,7 @@
 #include "SteamClans.h"
 
 // BT - STEAM
+#ifdef STEAM_APP_ID
 
 SteamClans::SteamClans()
 {
@@ -70,4 +71,4 @@ TVector<CallsignTagInfo, DefaultEquals, DefaultCompare> * SteamClans::GetAvailab
 	return &m_availableCallsignTags;
 }
 
-
+#endif

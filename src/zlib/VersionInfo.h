@@ -5,13 +5,12 @@
 // VersionInfo.h : Declaration of the ZVersionInfo class.
 //
 
-#ifndef VER_H
-  #include <winver.h>
-#endif // !VER_H
+#include <Windows.h>
+#include <winver.h>
+#include <tchar.h>
 
-#ifndef _INC_TCHAR
-  #include <tchar.h>
-#endif // !_INC_TCHAR
+#include "zassert.h"
+#include "zstring.h"
 
 #ifndef sizeofArray
   ///////////////////////////////////////////////////////////////////////////
@@ -41,18 +40,18 @@ public:
 public:
   // File Version
   ZString GetFileVersionString   () const;
-  WORD    GetFileVersionMSHigh   () const;
-  WORD    GetFileVersionMSLow    () const;
-  WORD    GetFileVersionLSHigh   () const;
-  WORD    GetFileVersionLSLow    () const;
-  WORD    GetFileBuildNumber     () const;
+  uint16_t    GetFileVersionMSHigh   () const;
+  uint16_t    GetFileVersionMSLow    () const;
+  uint16_t    GetFileVersionLSHigh   () const;
+  uint16_t    GetFileVersionLSLow    () const;
+  uint16_t    GetFileBuildNumber     () const;
   // Product Version
   ZString GetProductVersionString() const;
-  WORD    GetProductVersionMSHigh() const;
-  WORD    GetProductVersionMSLow () const;
-  WORD    GetProductVersionLSHigh() const;
-  WORD    GetProductVersionLSLow () const;
-  WORD    GetProductBuildNumber  () const;
+  uint16_t    GetProductVersionMSHigh() const;
+  uint16_t    GetProductVersionMSLow () const;
+  uint16_t    GetProductVersionLSHigh() const;
+  uint16_t    GetProductVersionLSLow () const;
+  uint16_t    GetProductBuildNumber  () const;
 
   // File Flags
   bool IsDebug            () const;
@@ -109,8 +108,8 @@ public:
   // String Values
   void   SetLanguageID    (LANGID wLangID = -1);
   LANGID GetLanguageID    () const;
-  void   SetCodePage      (WORD wCodePage = -1);
-  WORD   GetCodePage      () const;
+  void   SetCodePage      (uint16_t wCodePage = -1);
+  uint16_t   GetCodePage      () const;
   ZString GetStringValue(LPCTSTR pszKey, bool* pbExists = NULL) const;
 
   // Common String Values
@@ -126,17 +125,17 @@ public:
   ZString GetOLESelfRegister (bool* pbExists = NULL) const;
 
   // Raw Data Access
-  const BYTE*             GetVerInfo    () const;
+  const uint8_t*             GetVerInfo    () const;
   UINT                    GetVerInfoSize() const;
   const VS_FIXEDFILEINFO* GetFixed      () const;
 
 // Data Members
 protected:
-  BYTE*             m_pVerInfo;
+  uint8_t*             m_pVerInfo;
   UINT              m_cbVerInfo;
   VS_FIXEDFILEINFO* m_pFixed;
   LANGID            m_wLangID;
-  WORD              m_wCodePage;
+  uint16_t              m_wCodePage;
 };
 
 
@@ -157,31 +156,31 @@ inline ZString ZVersionInfo::GetFileVersionString() const
   return ZString(szText);
 }
 
-inline WORD ZVersionInfo::GetFileVersionMSHigh() const
+inline uint16_t ZVersionInfo::GetFileVersionMSHigh() const
 {
   assert(m_pFixed);
   return HIWORD(m_pFixed->dwFileVersionMS);
 }
 
-inline WORD ZVersionInfo::GetFileVersionMSLow() const
+inline uint16_t ZVersionInfo::GetFileVersionMSLow() const
 {
   assert(m_pFixed);
   return LOWORD(m_pFixed->dwFileVersionMS);
 }
 
-inline WORD ZVersionInfo::GetFileVersionLSHigh() const
+inline uint16_t ZVersionInfo::GetFileVersionLSHigh() const
 {
   assert(m_pFixed);
   return HIWORD(m_pFixed->dwFileVersionLS);
 }
 
-inline WORD ZVersionInfo::GetFileVersionLSLow() const
+inline uint16_t ZVersionInfo::GetFileVersionLSLow() const
 {
   assert(m_pFixed);
   return LOWORD(m_pFixed->dwFileVersionLS);
 }
 
-inline WORD ZVersionInfo::GetFileBuildNumber() const
+inline uint16_t ZVersionInfo::GetFileBuildNumber() const
 {
   return GetFileVersionLSLow();
 }
@@ -196,31 +195,31 @@ inline ZString ZVersionInfo::GetProductVersionString() const
   return ZString(szText);
 }
 
-inline WORD ZVersionInfo::GetProductVersionMSHigh() const
+inline uint16_t ZVersionInfo::GetProductVersionMSHigh() const
 {
   assert(m_pFixed);
   return HIWORD(m_pFixed->dwProductVersionMS);
 }
 
-inline WORD ZVersionInfo::GetProductVersionMSLow() const
+inline uint16_t ZVersionInfo::GetProductVersionMSLow() const
 {
   assert(m_pFixed);
   return LOWORD(m_pFixed->dwProductVersionMS);
 }
 
-inline WORD ZVersionInfo::GetProductVersionLSHigh() const
+inline uint16_t ZVersionInfo::GetProductVersionLSHigh() const
 {
   assert(m_pFixed);
   return HIWORD(m_pFixed->dwProductVersionLS);
 }
 
-inline WORD ZVersionInfo::GetProductVersionLSLow() const
+inline uint16_t ZVersionInfo::GetProductVersionLSLow() const
 {
   assert(m_pFixed);
   return LOWORD(m_pFixed->dwProductVersionLS);
 }
 
-inline WORD ZVersionInfo::GetProductBuildNumber() const
+inline uint16_t ZVersionInfo::GetProductBuildNumber() const
 {
   return GetProductVersionLSLow();
 }
@@ -511,12 +510,12 @@ inline LANGID ZVersionInfo::GetLanguageID() const
   return m_wLangID;
 }
 
-inline void ZVersionInfo::SetCodePage(WORD wCodePage)
+inline void ZVersionInfo::SetCodePage(uint16_t wCodePage)
 {
   m_wCodePage = wCodePage;
 }
 
-inline WORD ZVersionInfo::GetCodePage() const
+inline uint16_t ZVersionInfo::GetCodePage() const
 {
   return m_wCodePage;
 }
@@ -579,7 +578,7 @@ inline ZString ZVersionInfo::GetOLESelfRegister(bool* pbExists) const
 /////////////////////////////////////////////////////////////////////////////
 // Raw Data Access
 
-inline const BYTE* ZVersionInfo::GetVerInfo() const
+inline const uint8_t* ZVersionInfo::GetVerInfo() const
 {
   return m_pVerInfo;
 }

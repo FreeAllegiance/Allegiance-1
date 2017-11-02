@@ -44,10 +44,10 @@ public:
 
 // Implementation
 protected:
-  CAllSrvUISheet* GetSheet()
+  /*CAllSrvUISheet* GetSheet()
   {
     return reinterpret_cast<CAllSrvUISheet*>(GetParent());
-  }
+  }*/
 
 // Message Handlers
 protected:

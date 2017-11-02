@@ -969,6 +969,14 @@ ZString GetString(int indent, const Point& point)
         + ZString(point.Y()) + ")";
 }
 
+ZString GetString(int indent, const WinPoint& point)
+{
+	return
+		"WinPoint("
+		+ ZString(point.X()) + ", "
+		+ ZString(point.Y()) + ")";
+}
+
 ZString GetString(int indent, const Rect& Rect)
 {
     return
@@ -1107,11 +1115,23 @@ ZString GetFunctionName(const Point& value)
     return "Point";
 }
 
+ZString GetFunctionName(const WinPoint& value)
+{
+	return "WinPoint";
+}
+
 void Write(IMDLBinaryFile* pmdlFile, const Point& value)
 {
     pmdlFile->WriteReference("Point");
     TRef<ZFile> pfile = pmdlFile->WriteBinary();
     pfile->Write((void*)&value, sizeof(value));
+}
+
+void Write(IMDLBinaryFile* pmdlFile, const WinPoint& value)
+{
+	pmdlFile->WriteReference("WinPoint");
+	TRef<ZFile> pfile = pmdlFile->WriteBinary();
+	pfile->Write((void*)&value, sizeof(value));
 }
 
 ZString GetFunctionName(const Vector& value)

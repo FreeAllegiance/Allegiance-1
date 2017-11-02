@@ -1,9 +1,13 @@
 #ifndef _Window_h_
 #define _Window_h_
 
-#include "commctrl.h"
+#include "event.h"
+#include "input.h"
+#include "rect.h"
+#include "tmap.h"
 #include "winstyles.h"
 
+#include "commctrl.h"
 
 // x64: GWL is GWLP in x64 SDK Imago 6/20/09
 #if defined (_WIN64) 
@@ -80,7 +84,7 @@ private:
     static TList<TRef<IKeyboardInput> > m_listKeyboardInputFilters;
 
     static TMap<HWND, Window* > s_mapWindow;
-    static DWORD CALLBACK Win32WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+    static uint32_t CALLBACK Win32WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
     void Construct();
 
@@ -88,7 +92,7 @@ private:
 	void ClipOrCenterWindowToMonitor( const WinRect& rect, UINT flags );
 
 protected:
-    DWORD OriginalWndProc(UINT, WPARAM, LPARAM);
+    uint32_t OriginalWndProc(UINT, WPARAM, LPARAM);
     static void DoHitTest();
 
 public:
@@ -150,7 +154,7 @@ public:
     // Window message handlers
     //
 
-    virtual DWORD WndProc(UINT, WPARAM, LPARAM);
+    virtual uint32_t WndProc(UINT, WPARAM, LPARAM);
 
     virtual void ChildRectChanged(Window* pchild);
     virtual void RectChanged();

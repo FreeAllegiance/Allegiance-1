@@ -67,7 +67,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Training;..\src\Effect;..\src\Engine;..\src\ZLib;..\src\_Utility;..\src\Igc;..\src\Inc;..\src\clintlib;..\src\SoundEngine;..\src\wintrek;..\src\lobby;..\src\Zone;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;_AFXDLL;WIN32;_WINDOWS;STRICT;_DEBUG;DEBUG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_AFXDLL;WIN32;_WINDOWS;STRICT;_DEBUG;DEBUG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -85,7 +85,7 @@
     <ClCompile>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Training;..\src\Effect;..\src\Engine;..\src\ZLib;..\src\_Utility;..\src\Igc;..\src\Inc;..\src\clintlib;..\src\SoundEngine;..\src\wintrek;..\src\lobby;..\src\Zone;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;DEBUG;SRVLOG;_AFXDLL;WIN32;_WINDOWS;STRICT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;SRVLOG;_AFXDLL;WIN32;_WINDOWS;STRICT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>

@@ -1,6 +1,10 @@
 #ifndef _input_h_
 #define _input_h_
 
+#include "mask.h"
+#include "point.h"
+#include "tref.h"
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // Forward declarations
@@ -18,7 +22,7 @@ class IInputProvider;
 //////////////////////////////////////////////////////////////////////////////
 
 class MouseResultBaseType {};
-typedef TBitMask<MouseResultBaseType, DWORD> MouseResult;
+typedef TBitMask<MouseResultBaseType, uint32_t> MouseResult;
 
 class MouseResultHit     : public MouseResult { public: MouseResultHit()     : MouseResult(0x02) {} };
 class MouseResultCapture : public MouseResult { public: MouseResultCapture() : MouseResult(0x04) {} };
@@ -37,7 +41,7 @@ public:
     bool bControl;
     bool bAlt;
     bool bDown;
-    WORD countRepeat;
+    uint16_t countRepeat;
 };
 
 class IKeyboardInput : public IObject {
@@ -91,6 +95,8 @@ public:
 // Input Provider
 //
 /////////////////////////////////////////////////////////////////////////////
+
+class ITimerEventSource;
 
 class IInputProvider : public IObject {
 public:

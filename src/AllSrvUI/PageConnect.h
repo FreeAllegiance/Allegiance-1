@@ -23,6 +23,9 @@ class CAllSrvUISheet;
 
 class CPageConnect : public CPropertyPage
 {
+private:
+	CAllSrvUISheet *m_mpSheet;
+
 // Declarations
 public:
   DECLARE_DYNAMIC(CPageConnect)
@@ -30,7 +33,7 @@ public:
 
 // Construction
 public:
-  CPageConnect();
+  CPageConnect(CAllSrvUISheet *pSheet);
 
 // Attributes
 public:
@@ -48,10 +51,10 @@ public:
 
 // Implementation
 protected:
-  CAllSrvUISheet* GetSheet()
+  /*CAllSrvUISheet* GetSheet()
   {
     return reinterpret_cast<CAllSrvUISheet*>(GetParent());
-  }
+  }*/
   static UINT CreateSessionThreadThunk(void* pvParam);
   void CreateSessionThreadProc();
 

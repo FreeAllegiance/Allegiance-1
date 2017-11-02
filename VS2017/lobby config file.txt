@@ -1,0 +1,167 @@
+The lobby looks for a config file in it's current working directory. When running as a service, this directory is c:\windows\system32. Modify the sample below to fit your needs. This is also how you limit which servers can connect to the public lobby. As of now, it's not really an issue so we're not limiting anyone from connecting test servers to the lobby. As non-official servers can't log stats, there doesn't seem to be any other reason to limit this.
+
+From PKK:
+
+If the lobby is a service, then this goes into c:\windows\system32\Allegiance.cfg
+
+
+
+[Lobby]
+NumberOfServers=31
+FilterType=Allow
+Server1=70.86.91.82
+Server2=12.96.40.28
+Server3=204.14.17.25
+Server4=69.17.37.133
+Server5=69.17.37.134
+Server6=127.0.0.1
+Server7=208.52.171.207
+Server8=12.96.40.27
+Server9=66.45.163.130
+Server10=72.36.154.125
+Server11=63.145.183.14
+Server12=203.14.173.135
+Server13=66.36.240.92
+Server14=204.14.17.27
+Server15=178.77.66.104
+Server16=85.10.200.228
+
+;Disable BetaSrv:
+;Server17=24.241.110.106
+
+; Mach3 - pkk
+Server17=213.239.213.106
+
+; Weedman's test server
+;Server19=209.188..
+
+; FAZDev - pkk
+Server18=213.239.213.123
+
+; AEM - Test
+Server19=185.35.78.68
+Server20=198.100.154.201
+Server21=108.61.155.147
+Server22=192.223.31.156
+Server23=173.199.126.7
+Server24=185.35.78.175
+Server25=66.150.121.116
+Server26=104.243.32.210
+Server27=67.202.80.166
+Server28=23.29.136.97
+Server29=54.164.183.101
+Server30=158.69.223.59
+Server31=67.202.80.150
+
+[Cores]
+zone_core=AZ 1.25
+dn_000460=DN 4.60
+plus15b7=A+ 15b7
+Race101=Race Core 101
+GoDII_05=GoD II 0.5
+sw_a103=Starwars 1.03a
+rps55=RPS 5.5
+RTc006a=EoR 6.0a
+PC2_019=PookCore II b19
+VoS000091=VoS 91
+warpcorex1=Warp Core X1
+bsg0.35=BSG 35
+cc_09=Community Core 9
+cc_10=Community Core 10
+cc_11=Community Core 11
+cc_11b=Community Core 11b
+cc_12=Community Core 12
+cc_13=Community Core 13
+cc_13c=Community Core 13c
+cc_13d=Community Core 13d
+cc_14=Community Core 14
+cc_15NE=Community Core 15 (New Econ)
+cc_15OE=Community Core 15 (Old Econ)
+cc_16=Community Core 16
+cc_17=Community Core 17
+cc_18=Community Core 18
+cc_19=Community Core 19
+cc_20=Community Core 20
+tcor_02=Training Core 02
+xc05=Extreme Core 05
+xc06=Extreme Core 06
+PCore001=PCore 1
+PCore002=PCore 2
+PCore003=PCore 3
+PCore004=PCore 4
+aw3=Allegiance Wars 3
+tcor_03=Training Core 03
+sw_a102=Starwars Core a102
+
+[OfficialCores]
+zone_core=yes
+dn_000460=yes
+plus15b7=yes
+Race101=yes
+GoDII_05=yes
+sw_a103=yes
+rps55=yes
+RTc006a=yes
+PC2_019=yes
+VoS000091=yes
+warpcorex1=yes
+bsg0.35=yes
+cc_09=yes
+cc_10=yes
+cc_11=yes
+cc_11b=yes
+cc_12=yes
+cc_13=yes
+cc_13c=yes
+cc_13d=yes
+cc_14=yes
+cc_15NE=yes
+cc_15OE=yes
+cc_16=yes
+cc_17=yes
+cc_18=yes
+cc_19=yes
+cc_20=yes
+tcor_02=yes
+xc05=yes
+xc06=yes
+aw3=yes
+tcor_03=yes
+sw_a102=yes
+PCore001=yes
+PCore002=yes
+PCore003=yes
+PCore004=yes
+PCore006=yes
+PCore007=yes
+PCore007nD=yes
+PCore007nP=yes
+PCore008=yes
+PCore009=yes
+PCore010=yes
+PCore011=yes
+PCore012=yes
+
+[OfficialServers]
+Planet1=70.86.91.82
+Planet2=72.36.154.125
+Planet3=63.145.183.14
+ASGSBox=204.14.17.25
+Excalibur=208.52.171.207
+DocMach2=178.77.66.104
+DocMach3=85.10.200.228
+Mach3=213.239.213.106
+FAZDev=213.239.213.123
+FAZDUO=12.96.40.27
+FAZBeta=12.96.40.28
+Dogbones=69.17.37.133
+Dogbones1=69.17.37.134
+Dogbones2=66.170.98.75
+BeautyServ=66.45.163.130
+3FL=203.14.173.135
+Solap=66.36.240.92
+CSS=204.14.17.27
+;Disable BETASrv:
+;SpunkServ=24.241.110.106
+
+; THIS IS A VALID CONFIG FILE

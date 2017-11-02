@@ -894,7 +894,6 @@ public:
             new AnimatedImagePane(
                 CreatePaneImage( 
                     GetEngine(),
-                    SurfaceType3D() | SurfaceTypeZBuffer(),
                     false,
                     new AnimatedImagePane(
                         pimage,
@@ -1738,9 +1737,9 @@ public:
             }
         }
 
-        if (bAnyItems) {                                 
-            Point point = pslot->TransformLocalToImage(pointLocal);
-            GetWindow()->GetPopupContainer()->OpenPopup(m_pmenu, Rect(point, point), true, false);
+        if (bAnyItems) {
+            Point popupPosition = GetWindow()->GetMousePosition();
+            GetWindow()->GetPopupContainer()->OpenPopup(m_pmenu, Rect(popupPosition, popupPosition), true, false);
         }
     }
 
@@ -1834,11 +1833,10 @@ public:
                 }
             }
 #endif
-        } 
-		// -KGJV: fix ship drop down menu position
-		int dx = (GetWindow()->GetSize().X()-800)/2;
-		int dy = (GetWindow()->GetSize().Y()-600)/2;
-        GetWindow()->GetPopupContainer()->OpenPopup(m_phullMenu, Rect(dx+260, dy+450, dx+340, dy+530), true, false);
+        }
+
+        Point popupPosition = GetWindow()->GetMousePosition();
+        GetWindow()->GetPopupContainer()->OpenPopup(m_phullMenu, Rect(popupPosition, popupPosition), true, false);
     }
             
     void CloseMenu()

@@ -55,7 +55,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\src\Pigs\PigConfig;..\src\Test\Inc;..\src\Inc;..\src\AGC;$(OutDir)..\..\Guids;$(OutDir)..\PigsLib;$(OutDir)..\..\Test\TCObj;..\src\Pigs\PigsLib;..\src\zlib;..\src\engine;..\src\Guids;..\src\Lobby;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;_ATL_STATIC_REGISTRY;_DEBUG;DEBUG;STRICT;_WINDOWS;WIN32;_AFXDLL;_CRT_SECURE_NO_DEPRECATE;AGC_HOST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_ATL_STATIC_REGISTRY;_DEBUG;DEBUG;STRICT;_WINDOWS;WIN32;_AFXDLL;_CRT_SECURE_NO_DEPRECATE;AGC_HOST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -81,7 +81,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;_ATL_STATIC_REGISTRY;STRICT;_WINDOWS;WIN32;AGC_HOST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_ATL_STATIC_REGISTRY;STRICT;_WINDOWS;WIN32;AGC_HOST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>FLAVOR="$(Configuration)";%(PreprocessorDefinitions)</PreprocessorDefinitions>

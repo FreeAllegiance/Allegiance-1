@@ -1652,7 +1652,7 @@ public:
                     //
 
 					BlendMode oldMode = pcontext->GetBlendMode();
-					pcontext->SetBlendMode( BlendModeSource );
+					pcontext->SetBlendMode( BlendModeSourceAlpha );
                     RenderGeo(pcontext);
 					pcontext->SetBlendMode( oldMode );
                 }

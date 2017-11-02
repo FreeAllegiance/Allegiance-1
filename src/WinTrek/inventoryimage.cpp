@@ -348,7 +348,7 @@ namespace {
             }
 
             //ProcessCargo(pColumnPane, pship, "S.");
-            SetImage(CreatePaneImage(GetEngine(), SurfaceType3D(), true, pColumnPane));
+            SetImage(CreatePaneImage(GetEngine(), true, pColumnPane));
 			pColumnPane->InsertAtBottom(pBottom);
 			//pRowPane->InsertAtBottom(pColumnPane);
             pcachePrevious->SetEmpty();

@@ -120,7 +120,6 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 				Window(NULL, rect, strTitle, ZString(), 0, hmenu),
 				m_pengine(papp->GetEngine()),
 				m_pmodeler(papp->GetModeler()),
-				m_sizeWindowed(rect.Size()),
 				m_offsetWindowed(rect.Min()),
 				m_bSizeable(true),
 				m_bMinimized(false),
@@ -132,7 +131,6 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 				m_bInvalid(true),
 				m_bActive(true),
 				m_bShowCursor(true),
-				m_bMouseEnabled(true),
 				m_bRestore(false),
 				m_bMouseInside(false),
 				m_bMoveOnHide(true),
@@ -168,13 +166,13 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 
 	
 	// BT - 10/17 - Force the client to start windowed first, then we can take it full screen later.
-	m_bStartFullScreen = false;
+	bool bStartFullScreen = false;
 
     // Get the mouse
     //
 
     m_pmouse = m_pinputEngine->GetMouse();
-    m_pmouse->SetEnabled(m_bStartFullScreen);
+    m_pmouse->SetEnabled(startFullscreen);
     papp->SetMouse(m_pmouse);
 
     m_pmouse->GetEventSource()->AddSink(m_peventSink = new ButtonEvent::Delegate(this));
@@ -236,7 +234,7 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 	devLog.OutputString("CVertexGenerator::Get()->Initialise( );\n");
 
 	m_bStartFullScreen = startFullscreen;
-	pDev->ResetDevice(m_bStartFullScreen == false);
+	pDev->ResetDevice(startFullscreen == false);
 }
 
 EngineWindow::~EngineWindow()
@@ -490,19 +488,29 @@ void EngineWindow::UpdateWindowStyle()
 
         SetClientRect(rect);
     } else {
-        SetHasMinimize(true);
-        SetHasMaximize(true);
-        SetHasSysMenu(true);
-        Window::SetSizeable(m_bSizeable);
-        SetTopMost(false);
-        //SetTopMost(true);  Imago 6/25/09 - removed this undocumented change
+        WinPoint size = m_pengine->GetFullscreenSize();
+        if ((GetSystemMetrics(SM_CXSCREEN) <= size.X() || GetSystemMetrics(SM_CYSCREEN) <= size.Y()))
+        {
+            //windowed, but we do not fit with the selected resolution, switch to borderless
 
-        //
+            SetHasMinimize(false);
+            SetHasMaximize(false);
+            SetHasSysMenu(false);
+            Window::SetSizeable(false);
+
+            //make sure we are on top of everything
+            SetTopMost(true);
+        }
+        else
+        {
+            SetHasMinimize(true);
+            SetHasMaximize(true);
+            SetHasSysMenu(true);
+            Window::SetSizeable(m_bSizeable);
+            SetTopMost(false);
+        }
+
         // Win32 doesn't recognize the style change unless we resize the window
-        //
-        
-        WinPoint size = m_sizeWindowed;
-
         m_bMovingWindow = true;
         SetClientSize(size + WinPoint(1, 1));
         SetClientSize(size);
@@ -541,7 +549,7 @@ void EngineWindow::UpdateRectValues()
         m_prectValueScreen->SetValue(rect);
         m_pmouse->SetClipRect(rect);
     } else {
-		WinRect rect(WinPoint(0, 0), m_sizeWindowed);
+		WinRect rect(WinPoint(0, 0), m_pengine->GetFullscreenSize());
         if (g_bWindowLog) {
             ZDebugOutput("  Windowed: " + GetString(0, rect) + "\n");
         }
@@ -727,9 +735,8 @@ void EngineWindow::RectChanged()
 
         if (
                (size           != WinPoint(0, 0))
-            && (m_sizeWindowed != size          )
+            && (m_pengine->GetFullscreenSize() != size          )
         ) {
-            m_sizeWindowed = size;
             Invalidate();
         }
 
@@ -764,7 +771,7 @@ WinPoint EngineWindow::GetSize()
 
 WinPoint EngineWindow::GetWindowedSize()
 {
-    return m_sizeWindowed;
+    return m_pengine->GetFullscreenSize();
 }
 
 WinPoint EngineWindow::GetFullscreenSize()
@@ -778,9 +785,7 @@ void EngineWindow::SetWindowedSize(const WinPoint& size)
         ZDebugOutput("EngineWindow::SetWindowedSize(" + GetString(size) + ")\n");
     }
 
-    if (m_sizeWindowed != size) {
-        m_sizeWindowed = size;
-
+    if (m_pengine->GetFullscreenSize() != size) {
         if (!m_pengine->IsFullscreen()) {
             Invalidate();
         }
@@ -803,7 +808,7 @@ void EngineWindow::SetFullscreenSize(const Vector& size)
 
 void EngineWindow::ChangeFullscreenSize(bool bLarger)
 {
-    if (m_pengine->IsFullscreen() && m_bSizeable) 
+    if (m_bSizeable) 
 	{
         WinPoint size = GetFullscreenSize();
 
@@ -870,8 +875,6 @@ TRef<IPopup> EngineWindow::GetEngineMenu(IEngineFont* pfont)
 
                                  pmenu->AddMenuItem(idmBrightnessUp       , "Brightness Up"                                   , 'U');
                                  pmenu->AddMenuItem(idmBrightnessDown     , "Brightness Down"                                 , 'D');
-                                 pmenu->AddMenuItem(0                     , "------------------------------------------------"     );
-                                 pmenu->AddMenuItem(0                     , "Options are only valid when flying in fullscreen"     );
                                  pmenu->AddMenuItem(0                     , "------------------------------------------------"     );
     m_pitemHigherResolution    = pmenu->AddMenuItem(idmHigherResolution   , "Higher Resolution"                               , 'H');
     m_pitemLowerResolution     = pmenu->AddMenuItem(idmLowerResolution    , "Lower Resolution"                                , 'L');
@@ -1225,13 +1228,6 @@ void EngineWindow::DoIdle()
 	{
         if (bChanges || m_bInvalid) 
 		{
-			
-			//go fullscreen #73 7/10 Imago
-			if ((GetSystemMetrics(SM_CXSCREEN) <= m_sizeWindowed.X() || GetSystemMetrics(SM_CYSCREEN) <= m_sizeWindowed.Y()) && !m_bMovingWindow && !m_pengine->IsFullscreen()) {
-				SetFullscreen(true);
-				m_sizeWindowed.SetX(800);
-				m_sizeWindowed.SetY(600);
-			}
 			m_bInvalid = false;
 
 			UpdateWindowStyle();
@@ -1428,10 +1424,11 @@ bool EngineWindow::IsDoubleClick()
 
 void EngineWindow::SetCursorPos(const Point& point)
 {
-    if (m_pengine->IsFullscreen()) {
+    if (m_pmouse->IsEnabled()) {
         m_pmouse->SetPosition(point);
         //HandleMouseMessage(WM_MOUSEMOVE, point);
     } else {
+        //If disabled, send a new mouse position to the window.
         Window::SetCursorPos(point);
     }
 }
@@ -1457,11 +1454,6 @@ void EngineWindow::DoHitTest()
         Window::DoHitTest();
         s_forceHitTestCount = 2;
     }
-}
-
-void EngineWindow::SetMouseEnabled(bool bEnable)
-{
-    m_bMouseEnabled = bEnable;
 }
 
 void EngineWindow::HandleMouseMessage(UINT message, const Point& point, UINT nFlags)
@@ -1546,61 +1538,59 @@ void EngineWindow::HandleMouseMessage(UINT message, const Point& point, UINT nFl
         // Handle button messages
         //
 
-        if (m_bMouseEnabled) {    
-            switch (message) {
-                case WM_LBUTTONDOWN: 
-                    mouseResult = pimage->Button(this, point, 0, m_bCaptured, m_bHit, true );
-                    m_timeLastClick = m_timeCurrent;
-                    break;
+        switch (message) {
+            case WM_LBUTTONDOWN: 
+                mouseResult = pimage->Button(this, point, 0, m_bCaptured, m_bHit, true );
+                m_timeLastClick = m_timeCurrent;
+                break;
 
-                case WM_LBUTTONUP:   
-                    mouseResult = pimage->Button(this, point, 0, m_bCaptured, m_bHit, false);
-                    break;
+            case WM_LBUTTONUP:   
+                mouseResult = pimage->Button(this, point, 0, m_bCaptured, m_bHit, false);
+                break;
 
-                case WM_RBUTTONDOWN: 
-                    mouseResult = pimage->Button(this, point, 1, m_bCaptured, m_bHit, true );
-                    break;
+            case WM_RBUTTONDOWN: 
+                mouseResult = pimage->Button(this, point, 1, m_bCaptured, m_bHit, true );
+                break;
 
-                case WM_RBUTTONUP:   
-                    mouseResult = pimage->Button(this, point, 1, m_bCaptured, m_bHit, false);
-                    break;
+            case WM_RBUTTONUP:   
+                mouseResult = pimage->Button(this, point, 1, m_bCaptured, m_bHit, false);
+                break;
 
-                case WM_MBUTTONDOWN: 
-                    mouseResult = pimage->Button(this, point, 2, m_bCaptured, m_bHit, true );
-                    break;
+            case WM_MBUTTONDOWN: 
+                mouseResult = pimage->Button(this, point, 2, m_bCaptured, m_bHit, true );
+                break;
 
-                case WM_MBUTTONUP:   
-                    mouseResult = pimage->Button(this, point, 2, m_bCaptured, m_bHit, false);
-                    break;
+            case WM_MBUTTONUP:   
+                mouseResult = pimage->Button(this, point, 2, m_bCaptured, m_bHit, false);
+                break;
 
-                case WM_MOUSEWHEEL:  //imago 8/13/09
-                    if (nFlags >2) {
-                        if (GET_WHEEL_DELTA_WPARAM(nFlags) < 0) {
-                            mouseResult = pimage->Button(this,point, 8, m_bCaptured, m_bHit, true );
-                            if (!GetFullscreen())
-                                mouseResult = pimage->Button(this,point, 8, m_bCaptured, m_bHit, false );
-                        } else {
-                            mouseResult = pimage->Button(this, point, 9, m_bCaptured, m_bHit, true );
-                            if (!GetFullscreen())
-                                mouseResult = pimage->Button(this, point, 9, m_bCaptured, m_bHit, false );
-                        }
-                    } else if (nFlags == 1) {
-                        mouseResult = pimage->Button(this,point, 8, m_bCaptured, m_bHit, false );
-                    } else if (nFlags == 0) {
-                        mouseResult = pimage->Button(this,point, 9, m_bCaptured, m_bHit, false );
+            case WM_MOUSEWHEEL:  //imago 8/13/09
+                if (nFlags >2) {
+                    if (GET_WHEEL_DELTA_WPARAM(nFlags) < 0) {
+                        mouseResult = pimage->Button(this,point, 8, m_bCaptured, m_bHit, true );
+                        if (!m_pmouse->IsEnabled())
+                            mouseResult = pimage->Button(this,point, 8, m_bCaptured, m_bHit, false );
+                    } else {
+                        mouseResult = pimage->Button(this, point, 9, m_bCaptured, m_bHit, true );
+                        if (!m_pmouse->IsEnabled())
+                            mouseResult = pimage->Button(this, point, 9, m_bCaptured, m_bHit, false );
                     }
-                    break;
+                } else if (nFlags == 1) {
+                    mouseResult = pimage->Button(this,point, 8, m_bCaptured, m_bHit, false );
+                } else if (nFlags == 0) {
+                    mouseResult = pimage->Button(this,point, 9, m_bCaptured, m_bHit, false );
+                }
+                break;
 
-		        case WM_XBUTTONDOWN: //imago 8/15/09
-                    ZDebugOutput("WM_XBUTTONDOWN: " + ZString(2+GET_XBUTTON_WPARAM(nFlags)) + "\n");
-                    mouseResult = pimage->Button(this, point, 2+GET_XBUTTON_WPARAM(nFlags), m_bCaptured, m_bHit, true );
-                    break;
+		    case WM_XBUTTONDOWN: //imago 8/15/09
+                ZDebugOutput("WM_XBUTTONDOWN: " + ZString(2+GET_XBUTTON_WPARAM(nFlags)) + "\n");
+                mouseResult = pimage->Button(this, point, 2+GET_XBUTTON_WPARAM(nFlags), m_bCaptured, m_bHit, true );
+                break;
 
-		        case WM_XBUTTONUP:
-                    ZDebugOutput("WM_XBUTTONUP: " + ZString(2+GET_XBUTTON_WPARAM(nFlags)) + "\n");
-                    mouseResult = pimage->Button(this, point, 2+GET_XBUTTON_WPARAM(nFlags), m_bCaptured, m_bHit, false );
-                    break;
-            }
+		    case WM_XBUTTONUP:
+                ZDebugOutput("WM_XBUTTONUP: " + ZString(2+GET_XBUTTON_WPARAM(nFlags)) + "\n");
+                mouseResult = pimage->Button(this, point, 2+GET_XBUTTON_WPARAM(nFlags), m_bCaptured, m_bHit, false );
+                break;
         }
 
         if (mouseResult.Test(MouseResultRelease())) {
@@ -1617,7 +1607,8 @@ void EngineWindow::HandleMouseMessage(UINT message, const Point& point, UINT nFl
 
 bool EngineWindow::OnMouseMessage(UINT message, UINT nFlags, const WinPoint& point)
 {
-    if (!m_pengine->IsFullscreen()) {
+    if (!m_pmouse->IsEnabled()) {
+        //we are not ignoring window mouse events
         HandleMouseMessage(message, Point::Cast(point), nFlags);
     }
     
@@ -1706,7 +1697,8 @@ void EngineWindow::UpdateInput()
     // Update the mouse position
     //
 
-    if (m_pengine->IsFullscreen()) {
+    if (m_pmouse->IsEnabled()) {
+        // we have to manually fire mouse move events
         if (m_ppointMouse->GetValue() != m_pmouse->GetPosition() || (s_forceHitTestCount >> 0)) {
             if (s_forceHitTestCount > 0) {
                 s_forceHitTestCount--;

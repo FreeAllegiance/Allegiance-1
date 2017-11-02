@@ -93,7 +93,8 @@ public:
         misparams.dtGameLength = m_fGameLength;
 		misparams.bExperimental = m_bExperimental; // mmf 10/07 Experimental game type
 		misparams.mmMapType = m_mmMapType;
-        misparams.bScoresCount = misparams.bClubGame;
+        //misparams.bScoresCount = misparams.bClubGame;
+		misparams.bScoresCount = true;
  }
 };
 

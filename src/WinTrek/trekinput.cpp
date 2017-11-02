@@ -2937,7 +2937,7 @@ public:
         return 
             new EvaluateImage(
                 this,
-                CreatePaneImage(pengine, SurfaceType3D(), true, GetPane()),
+                CreatePaneImage(pengine, true, GetPane()),
                 m_ptime
             );
     }

@@ -7,6 +7,8 @@
 #ifndef _Point_H_
 #define _Point_H_
 
+#include "zstring.h"
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // Template Points
@@ -18,7 +20,7 @@ class TPoint : public PointType {
 public:
     TPoint() {}
 
-    TPoint(VSNET_TNFIX PointType::Number x, VSNET_TNFIX PointType::Number y) :
+    TPoint(typename PointType::Number x, typename PointType::Number y) :
         PointType(x, y)
     {}
 
@@ -42,12 +44,12 @@ public:
 
     //  , there should really be a Vector2 class
 
-    VSNET_TNFIX PointType::Number LengthSquared() const
+    typename PointType::Number LengthSquared() const
     {
         return X() * X() + Y() * Y();
     }
 
-    VSNET_TNFIX PointType::Number Length() const
+    typename PointType::Number Length() const
     {
         if (LengthSquared() == 1) {
             return 1;
@@ -61,20 +63,25 @@ public:
         return ZString("(") + ZString(X()) + ", " + ZString(Y()) + ")";
     }
 
-    friend TPoint operator*(VSNET_TNFIX PointType::Number value, const TPoint& p1)
+    friend TPoint operator*(typename PointType::Number value, const TPoint& p1)
     {
         return TPoint(p1.X() * value, p1.Y() * value);
     }
 
-    friend TPoint operator*(const TPoint& p1, VSNET_TNFIX PointType::Number value)
+    friend TPoint operator*(const TPoint& p1, typename PointType::Number value)
     {
         return TPoint(p1.X() * value, p1.Y() * value);
     }
 
-    friend TPoint operator/(const TPoint& p1, VSNET_TNFIX PointType::Number value)
+    friend TPoint operator/(const TPoint& p1, typename PointType::Number value)
     {
         return TPoint(p1.X() / value, p1.Y() / value);
     }
+
+	friend TPoint operator/(const TPoint& p1, const TPoint& p2)
+	{
+		return TPoint(p1.X() / p2.X(), p1.Y() / p2.Y());
+	}
 
     friend TPoint operator+(const TPoint& p1, const TPoint& p2)
     {

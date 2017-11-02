@@ -1,6 +1,10 @@
 #ifndef _TList_H_
 #define _TList_H_
 
+#include "tcompare.h"
+#include "tref.h"
+#include "zmath.h"
+
 #pragma warning(disable:4291) //no matching operator delete found; memory will not be freed if initialization throws an exception
 
 //////////////////////////////////////////////////////////////////////////////
@@ -372,7 +376,7 @@ class TPointerListObject : public IObject {
 private:
     TList<TRef<TValue> >           m_list;
 
-    VSNET_TNFIX TList<TRef<TValue> >::Iterator m_iter;
+    typename TList<TRef<TValue> >::Iterator m_iter;
 
 public:
     TPointerListObject() :

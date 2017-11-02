@@ -1,16 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="FZDebug-DX7|Win32">
-      <Configuration>FZDebug-DX7</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="FZRetail-DX7|Win32">
-      <Configuration>FZRetail-DX7</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="FZRetail|Win32">
@@ -22,7 +14,7 @@
     <ProjectGUID>{3702DB5A-C966-4133-824F-5958F4BF9BCF}</ProjectGUID>
     <RootNamespace>Allegiance</RootNamespace>
     <Keyword>MakeFileProj</Keyword>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -41,21 +33,11 @@
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v141_xp</PlatformToolset>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <PlatformToolset>v141_xp</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseOfMfc>false</UseOfMfc>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
-    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -66,36 +48,24 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
     <Import Project="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.props" Condition="exists('$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.props')" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'" Label="PropertySheets">
-    <Import Project="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.props" Condition="exists('$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.props')" />
-  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">..\objs$(PlatformToolset)\$(Configuration)\WinTrek\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">..\objs$(PlatformToolset)\$(Configuration)\WinTrek\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">..\objs$(PlatformToolset)\$(Configuration)\WinTrek\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">..\objs$(PlatformToolset)\$(Configuration)\WinTrek\</IntDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">..\objs$(PlatformToolset)\$(Configuration)\WinTrek\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">..\objs$(PlatformToolset)\$(Configuration)\WinTrek\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">..\objs$(PlatformToolset)\$(Configuration)\WinTrek\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">..\objs$(PlatformToolset)\$(Configuration)\WinTrek\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">false</LinkIncremental>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">$(DXSDK_DIR)\Include;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">$(DXSDK_DIR)\Include;$(IncludePath);$(WindowsSDK_IncludePath);$(VC_IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">$(DXSDK_DIR)\Include;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">$(DXSDK_DIR)\Include;$(IncludePath)</IncludePath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">$(DXSDK_DIR)\Lib\x86;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">$(DXSDK_DIR)\Lib\x86;$(LibraryPath);$(WindowsSDK_LibraryPath_x86);$(VC_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">$(DXSDK_DIR)\Lib\x86;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">$(DXSDK_DIR)\Lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>.\;..\src\lib\AllegianceSecurity\;..\src\lib\Steam;..\src\effect;..\src\engine;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\clintlib;..\src\soundengine;..\src\AGC;..\src\FedSrv;..\src\training;..\src\lobby;..\src\Inc;..\src\guids;..\src\Zone;.\$(OutDir)..\AGC;.\$(OutDir)..\FedSrv;.\$(OutDir)..\Guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;STEAM_APP_ID=700480;D3D_DEBUG_INFO;WINTREK;igc_static;IGC_SHIP;_USRDLL;DLL;DIRECTINPUT_VERSION=0x0800;_DEBUG;DEBUG;_WINDOWS;WIN32;AFXDLL;_TRACE;D3D_DEBUG_INFO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STEAM_APP_ID=700480;D3D_DEBUG_INFO;WINTREK;igc_static;IGC_SHIP;_USRDLL;DLL;DIRECTINPUT_VERSION=0x0800;_DEBUG;DEBUG;_WINDOWS;WIN32;AFXDLL;_TRACE;D3D_DEBUG_INFO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>StackFrameRuntimeCheck</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -132,53 +102,11 @@
 xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">
-    <ClCompile>
-      <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\;..\src\lib\Steam;..\src\effectDX7;..\src\engineDX7;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\clintlib;..\src\soundengine;..\src\AGC;..\src\FedSrv;..\src\training;..\src\lobby;..\src\Inc;..\src\guids;..\src\Zone;.\$(OutDir)..\AGC;.\$(OutDir)..\FedSrv;.\$(OutDir)..\guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0700;STEAM_APP_ID=700480;D3D_DEBUG_INFO;WINTREK;igc_static;IGC_SHIP;_USRDLL;DLL;DIRECTINPUT_VERSION=0x0800;_DEBUG;DEBUG;_WINDOWS;WIN32;AFXDLL;_TRACE;D3D_DEBUG_INFO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ExceptionHandling>Async</ExceptionHandling>
-      <BasicRuntimeChecks>StackFrameRuntimeCheck</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <StructMemberAlignment>Default</StructMemberAlignment>
-      <FunctionLevelLinking>false</FunctionLevelLinking>
-      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <DisableSpecificWarnings>4995;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <ResourceCompile>
-      <Culture>0x0409</Culture>
-      <PreprocessorDefinitions>FLAVOR=\"$(ConfigurationName)\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\src\Inc;..\src\Lang\NonIntl\allegiance;..\src\Lang\USA\allegiance;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ResourceCompile>
-    <ProjectReference>
-      <LinkLibraryDependencies>false</LinkLibraryDependencies>
-    </ProjectReference>
-    <Link>
-      <AdditionalDependencies>ddraw.lib;..\src\Lib\FreeImage\FreeImage.lib;..\objsv141_xp\$(Configuration)\zlib\zlib.lib;..\src\Lib\AllegianceSecurity\AllegianceSecurityd.lib;..\src\Lib\Steam\steam_api.lib;dbghelp.lib;d3d9.lib;d3dx9.lib;dsound.lib;dinput8.lib;..\objsv141_xp\FZDebug\soundengine\soundengine.lib;..\objsv141_xp\FZDebug\_utility\Utility.lib;$(OutDir)..\engineDX7\EngineDX7.lib;$(OutDir)..\effectDX7\EffectDX7.lib;..\objsv141_xp\FZDebug\igc\igc.lib;..\objsv141_xp\FZDebug\clintlib\clintlib.lib;..\objsv141_xp\FZDebug\Guids\AGCGuid.lib;..\objsv141_xp\FZDebug\Guids\guids.lib;..\objsv141_xp\FZDebug\training\training.lib;urlmon.lib;winmm.lib;comctl32.lib;version.lib;ws2_32.lib;delayimp.lib;wininet.lib;lz32.lib;netapi32.lib;comsupp.lib;oledb.lib;..\src\Lib\DirectPlay\dxguid.lib;..\src\Lib\OggVorbis\vorbis.lib;..\src\Lib\OggVorbis\ogg.lib;..\src\Lib\OggVorbis\file.lib;amstrmid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <GenerateMapFile>true</GenerateMapFile>
-      <SubSystem>Windows</SubSystem>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <DataExecutionPrevention>
-      </DataExecutionPrevention>
-      <TargetMachine>MachineX86</TargetMachine>
-      <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
-    </Link>
-    <PostBuildEvent>
-      <Command>xcopy ..\src\lib\steam\steam_api.dll $(OutDir) /s /d /y
-xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y
-xcopy ..\src\lib\FreeImage\FreeImage.dll $(OutDir) /s /d /y</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">
     <ClCompile>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>.\;..\src\lib\AllegianceSecurity\;..\src\lib\Steam;..\src\effect;..\src\engine;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\clintlib;..\src\soundengine;..\src\AGC;..\src\FedSrv;..\src\training;..\src\lobby;..\src\Inc;..\src\guids;..\src\Zone;.\$(OutDir)..\AGC;.\$(OutDir)..\FedSrv;.\$(OutDir)..\guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;STEAM_APP_ID=700480;SRVLOG;DEBUG;WINTREK;igc_static;IGC_SHIP;_USRDLL;DLL;DIRECTINPUT_VERSION=0x0800;_WINDOWS;WIN32;AFXDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STEAM_APP_ID=700480;SRVLOG;DEBUG;WINTREK;igc_static;IGC_SHIP;_USRDLL;DLL;DIRECTINPUT_VERSION=0x0800;_WINDOWS;WIN32;AFXDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -225,62 +153,9 @@ xcopy ..\src\lib\FreeImage\FreeImage.dll $(OutDir) /s /d /y</Command>
 xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">
-    <ClCompile>
-      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>.\;..\src\lib\AllegianceSecurity\;..\src\lib\Steam;..\src\effectDX7;..\src\engineDX7;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\clintlib;..\src\soundengine;..\src\AGC;..\src\FedSrv;..\src\training;..\src\lobby;..\src\Inc;..\src\guids;..\src\Zone;.\$(OutDir)..\AGC;.\$(OutDir)..\FedSrv;.\$(OutDir)..\guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0700;STEAM_APP_ID=700480;SRVLOG;DEBUG;WINTREK;igc_static;IGC_SHIP;_USRDLL;DLL;DIRECTINPUT_VERSION=0x0800;_WINDOWS;WIN32;AFXDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <BufferSecurityCheck>true</BufferSecurityCheck>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AssemblerOutput>
-      </AssemblerOutput>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <DisableSpecificWarnings>4995;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <Optimization>Disabled</Optimization>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <IntrinsicFunctions>false</IntrinsicFunctions>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
-      <OmitFramePointers>false</OmitFramePointers>
-      <WholeProgramOptimization>false</WholeProgramOptimization>
-      <ErrorReporting>None</ErrorReporting>
-      <ExceptionHandling>Async</ExceptionHandling>
-    </ClCompile>
-    <ResourceCompile>
-      <Culture>0x0409</Culture>
-      <PreprocessorDefinitions>FLAVOR=\"$(ConfigurationName)\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\src\Inc;..\src\Lang\NonIntl\allegiance;..\src\Lang\USA\allegiance;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ResourceCompile>
-    <ProjectReference>
-      <LinkLibraryDependencies>false</LinkLibraryDependencies>
-    </ProjectReference>
-    <Link>
-      <AdditionalDependencies>ddraw.lib;..\src\Lib\FreeImage\FreeImage.lib;..\objsv141_xp\$(Configuration)\zlib\zlib.lib;..\src\Lib\AllegianceSecurity\AllegianceSecurity.lib;..\src\Lib\Steam\steam_api.lib;dbghelp.lib;d3d9.lib;d3dx9.lib;dsound.lib;dinput8.lib;..\objsv141_xp\FZRetail\soundengine\soundengine.lib;..\objsv141_xp\FZRetail\_utility\Utility.lib;$(OutDir)..\engineDX7\EngineDX7.lib;$(OutDir)..\effectDX7\EffectDX7.lib;..\objsv141_xp\FZRetail\igc\igc.lib;..\objsv141_xp\FZRetail\clintlib\clintlib.lib;..\objsv141_xp\FZRetail\Guids\AGCGuid.lib;..\objsv141_xp\FZRetail\Guids\guids.lib;..\objsv141_xp\FZRetail\training\training.lib;urlmon.lib;winmm.lib;comctl32.lib;version.lib;ws2_32.lib;delayimp.lib;wininet.lib;lz32.lib;netapi32.lib;comsupp.lib;oledb.lib;..\src\Lib\DirectPlay\dxguid.lib;..\src\Lib\OggVorbis\vorbis.lib;..\src\Lib\OggVorbis\ogg.lib;..\src\Lib\OggVorbis\file.lib;amstrmid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <StripPrivateSymbols>
-      </StripPrivateSymbols>
-      <GenerateMapFile>true</GenerateMapFile>
-      <SubSystem>Windows</SubSystem>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <DataExecutionPrevention>
-      </DataExecutionPrevention>
-      <TargetMachine>MachineX86</TargetMachine>
-    </Link>
-    <PostBuildEvent>
-      <Command>xcopy ..\src\lib\steam\steam_api.dll $(OutDir) /s /d /y
-xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y
-xcopy ..\src\lib\FreeImage\FreeImage.dll $(OutDir) /s /d /y</Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\Lang\Usa\allegiance\allegiance.rc">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
@@ -299,9 +174,7 @@ xcopy ..\src\lib\FreeImage\FreeImage.dll $(OutDir) /s /d /y</Command>
     <ClCompile Include="..\src\WinTrek\gamestartingscreen.cpp" />
     <ClCompile Include="..\src\WinTrek\gametypes.cpp" />
     <ClCompile Include="..\src\WinTrek\hangarscreen.cpp" />
-    <ClCompile Include="..\src\WinTrek\indicator.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">deo</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="..\src\WinTrek\indicator.cpp" />
     <ClCompile Include="..\src\WinTrek\introscreen.cpp" />
     <ClCompile Include="..\src\WinTrek\inventoryimage.cpp" />
     <ClCompile Include="..\src\WinTrek\leaderboardscreen.cpp" />
@@ -315,9 +188,7 @@ xcopy ..\src\lib\FreeImage\FreeImage.dll $(OutDir) /s /d /y</Command>
     <ClCompile Include="..\src\WinTrek\passworddialog.cpp" />
     <ClCompile Include="..\src\WinTrek\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\WinTrek\PostTrainingSlideshow.cpp" />
     <ClCompile Include="..\src\WinTrek\radarimage.cpp" />
@@ -339,7 +210,6 @@ xcopy ..\src\lib\FreeImage\FreeImage.dll $(OutDir) /s /d /y</Command>
     <ClCompile Include="..\src\WinTrek\trekinput.cpp" />
     <ClCompile Include="..\src\WinTrek\trekmdl.cpp" />
     <ClCompile Include="..\src\WinTrek\treksound.cpp" />
-    <ClCompile Include="..\src\WinTrek\videoscreen.cpp" />
     <ClCompile Include="..\src\WinTrek\WinTrek.cpp" />
     <ClCompile Include="..\src\WinTrek\ZoneClubScreen.cpp" />
     <ClCompile Include="..\src\WinTrek\zoneeventsscreen.cpp" />

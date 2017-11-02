@@ -49,14 +49,6 @@ public:
     SurfaceType					m_stype;
 
     //
-    // Format convertion
-    //
-
-    int                       m_idConverted;
-    TRef<PixelFormat>         m_ppfConverted;
-    TRef<PrivateSurfaceImpl>  m_psurfaceConverted;
-
-    //
     // Drawing
     //
 
@@ -108,7 +100,6 @@ public:
         m_colorKey				= Color(0, 0, 0);
 
         m_id					= 0;
-        m_idConverted			= -1;
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -204,10 +195,10 @@ public:
 		m_psite( psite ),
 		m_bInContext( false ),
 		m_bSurfaceAllocated( false ),
-		m_bColorKey( true ),
 		m_hTexture( INVALID_TEX_HANDLE ),
 		m_pcontext( NULL )
 	{
+		Initialize();
         m_pointOffset			= WinPoint(0, 0);
         m_rectClip				= WinRect(WinPoint(0, 0), m_size);
 		m_pUIVerts				= NULL;
@@ -215,7 +206,6 @@ public:
 		m_dwNumVerts			= 0;
         m_colorKey				= Color(0, 0, 0);
         m_id					= 0;
-		m_idConverted			= -1;
 
 		if( m_stype.Test( SurfaceTypeDummy() ) == true )
 		{
@@ -262,6 +252,7 @@ public:
     //////////////////////////////////////////////////////////////////////////////
 	TEXHANDLE GetTexHandle( )
 	{
+        ZAssert(m_hTexture != INVALID_TEX_HANDLE);
 		return m_hTexture;
 	}
 
@@ -1134,10 +1125,6 @@ public:
 //        if (m_pvideoSurface) {
   //          m_pvideoSurface->SetColorKey(color);
     //    }
-
-        if (m_psurfaceConverted) {
-            m_psurfaceConverted->SetColorKey(color);
-        }
     }
 
 	void SetEnableColorKey( bool bEnable )
@@ -1159,8 +1146,7 @@ public:
 
         if (m_pcontext == NULL) 
 		{
-			m_pcontext = CreateContextImpl( this,
-											WinPoint( m_size.X(), m_size.Y() ) );
+			m_pcontext = CreateContextImpl(this);
         }
 
         if (m_pcontext->IsValid()) {
@@ -1194,52 +1180,6 @@ public:
 
         m_pointOffset = m_pointOffsetSave;
         m_rectClip    = m_rectClipSave;
-    }
-
-    PrivateSurface* GetConvertedSurface(PixelFormat* ppf)
-    {
-//		if (ppf->Equivalent(m_ppf->GetDDPF())) 
-
-		// Does actually mean pointer comparison by the looks of it.
-		if (ppf == m_ppf) 
-		{
-            return this;
-        } 
-		else if (ppf != m_ppfConverted || m_idConverted != m_id) 
-		{
-            if (ppf != m_ppfConverted) 
-			{
-                // Create a surface with the requested pixel format
-                m_ppfConverted = ppf;
-
-                m_psurfaceConverted = new PrivateSurfaceImpl(	m_pengine,
-																ppf,
-//																NULL,
-																m_size,
-																m_stype,
-																NULL );
-                
-			}
-
-            if (HasColorKey()) 
-			{
-                m_psurfaceConverted->SetColorKey(GetColorKey());
-            }
-
-            m_idConverted = m_id - 1;
-        }
-
-        // Do the bits need to be updated?
-        if (m_idConverted != m_id) 
-		{
-            // Do a conversion blt
-            m_psurfaceConverted->BltConvert(	WinPoint(0, 0),
-												this,
-												WinRect(WinPoint(0, 0), m_size) );
-            m_idConverted = m_id;
-        }
-
-        return m_psurfaceConverted;
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -1378,9 +1318,7 @@ public:
         const ZString& str
     ) {
         pfont->DrawString(
-            this, 
             point + m_pointOffset, 
-            m_rectClip,
             str, 
             color
         );
@@ -1767,7 +1705,7 @@ public:
         // Calculate the target rectangle
         //
 
-		_ASSERT( false && "Is this called? If not, remove this function." );
+		//_ASSERT( false && "Is this called? If not, remove this function." );
 
         WinRect rectTarget = rectTargetArg;
         rectTarget.Offset(m_pointOffset);
@@ -1938,36 +1876,19 @@ public:
 		{
 			if( pDev->IsInScene() == true )
 			{
-				if( m_bColorKey == true )
+				if (dwPixel != 0)
 				{
-					if( dwPixel != 0 )
-					{
-						pVertGen->GenerateFillVerticesD3DColor( (WinRect&)rect, true, (DWORD) pixel.Value() );
+					pVertGen->GenerateFillVerticesD3DColor((WinRect&)rect, true, (DWORD)pixel.Value());
 
-						pVRAMMan->SetTexture( INVALID_TEX_HANDLE, 0 );
-						pDev->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE );
-						pDev->SetRenderState( D3DRS_ZENABLE, D3DZB_FALSE );
-						pDev->SetFVF( D3DFVF_UICOLOURVERT );
-						pDev->DrawPrimitive( 
-									D3DPT_TRIANGLESTRIP, 
-//									pVertGen->GetUIFillVertsVB()->dwFirstElementOffset,
-									pVertGen->GetPredefinedDynamicBuffer( CVertexGenerator::ePDBT_UIFillVB )->dwFirstElementOffset,
-									2);
-					}
-				}
-				else
-				{
-					pVertGen->GenerateFillVerticesD3DColor( (WinRect&)rect, true, dwPixel );
-
-					pVRAMMan->SetTexture( INVALID_TEX_HANDLE, 0 );
-					pDev->SetRenderState( D3DRS_ALPHABLENDENABLE, FALSE );
-					pDev->SetRenderState( D3DRS_ZENABLE, D3DZB_FALSE );
-					pDev->SetFVF( D3DFVF_UICOLOURVERT );
-					pDev->DrawPrimitive( 
-									D3DPT_TRIANGLESTRIP, 
-//									pVertGen->GetUIFillVertsVB()->dwFirstElementOffset,
-									pVertGen->GetPredefinedDynamicBuffer( CVertexGenerator::ePDBT_UIFillVB )->dwFirstElementOffset,
-									2 );
+					pVRAMMan->SetTexture(INVALID_TEX_HANDLE, 0);
+					pDev->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+					pDev->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
+					pDev->SetFVF(D3DFVF_UICOLOURVERT);
+					pDev->DrawPrimitive(
+						D3DPT_TRIANGLESTRIP,
+						//									pVertGen->GetUIFillVertsVB()->dwFirstElementOffset,
+						pVertGen->GetPredefinedDynamicBuffer(CVertexGenerator::ePDBT_UIFillVB)->dwFirstElementOffset,
+						2);
 				}
 			}
 			else

@@ -7,6 +7,9 @@
 #ifndef _Vector_h_
 #define _Vector_h_
 
+#include "zassert.h"
+#include "zstring.h"
+
 class Vector {
 private:
     static const Vector s_vectorZero;

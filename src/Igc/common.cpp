@@ -2544,21 +2544,25 @@ void   PlayerScoreObject::CalculateScore(ImissionIGC*   pmission)
 
 
     m_fScore = float(m_cWarpsSpotted)       * pmission->GetFloatConstant(c_fcidPointsWarp) +
-               float(m_cAsteroidsSpotted)   * pmission->GetFloatConstant(c_fcidPointsAsteroid) +
-               m_cTechsRecovered            * pmission->GetFloatConstant(c_fcidPointsTech) +
-               (m_cMinerKills * kMax)       * pmission->GetFloatConstant(c_fcidPointsMiner)       / (m_cMinerKills + kMax)   +
-               (m_cBuilderKills * kMax)     * pmission->GetFloatConstant(c_fcidPointsBuilder)     / (m_cBuilderKills + kMax) +
-               (m_cLayerKills * kMax)       * pmission->GetFloatConstant(c_fcidPointsLayer)       / (m_cLayerKills + kMax)   +
-               (m_cCarrierKills * kMax)     * pmission->GetFloatConstant(c_fcidPointsCarrier)     / (m_cCarrierKills + kMax) +
-               m_cPlayerKills               * pmission->GetFloatConstant(c_fcidPointsPlayer) +
-               (m_cBaseKills * kMax)        * pmission->GetFloatConstant(c_fcidPointsBaseKill)    / (m_cBaseKills + kMax)    +
-               (m_cBaseCaptures * kMax)     * pmission->GetFloatConstant(c_fcidPointsBaseCapture) / (m_cBaseCaptures + kMax) +
-               float(m_cRescues)            * pmission->GetFloatConstant(c_fcidPointsRescues) +
-               float(m_cArtifacts)          * pmission->GetFloatConstant(c_fcidPointsArtifacts) +
-               float(m_cFlags)              * pmission->GetFloatConstant(c_fcidPointsFlags);
+        float(m_cAsteroidsSpotted)           * pmission->GetFloatConstant(c_fcidPointsAsteroid) +
+        m_cTechsRecovered                    * pmission->GetFloatConstant(c_fcidPointsTech) +
+        (m_cMinerKills * kMax)               * pmission->GetFloatConstant(c_fcidPointsMiner) / (m_cMinerKills + kMax) +
+        (m_cBuilderKills * kMax)             * pmission->GetFloatConstant(c_fcidPointsBuilder) / (m_cBuilderKills + kMax) +
+        (m_cLayerKills * kMax)               * pmission->GetFloatConstant(c_fcidPointsLayer) / (m_cLayerKills + kMax) +
+        (m_cCarrierKills * kMax)             * pmission->GetFloatConstant(c_fcidPointsCarrier) / (m_cCarrierKills + kMax) +
+        m_cPlayerKills                       * pmission->GetFloatConstant(c_fcidPointsPlayer) +
+        (m_cBaseKills * kMax)                * pmission->GetFloatConstant(c_fcidPointsBaseKill) / (m_cBaseKills + kMax) +
+        (m_cBaseCaptures * kMax)             * pmission->GetFloatConstant(c_fcidPointsBaseCapture) / (m_cBaseCaptures + kMax) +
+        float(m_cRescues)                    * pmission->GetFloatConstant(c_fcidPointsRescues) +
+        float(m_cArtifacts)                  * pmission->GetFloatConstant(c_fcidPointsArtifacts) +
+        float(m_cFlags)                      * pmission->GetFloatConstant(c_fcidPointsFlags) +
+        float(m_cProbeSpot) * 10 +  //pmission->GetFloatConstant(c_fcidPointsProbeSpot) +
+        float(m_cRepair)                     * 0.0006; // pmission->GetFloatConstant(c_fcidPointsRepair);
 
     if (m_bWin)
         m_fScore *= 2.0f;
+
+	m_fScore *= m_rankRatio;
 }
 
 float  PlayerScoreObject::GetScore(void) const

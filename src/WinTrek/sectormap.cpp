@@ -947,7 +947,6 @@ public:
     void Render(Context* pcontext)
     {
         pcontext->SetShadeMode(ShadeModeFlat);
-		pcontext->SetBlendMode(BlendModeSourceAlpha); //imago 7/15/09
 
         Rect rectClip = m_bounds.GetRect();
         rectClip.Expand(-1);

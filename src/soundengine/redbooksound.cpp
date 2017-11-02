@@ -5,6 +5,9 @@
 //
 
 #include "pch.h"
+
+#include <mutex>
+
 #include "soundbase.h"
 #include "redbooksound.h"
 #include "ds3dutil.h"
@@ -197,7 +200,7 @@ class DiskPlayerImpl : public IDiskPlayer, private WorkerThread
     ZString m_strElementName;
 
     // a critical section controling access to the queued track and current track
-    CriticalSection m_csTrack;
+    std::mutex m_csTrack;
 
     enum { trackEmpty = -1, trackStop = 0 };
 
@@ -309,7 +312,7 @@ public:
         int nRequestedTrack;
         int nOldTrack;
         {
-            CriticalSectionLock lock(m_csTrack);
+            std::lock_guard<std::mutex> lock(m_csTrack);
 
             nOldTrack = m_nCurrentTrack;
             nRequestedTrack = m_nQueuedTrack;
@@ -332,7 +335,7 @@ public:
         {
             if ((nOldTrack != trackStop) && (IsPlayingImpl() != S_OK))
             {
-                CriticalSectionLock lock(m_csTrack);
+				std::lock_guard<std::mutex> lock(m_csTrack);
                 m_nCurrentTrack = trackStop;
             }
         }
@@ -400,7 +403,7 @@ public:
     // plays one track
     virtual HRESULT Play(int nTrack)
     {
-        CriticalSectionLock lock(m_csTrack);
+		std::lock_guard<std::mutex> lock(m_csTrack);
 
         if (nTrack <= 0)
         {
@@ -415,7 +418,7 @@ public:
     // stops the CD player
     virtual HRESULT Stop()
     {
-        CriticalSectionLock lock(m_csTrack);
+		std::lock_guard<std::mutex> lock(m_csTrack);
 
         m_nQueuedTrack = trackStop;
 
@@ -425,7 +428,7 @@ public:
     // returns S_OK if the CD player is playing, S_FALSE otherwise
     virtual HRESULT IsPlaying()
     {
-        CriticalSectionLock lock(m_csTrack);
+		std::lock_guard<std::mutex> lock(m_csTrack);
         int nTrack;
         
         if (m_nQueuedTrack != trackEmpty)
@@ -443,7 +446,7 @@ public:
     // returns the current track of the CD player
     virtual HRESULT GetCurrentTrack(int& nTrack)
     {
-        CriticalSectionLock lock(m_csTrack);
+		std::lock_guard<std::mutex> lock(m_csTrack);
         
         if (m_nQueuedTrack != trackEmpty)
         {

@@ -5,8 +5,11 @@
 // ztime.h : Declaration and implementation of the Time class.
 //
 
-#include "TlsValue.h"
+#include <cmath>
+#include <cstdint>
+#include <Windows.h>
 
+#include "TlsValue.h"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -16,17 +19,17 @@
 
 class Time {
 private:
-    DWORD m_dwTime;
+    uint32_t m_dwTime;
     friend class DTime;
 
-    static  tlsDWORD s_dwPauseStart;
-    static  tlsDWORD s_dwNegativeOffset;
+    static  tlsUINT32 s_dwPauseStart;
+    static  tlsUINT32 s_dwNegativeOffset;
 
 #ifdef _DEBUG_TRAINING
-    static  tlsDWORD s_dwLastTime;
-    static  tlsDWORD s_dwAccumulatedTime;
+    static  tlsUINT32 s_dwLastTime;
+    static  tlsUINT32 s_dwAccumulatedTime;
     static  tlsINT   s_iShift;
-    static  tlsDWORD s_dwLastClockTime;
+    static  tlsUINT32 s_dwLastClockTime;
 #endif
 
 public:
@@ -45,24 +48,24 @@ public:
     {
       #ifdef _DEBUG_TRAINING
         // compute the amount of time elapsed since the last frame
-        DWORD   dwRealTime = timeGetTime ();
+        uint32_t   dwRealTime = timeGetTime ();
         assert (dwRealTime >= s_dwLastTime);
-        DWORD   dwDeltaTime = dwRealTime - s_dwLastTime;
+        uint32_t   dwDeltaTime = dwRealTime - s_dwLastTime;
         s_dwLastTime = dwRealTime;
 
         // compute a maximum allowable frame time
-        DWORD   dwMaxDeltaTime =  static_cast<DWORD> (fResolution () * 0.25f); // 4 FPS
+        uint32_t   dwMaxDeltaTime =  static_cast<uint32_t> (fResolution () * 0.25f); // 4 FPS
         dwDeltaTime = (dwDeltaTime > dwMaxDeltaTime) ? dwMaxDeltaTime : dwDeltaTime;
 
         // scale the elapsed time using the shift factor, and
         // accumulate it into the game clock
-        DWORD   dwShiftedTime = (s_iShift >= 0) ? (dwDeltaTime << s_iShift) : (dwDeltaTime >> -s_iShift);
+        uint32_t   dwShiftedTime = (s_iShift >= 0) ? (dwDeltaTime << s_iShift) : (dwDeltaTime >> -s_iShift);
         s_dwAccumulatedTime += dwShiftedTime;
 
         // compute the current time, accounting for whether or
         // not the clock is paused, and whether or not it has
         // been paused in the past.
-        DWORD   dwCurrentClockTime = ((s_dwPauseStart != 0) ? s_dwPauseStart : s_dwAccumulatedTime) - s_dwNegativeOffset;
+        uint32_t   dwCurrentClockTime = ((s_dwPauseStart != 0) ? s_dwPauseStart : s_dwAccumulatedTime) - s_dwNegativeOffset;
         Time    now (dwCurrentClockTime);
 
         // check that time is strictly increasing
@@ -70,7 +73,7 @@ public:
             assert (dwCurrentClockTime >= s_dwLastClockTime);
         s_dwLastClockTime = dwCurrentClockTime;
       #else
-        DWORD   dwCurrentClockTime = ((s_dwPauseStart != 0) ? s_dwPauseStart : timeGetTime()) - s_dwNegativeOffset;
+        uint32_t   dwCurrentClockTime = ((s_dwPauseStart != 0) ? s_dwPauseStart : timeGetTime()) - s_dwNegativeOffset;
         Time    now (dwCurrentClockTime);
       #endif
 
@@ -81,7 +84,7 @@ public:
     {
     }
 
-    inline Time(DWORD  dwTime) :
+    inline Time(uint32_t  dwTime) :
         m_dwTime(dwTime)
     {
     }
@@ -131,7 +134,7 @@ public:
         return m_dwTime != t.m_dwTime;
     }
 
-    inline Time    operator =  (DWORD  tick)
+    inline Time    operator =  (uint32_t  tick)
     {
         this->m_dwTime = tick;
 
@@ -169,12 +172,12 @@ public:
         return ((float)((int)(m_dwTime - t.m_dwTime))) / fResolution ();
     }
 
-    inline DWORD   clock(void) const
+    inline uint32_t   clock(void) const
     {
         return m_dwTime;
     }
 
-    inline void     clock(DWORD c)
+    inline void     clock(uint32_t c)
     {
         m_dwTime = c;
     }

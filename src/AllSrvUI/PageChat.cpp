@@ -58,7 +58,7 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // Construction
 
-CPageChat::CPageChat() :
+CPageChat::CPageChat(CAllSrvUISheet *pSheet) :
   CPropertyPage(CPageChat::IDD),
   m_Prefs(this),
   m_bAdminPageActivated(false),
@@ -66,7 +66,8 @@ CPageChat::CPageChat() :
   m_pthAdminPageMsg(NULL),
   m_pthAdminPageRun(NULL),
   m_pWndAdminPageMsgThread(NULL),
-  m_pWndAdminPageRunThread(NULL)
+  m_pWndAdminPageRunThread(NULL),
+  m_mpSheet(pSheet)
 {
   //{{AFX_DATA_INIT(CPageChat)
   m_strSendChat = _T("");
@@ -76,7 +77,7 @@ CPageChat::CPageChat() :
   // Create a TCObj.Strings object
   HRESULT hr = m_spStrings.CreateInstance("TCObj.Strings");
   if (FAILED(hr))
-    GetSheet()->HandleError(hr, "creating TCObj.Strings helper object", true);
+    m_mpSheet->HandleError(hr, "creating TCObj.Strings helper object", true);
 }
 
 
@@ -116,10 +117,10 @@ void CPageChat::OnEvent(IAGCEvent* pEvent)
         varGameID.ChangeType(VT_I4);
 
         // Get the current GameID
-        if (!GetSheet()->GetGame())
+        if (!m_mpSheet->GetGame())
           return;
         AGCGameID idGame = 0;
-        if (FAILED(GetSheet()->GetGame()->get_GameID(&idGame)))
+        if (FAILED(m_mpSheet->GetGame()->get_GameID(&idGame)))
           return;
 
         // Ignore chats not for this game
@@ -446,9 +447,9 @@ void CPageChat::UpdateActivateAdminPage()
   {
     // Activate/deactivate the event notification
     if (bAdminPageMonitored)
-      GetSheet()->GetSession()->ActivateEvents(EventID_AdminPage, -1);
+      m_mpSheet->GetSession()->ActivateEvents(EventID_AdminPage, -1);
     else
-      GetSheet()->GetSession()->DeactivateEvents(EventID_AdminPage, -1);
+      m_mpSheet->GetSession()->DeactivateEvents(EventID_AdminPage, -1);
     m_bAdminPageActivated = bAdminPageMonitored;
   }
 }
@@ -460,9 +461,9 @@ void CPageChat::UpdateActivateChatMessage()
   {
     // Activate/deactivate the event notification
     if (bChatMonitored)
-      GetSheet()->GetSession()->ActivateEvents(EventID_ChatMessage, -1);
+      m_mpSheet->GetSession()->ActivateEvents(EventID_ChatMessage, -1);
     else
-      GetSheet()->GetSession()->DeactivateEvents(EventID_ChatMessage, -1);
+      m_mpSheet->GetSession()->DeactivateEvents(EventID_ChatMessage, -1);
     m_bChatActivated = bChatMonitored;
   }
 }
@@ -474,7 +475,7 @@ void CPageChat::UpdateUI(bool bUpdateData)
     UpdateData();
 
   // Determine if a game is in progress or not
-  bool bGameInProgress = NULL != GetSheet()->GetGame();
+  bool bGameInProgress = NULL != m_mpSheet->GetGame();
 
   // Enable/disable the controls as needed
   m_staticSendChat.EnableWindow(bGameInProgress);
@@ -513,10 +514,10 @@ void CPageChat::SendChat()
 
     // Send the chat to current game or all games, as specified
     CComBSTR bstrText(m_strSendChat);
-    if (m_bSendChatAllGames && GetSheet()->IsServerInMultiMode())
-      GetSheet()->GetServer()->SendMsg(bstrText);
+    if (m_bSendChatAllGames && m_mpSheet->IsServerInMultiMode())
+		m_mpSheet->GetServer()->SendMsg(bstrText);
     else
-      GetSheet()->GetGame()->SendChat(bstrText, -1);
+      m_mpSheet->GetGame()->SendChat(bstrText, -1);
 
     // Clear the string
     m_strSendChat.Empty();
@@ -620,7 +621,7 @@ void CPageChat::AdminPageRunThreadProc()
 BOOL CPageChat::OnInitDialog()
 {
   // Register for events of interest
-  GetSheet()->GetSession()->ActivateEvents(EventID_GameDestroyed, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_GameDestroyed, -1);
 
   // Perform default processing
   CPropertyPage::OnInitDialog();
@@ -629,7 +630,7 @@ BOOL CPageChat::OnInitDialog()
   m_AutoSizer.SetWindowAndRules(*this, _AutoSizerMap);
 
   // Show/hide buttons depending on server mode
-  bool bMultiMode = GetSheet()->IsServerInMultiMode();
+  bool bMultiMode = m_mpSheet->IsServerInMultiMode();
   m_btnSendChatAllGames.ShowWindow(bMultiMode ? SW_SHOW : SW_HIDE);
   m_btnSendChatAllGames.EnableWindow(bMultiMode);
 

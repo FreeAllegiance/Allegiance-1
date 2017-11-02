@@ -790,9 +790,7 @@ public:
 //#endif        
         GetWindow()->SetWaitCursor();
         TRef<IMessageBox> pmsgBox = CreateMessageBox("Connecting...", NULL, false);
-        Point point(c_PopupX, c_PopupY);
-        Rect rect(point, point);
-        GetWindow()->GetPopupContainer()->OpenPopup(pmsgBox, rect, false);
+        GetWindow()->GetPopupContainer()->OpenPopup(pmsgBox, false);
 
         // pause to let the "connecting..." box draw itself
         AddEventTarget(&ZoneClubScreen::OnUsernameAndPassword, GetWindow(), 0.1f);

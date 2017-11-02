@@ -1,4 +1,8 @@
-#include "pch.h"
+#include "StackTracer.h"
+
+#include <tchar.h>
+
+#include "zassert.h"
 
 /*
 // -- https://www.codeproject.com/Articles/41923/Get-the-call-stack-when-an-exception-is-being-caug
@@ -115,7 +119,7 @@ std::string StackTracer::GetExceptionMsg()
 	return m_ostringstream.str();
 }
 
-DWORD StackTracer::GetExceptionCode()
+uint32_t StackTracer::GetExceptionCode()
 {
 	return s_StackTracer.m_dwExceptionCode;
 }
@@ -197,9 +201,9 @@ void StackTracer::TraceCallStack(CONTEXT* pContext)
 
 		//2. get line and file name at the address
 		IMAGEHLP_LINE64 lineInfo = { sizeof(IMAGEHLP_LINE64) };
-		DWORD dwLineDisplacement = 0;
+		uint32_t dwLineDisplacement = 0;
 
-		if(SymGetLineFromAddr64(hProcess, sf.AddrPC.Offset, &dwLineDisplacement, &lineInfo ))
+		if(SymGetLineFromAddr64(hProcess, sf.AddrPC.Offset, LPDWORD(&dwLineDisplacement), &lineInfo ))
 		{
 			curCall.FileName = std::string(lineInfo.FileName);
 			curCall.LineNumber = lineInfo.LineNumber;

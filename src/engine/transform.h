@@ -182,6 +182,7 @@ private:
 
 public:
     ScaleTransform2(PointValue* ppoint);
+	ScaleTransform2(const Point& point);
 
     PointValue* GetScale() { return PointValue::Cast(GetChild(0)); }
 
@@ -258,11 +259,13 @@ public:
 class ScaleTransform : public Transform {
 private:
     Vector m_vec;
+	TRef<Number> m_pScale;
 
     void Evaluate();
 
 public:
     ScaleTransform(float scale);
+	ScaleTransform(Number* pscale);
     ScaleTransform(const Vector& vec);
 
     void SetScale(float scale);

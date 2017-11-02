@@ -138,10 +138,6 @@ private:
     TRef<State>              m_pstate;
     TRef<State>              m_pstateDevice;
     PrivateSurface*          m_psurface;
-	
-	// ADDED
-	WinPoint				m_ContextRes;			// Current context resolution (800x600)
-//	WinPoint				m_UIOffset;				// Current UI offset.
 
     //
     // Vertex buffers
@@ -293,8 +289,7 @@ public:
     //
     //////////////////////////////////////////////////////////////////////////////
 
-//    ContextImpl( PrivateSurface* psurface ) :
-	ContextImpl( PrivateSurface* psurface, WinPoint screenRes ) :
+	ContextImpl( PrivateSurface* psurface ) :
         #ifdef EnablePerformanceCounters
             m_countDrawString(0),
             m_countDrawStringChars(0),
@@ -304,8 +299,6 @@ public:
         m_pindexBuffer(NULL),
         m_countIndexBuffer(0),
         m_psurface( psurface ),
-		m_ContextRes( screenRes ),
-//		m_UIOffset( contextOffset ),
         m_bRendering(false),
         m_bIn3DLayer(false),
         m_bInScene(false),
@@ -335,7 +328,7 @@ public:
         m_pstateDevice->m_bColorKey              = true;
         m_pstateDevice->m_bLinearFilter          = true;
         m_pstateDevice->m_shadeMode              = ShadeModeGouraud;
-        m_pstateDevice->m_blendMode              = BlendModeSource;
+        m_pstateDevice->m_blendMode              = BlendModeSourceAlpha;
         m_pstateDevice->m_wrapMode               = WrapModeNone;
         m_pstateDevice->m_cullMode               = CullModeCCW;
         m_pstateDevice->m_maskChanges            = StateChangeAll();
@@ -675,16 +668,31 @@ public:
 		CD3DDevice9 * pDev = CD3DDevice9::Get();
 		CVRAMManager::Get()->SetTexture( psurface->GetTexHandle(), 0 );
 
-		// Source mode blends might still want colour keying. If so,
-		// configure it now.
-		if( ( psurface->HasColorKey() == true ) &&
-			( GetBlendMode() == BlendModeSource ) )
+		switch (GetBlendMode())
 		{
-			pDev->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1 );
-			pDev->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
-			pDev->SetRenderState( D3DRS_ALPHABLENDENABLE, TRUE );
-			pDev->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR );
-			pDev->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR );
+			case BlendModeSource:
+				pDev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+				pDev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+				pDev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+				pDev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR);
+				pDev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+				break;
+			case BlendModeAdd:
+				pDev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+				pDev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+				pDev->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+				pDev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+				pDev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+				break;
+			case BlendModeSourceAlpha:
+				pDev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+				pDev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+				pDev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+				pDev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+				pDev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+				break;
+			default:
+				ZError("Invalid blend mode");
 		}
 
 		switch (GetShadeMode()) 
@@ -774,6 +782,10 @@ public:
 
 					// Finished, unlock the buffer, set the stream.
 					CVBIBManager::Get()->UnlockDynamicVertexBuffer( phVB );
+
+					pDev->SetSamplerState(0, D3DSAMP_MAGFILTER, GetLinearFilter() ? D3DTEXF_LINEAR : D3DTEXF_POINT);
+					pDev->SetSamplerState(0, D3DSAMP_MINFILTER, GetLinearFilter() ? D3DTEXF_LINEAR : D3DTEXF_POINT);
+					pDev->SetSamplerState(0, D3DSAMP_MIPFILTER, GetLinearFilter() ? D3DTEXF_LINEAR : D3DTEXF_POINT);
 
 					pDev->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
                     m_pdevice3D->SetShadeMode(ShadeModeFlat);
@@ -888,8 +900,7 @@ public:
 //			pointScreen += m_UIOffset;
 
             //m_psurface->DrawString(pfont, color, pointScreen, str);
-			WinRect rectClip(	0, 0, 800, 600 );
-			pfont->DrawString( NULL, pointScreen, rectClip, str, color );
+			pfont->DrawString(pointScreen, str, color );
         }
     }
 
@@ -941,6 +952,34 @@ public:
         };
 
         UpdateState();
+
+		CD3DDevice9 * pDev = CD3DDevice9::Get();
+		switch (GetBlendMode())
+		{
+		case BlendModeSource:
+			pDev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+			pDev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+			pDev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+			pDev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR);
+			pDev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+			break;
+		case BlendModeAdd:
+			pDev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+			pDev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+			pDev->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+			pDev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+			pDev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+			break;
+		case BlendModeSourceAlpha:
+			pDev->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+			pDev->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+			pDev->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+			pDev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+			pDev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+			break;
+		default:
+			ZError("Invalid blend mode");
+		}
 
         m_pdevice3D->SetShadeMode(ShadeModeFlat);
 		m_pdevice3D->SetColorKey(false); // KGJV 32B
@@ -2440,7 +2479,7 @@ public:
         // Opaque decals
         //
 
-        SetBlendMode(BlendModeSourceAlphaTest, false); //Imago 7/16/09 7/31/09
+        SetBlendMode(BlendModeSource, false); //Imago 7/16/09 7/31/09
         SetZWrite(true, false);
 
         DrawVDecalSet(m_vdecalSetOpaque);
@@ -2500,8 +2539,7 @@ public:
 // level pane which would be whole window.
 // Now, we just pass in the size of the window to the constructor.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-//TRef<PrivateContext> CreateContextImpl(PrivateSurface* psurface)
-TRef<PrivateContext> CreateContextImpl( PrivateSurface* psurface, WinPoint screenRes )
+TRef<PrivateContext> CreateContextImpl( PrivateSurface* psurface )
 {
-	return new ContextImpl( psurface, screenRes );
+	return new ContextImpl( psurface );
 }

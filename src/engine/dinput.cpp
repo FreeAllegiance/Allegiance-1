@@ -641,6 +641,11 @@ public:
         return m_point;
     }
 
+    bool IsEnabled()
+    {
+        return m_bEnabled;
+    }
+
     void SetEnabled(bool bEnabled)
     {
         if (m_bEnabled != bEnabled) {

@@ -1,16 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="FZDebug-DX7|Win32">
-      <Configuration>FZDebug-DX7</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="FZRetail-DX7|Win32">
-      <Configuration>FZRetail-DX7</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="FZRetail|Win32">
@@ -43,18 +35,7 @@
     <UseOfMfc>false</UseOfMfc>
     <PlatformToolset>v141_xp</PlatformToolset>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>v141_xp</PlatformToolset>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <UseOfMfc>false</UseOfMfc>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
-    <PlatformToolset>v141_xp</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -69,60 +50,33 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
     <Import Project="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.props" Condition="exists('$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.props')" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'" Label="PropertySheets">
-    <Import Project="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.props" Condition="exists('$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.props')" />
-  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">..\objs$(PlatformToolset)\$(Configuration)\ZLib\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">..\objs$(PlatformToolset)\$(Configuration)\ZLib\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">..\objs$(PlatformToolset)\$(Configuration)\ZLib\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">..\objs$(PlatformToolset)\$(Configuration)\ZLib\</IntDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">..\objs$(PlatformToolset)\$(Configuration)\ZLib\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">..\objs$(PlatformToolset)\$(Configuration)\ZLib\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">..\objs$(PlatformToolset)\$(Configuration)\ZLib\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">..\objs$(PlatformToolset)\$(Configuration)\ZLib\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_AFXDLL;WIN32;_WINDOWS;STRICT;_DEBUG;DEBUG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_AFXDLL;WIN32;_WINDOWS;STRICT;_DEBUG;DEBUG;_CRT_SECURE_NO_DEPRECATE;__MODULE__#"ZLib";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>StackFrameRuntimeCheck</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <WarningLevel>Level1</WarningLevel>
       <TreatWarningAsError>false</TreatWarningAsError>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    </ClCompile>
-    <Lib>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
-    </Lib>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">
-    <ClCompile>
-      <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_AFXDLL;WIN32;_WINDOWS;STRICT;_DEBUG;DEBUG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>false</MinimalRebuild>
-      <ExceptionHandling>Async</ExceptionHandling>
-      <BasicRuntimeChecks>StackFrameRuntimeCheck</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <WarningLevel>Level1</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Lib>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
@@ -137,39 +91,9 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <WarningLevel>Level3</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
-      <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
-      <Optimization>Disabled</Optimization>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <IntrinsicFunctions>false</IntrinsicFunctions>
-      <OmitFramePointers>false</OmitFramePointers>
-      <WholeProgramOptimization>false</WholeProgramOptimization>
-      <ErrorReporting>None</ErrorReporting>
-    </ClCompile>
-    <Lib>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
-      <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>
-      <Verbose>false</Verbose>
-      <RemoveObjects>
-      </RemoveObjects>
-    </Lib>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">
-    <ClCompile>
-      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SRVLOG;DEBUG;_AFXDLL;WIN32;_WINDOWS;STRICT;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ExceptionHandling>Async</ExceptionHandling>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <BufferSecurityCheck>true</BufferSecurityCheck>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <TreatWarningAsError>false</TreatWarningAsError>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -199,12 +123,6 @@
     <ClCompile Include="..\src\zlib\matrix.cpp" />
     <ClCompile Include="..\src\zlib\matrix2.cpp" />
     <ClCompile Include="..\src\zlib\orientation.cpp" />
-    <ClCompile Include="..\src\zlib\pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='FZDebug-DX7|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='FZRetail-DX7|Win32'">Create</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\src\zlib\quaternion.cpp" />
     <ClCompile Include="..\src\zlib\StackTracer.cpp" />
     <ClCompile Include="..\src\zlib\tlist.cpp" />
@@ -213,17 +131,15 @@
     <ClCompile Include="..\src\zlib\VersionInfo.cpp" />
     <ClCompile Include="..\src\zlib\Win32app.cpp" />
     <ClCompile Include="..\src\zlib\window.cpp" />
-    <ClCompile Include="..\src\zlib\zlib.cpp" />
+    <ClCompile Include="..\src\zlib\zmath.cpp" />
     <ClCompile Include="..\src\zlib\zstring.cpp" />
     <ClCompile Include="..\src\zlib\ztime.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\zlib\alloc.h" />
-    <ClInclude Include="..\src\zlib\AutoCriticalSection.h" />
     <ClInclude Include="..\src\zlib\base.h" />
     <ClInclude Include="..\src\zlib\cast.h" />
     <ClInclude Include="..\src\zlib\color.h" />
-    <ClInclude Include="..\src\zlib\comobj.h" />
     <ClInclude Include="..\src\zlib\event.h" />
     <ClInclude Include="..\src\zlib\fixdelete.h" />
     <ClInclude Include="..\src\zlib\FTPSession.h" />
@@ -234,7 +150,6 @@
     <ClInclude Include="..\src\zlib\matrix.h" />
     <ClInclude Include="..\src\zlib\olddxdefns.h" />
     <ClInclude Include="..\src\zlib\orientation.h" />
-    <ClInclude Include="..\src\zlib\pch.h" />
     <ClInclude Include="..\src\zlib\point.h" />
     <ClInclude Include="..\src\zlib\quaternion.h" />
     <ClInclude Include="..\src\zlib\rect.h" />

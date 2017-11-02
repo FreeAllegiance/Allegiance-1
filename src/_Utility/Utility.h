@@ -1336,9 +1336,19 @@ class   BytePercentage
 
         BytePercentage& operator = (float f)
         {
-            assert ((f * (float)Divisor + 0.5f) >= 0.0f);
-            assert ((f * (float)Divisor + 0.5f) < (float)(Divisor + 1));
-            m_percentage = (unsigned char)(f * (float)Divisor + 0.5f);
+			/*assert((f * (float)Divisor + 0.5f) >= 0.0f);
+			assert((f * (float)Divisor + 0.5f) < (float)(Divisor + 1));*/
+
+			// Fix for crash when a user drops a probe right when entering an aleph. 
+			if ((f * (float)Divisor + 0.5f) < 0.0f)
+				m_percentage = 0;
+
+			else if ((f * (float)Divisor + 0.5f) >= (float)(Divisor + 1))
+				m_percentage = Divisor;
+
+			else
+				m_percentage = (unsigned char)(f * (float)Divisor + 0.5f);
+
             return *this;
         }
 

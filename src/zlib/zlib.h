@@ -15,12 +15,6 @@
 	#define USEASM
 #endif
 
-// VS.Net 2003 port: typename is required for template
-#if _MSC_VER >= 1310
-	#define VSNET_TNFIX typename
-#else
-	#define VSNET_TNFIX
-#endif
 //
 // Required CRT headers
 //
@@ -65,8 +59,6 @@
 #include "tstack.h"
 #include "tlist.h"
 #include "tmap.h"
-
-#include "comobj.h"
 
 //
 // Types

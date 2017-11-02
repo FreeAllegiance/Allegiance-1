@@ -79,6 +79,7 @@ private:
     TRef<ButtonPane> m_pbuttonSettings;
     TRef<ButtonPane> m_pbuttonTeamSettings;
     TRef<ButtonPane> m_pbuttonMakeLeader;
+	TRef<ButtonPane> m_pbuttonDiscord;
 
     TRef<ButtonBarPane> m_pbuttonbarPlayers;
     TRef<ButtonBarPane> m_pbuttonbarChat;
@@ -1192,6 +1193,7 @@ public:
         CastTo(m_ptextStatus2,      (Pane*)pns->FindMember("textStatus2"         ));
         CastTo(m_ptextTimer,        (Pane*)pns->FindMember("textTimer"           ));
         CastTo(m_ptextTimerType,    (Pane*)pns->FindMember("textTimerType"       ));
+		CastTo(m_pbuttonDiscord,           pns->FindMember("discordButtonPane"      ));
 
 		// KGJV #62
 		CastTo(m_ppaneMapPreview ,  (Pane*)pns->FindMember("mapPreviewPane"));
@@ -1308,6 +1310,8 @@ public:
         AddEventTarget(&TeamScreen::OnButtonToggleTeam3, m_pbuttonsTeam[3]->GetEventSource());
         AddEventTarget(&TeamScreen::OnButtonToggleTeam4, m_pbuttonsTeam[4]->GetEventSource());
         AddEventTarget(&TeamScreen::OnButtonToggleTeam5, m_pbuttonsTeam[5]->GetEventSource());
+
+		AddEventTarget(&TeamScreen::OnButtonDiscord, m_pbuttonDiscord->GetEventSource());
 
         //
         // Lists
@@ -1629,6 +1633,9 @@ public:
         
         m_pcomboWing->SetHidden(m_sideCurrent != trekClient.GetSideID() 
             || m_sideCurrent == SIDE_TEAMLOBBY);
+
+		m_pbuttonDiscord->SetHidden(m_sideCurrent != trekClient.GetSideID()
+			|| m_sideCurrent == SIDE_TEAMLOBBY);
 
         m_pbuttonJoin->SetEnabled(
                 (trekClient.GetSideID() == SIDE_TEAMLOBBY) // TE: Commented this from the brackets so you can always join NOAT: || !m_pMission->GetMissionParams().bLockSides
@@ -2860,6 +2867,42 @@ public:
         m_lastToJoinSend = NA;  // KGJV #104
         return false;
     }
+
+	bool OnButtonDiscord()
+	{
+		switch (m_sideCurrent)
+		{
+		case 0: // Yellow.
+			GetWindow()->ShowWebPage("https://discord.gg/qv3cEa7");
+			break;
+
+		case 1: // Blue.
+			GetWindow()->ShowWebPage("https://discord.gg/6JWrRdZ");
+			break;
+
+		case 2: // Purple.
+			GetWindow()->ShowWebPage("https://discord.gg/wytSK2Q");
+			break;
+
+		case 3: // Green.
+			GetWindow()->ShowWebPage("https://discord.gg/5QWGrSa");
+			break;
+
+		case 4: // Pink.
+			GetWindow()->ShowWebPage("https://discord.gg/WrHj7AS");
+			break;
+
+		case 5: // Teal.
+			GetWindow()->ShowWebPage("https://discord.gg/eUrSxek");
+			break;
+
+		default:
+			GetWindow()->ShowWebPage("https://discord.gg/WcEJ9VH");
+			break;
+		}
+
+		return true;
+	}
 
     bool OnButtonJoin()
     {

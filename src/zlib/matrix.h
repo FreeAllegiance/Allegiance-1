@@ -1,13 +1,19 @@
 #ifndef _matrix_h_
 #define _matrix_h_
 
+#include <cstdint>
+
+#include "point.h"
+#include "tvector.h"
+#include "vertex.h"
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // Transform Types
 //
 //////////////////////////////////////////////////////////////////////////////
 
-typedef DWORD TransformType;
+typedef uint32_t TransformType;
 
 #define TransformUnknown    -1
 #define TransformIdentity    0
@@ -55,7 +61,7 @@ float Determinant(
 // Matrix2
 //
 //////////////////////////////////////////////////////////////////////////////
-
+class Matrix;
 class Matrix2 {
 private:
     float m_m[3][3];
@@ -145,7 +151,8 @@ public:
 // Matrix
 //
 //////////////////////////////////////////////////////////////////////////////
-
+class Orientation;
+class Vector;
 class Matrix {
 private:
     float m_m[4][4];

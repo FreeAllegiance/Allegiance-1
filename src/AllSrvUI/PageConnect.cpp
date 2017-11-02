@@ -17,7 +17,7 @@
 #endif
 
 //mdvalley: defines good
-//#define _WIN32_DCOM //Imago removed
+#define _WIN32_DCOM //Imago removed
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -55,8 +55,9 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // Construction
 
-CPageConnect::CPageConnect() :
-  CPropertyPage(CPageConnect::IDD)
+CPageConnect::CPageConnect(CAllSrvUISheet *pSheet) :
+  CPropertyPage(CPageConnect::IDD),
+	m_mpSheet(pSheet)
 {
   //{{AFX_DATA_INIT(CPageConnect)
   //}}AFX_DATA_INIT
@@ -118,6 +119,16 @@ void CPageConnect::CreateSessionThreadProc()
 {
   // Create the AdminSession class object
   IAdminSessionClassPtr spClass;
+
+  LPOLESTR lpolestr;
+  StringFromCLSID(__uuidof(AdminSession), &lpolestr);
+  debugf("one: %s\n", lpolestr);
+
+  StringFromCLSID(__uuidof(spClass), &lpolestr);
+  debugf("two: %s\n", lpolestr);
+
+  CoTaskMemFree(lpolestr);
+
   HRESULT hr = CoGetClassObject(__uuidof(AdminSession), CLSCTX_LOCAL_SERVER,
     NULL, __uuidof(spClass), (void**)&spClass);
   if (FAILED(hr))
@@ -203,7 +214,7 @@ void CPageConnect::OnTimer(UINT_PTR nIDEvent)
 LRESULT CPageConnect::OnSessionSucceeded(WPARAM wParam, LPARAM lParam)
 {
   KillTimer(1);
-  GetSheet()->PostConnect((DWORD)wParam);
+  m_mpSheet->PostConnect((DWORD)wParam);
   SetEvent((HANDLE)lParam);
   return 0;
 }
@@ -211,7 +222,7 @@ LRESULT CPageConnect::OnSessionSucceeded(WPARAM wParam, LPARAM lParam)
 LRESULT CPageConnect::OnSessionFailed(WPARAM wParam, LPARAM)
 {
   KillTimer(1);
-  GetSheet()->HandleError(HRESULT(wParam), "connecting to Game Server", true);
+  m_mpSheet->HandleError(HRESULT(wParam), "connecting to Game Server", true);
   return 0;
 }
 

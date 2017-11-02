@@ -24,6 +24,9 @@ class CAllSrvUISheet;
 class CPageGameCreate :
   public CPropertyPage
 {
+private:
+	CAllSrvUISheet *m_mpSheet;
+
 // Declarations
 public:
   DECLARE_DYNAMIC(CPageGameCreate)
@@ -31,7 +34,7 @@ public:
 
 // Construction
 public:
-  CPageGameCreate();
+  CPageGameCreate(CAllSrvUISheet *pSheet);
 
 // Attributes
 public:
@@ -49,10 +52,10 @@ public:
 
 // Implementation
 protected:
-  CAllSrvUISheet* GetSheet()
+ /* CAllSrvUISheet* GetSheet()
   {
     return reinterpret_cast<CAllSrvUISheet*>(GetParent());
-  }
+  }*/
   void UpdateUI(bool bUpdateData = false);
   void UpdateFromGameParameters();
 

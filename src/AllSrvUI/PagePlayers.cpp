@@ -52,8 +52,9 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // Construction
 
-CPagePlayers::CPagePlayers() :
-  CPropertyPage(CPagePlayers::IDD)
+CPagePlayers::CPagePlayers(CAllSrvUISheet *pSheet) :
+  CPropertyPage(CPagePlayers::IDD),
+	m_mpSheet(pSheet)
 {
   //{{AFX_DATA_INIT(CPagePlayers)
   m_strSendChat = _T("");
@@ -62,7 +63,7 @@ CPagePlayers::CPagePlayers() :
   // Create a TCObj.Strings object
   HRESULT hr = m_spStrings.CreateInstance("TCObj.Strings");
   if (FAILED(hr))
-    GetSheet()->HandleError(hr, "creating TCObj.Strings helper object", true);
+    m_mpSheet->HandleError(hr, "creating TCObj.Strings helper object", true);
 }
 
 
@@ -339,7 +340,7 @@ void CPagePlayers::UpdateUI(bool bUpdateData)
     UpdateData();
 
   // Determine if a game is in progress or not
-  bool bGameInProgress = NULL != GetSheet()->GetGame();
+  bool bGameInProgress = NULL != m_mpSheet->GetGame();
 
   // Get the number of players that are selected
   UINT cSelectedItems = m_listPlayers.GetSelectedCount();
@@ -391,7 +392,7 @@ void CPagePlayers::SendChat()
     CComBSTR bstrSendChat(m_strSendChat);
     if (m_listPlayers.GetItemCount() == static_cast<int>(cSelectedItems))
     {
-      GetSheet()->GetGame()->SendChat(bstrSendChat, -1);
+      m_mpSheet->GetGame()->SendChat(bstrSendChat, -1);
     }
     else
     {
@@ -431,15 +432,15 @@ void CPagePlayers::PopulatePlayersList()
   m_listPlayers.DeleteAllItems();
 
   // Do nothing else if there is no game in progress
-  if (NULL == GetSheet()->GetGame())
+  if (NULL == m_mpSheet->GetGame())
     return;
 
   // Get the collection of users in the game
   IAdminUsersPtr spUsers;
-  HRESULT hr = GetSheet()->GetGame()->get_Users(&spUsers);
+  HRESULT hr = m_mpSheet->GetGame()->get_Users(&spUsers);
   if (FAILED(hr))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
 
@@ -447,13 +448,13 @@ void CPagePlayers::PopulatePlayersList()
   IUnknownPtr spEnumUnk;
   if (FAILED(hr = spUsers->get__NewEnum(&spEnumUnk)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
   IEnumVARIANTPtr spEnum(spEnumUnk);
   if (NULL == spEnum)
   {
-    GetSheet()->HandleError(E_NOINTERFACE, pszContext, true);
+    m_mpSheet->HandleError(E_NOINTERFACE, pszContext, true);
     return;
   }
 
@@ -466,7 +467,7 @@ void CPagePlayers::PopulatePlayersList()
     ULONG cFetched;
     if (FAILED(hr = spEnum->Next(sizeofArray(players), players, &cFetched)))
     {
-      GetSheet()->HandleError(hr, pszContext, true);
+      m_mpSheet->HandleError(hr, pszContext, true);
       return;
     }
 
@@ -477,7 +478,7 @@ void CPagePlayers::PopulatePlayersList()
       VARTYPE vt = V_VT(&players[i]);
       if (VT_DISPATCH != vt && VT_UNKNOWN != vt)
       {
-        GetSheet()->HandleError(DISP_E_TYPEMISMATCH, pszContext, true);
+        m_mpSheet->HandleError(DISP_E_TYPEMISMATCH, pszContext, true);
         return;
       }
 
@@ -485,7 +486,7 @@ void CPagePlayers::PopulatePlayersList()
       IAdminUserPtr spUser(V_DISPATCH(&players[i]));
       if (NULL == spUser)
       {
-        GetSheet()->HandleError(E_NOINTERFACE, pszContext, true);
+        m_mpSheet->HandleError(E_NOINTERFACE, pszContext, true);
         return;
       }
 
@@ -496,7 +497,7 @@ void CPagePlayers::PopulatePlayersList()
       IAdminShipPtr spShip;
       if (FAILED(hr = spUser->get_Ship(&spShip)))
       {
-        GetSheet()->HandleError(hr, pszContext, true);
+        m_mpSheet->HandleError(hr, pszContext, true);
         return;
       }
 
@@ -551,11 +552,16 @@ void CPagePlayers::AddPlayer(IAGCEvent* pEvent)
 
   // Get the IAdminUser for the specified user
   IAdminUserPtr spUser;
-//  if (FAILED(hr = GetSheet()->GetServer()->get_LookupUser(
+//  if (FAILED(hr = m_mpSheet->GetServer()->get_LookupUser(
 //    static_cast<AGCUniqueID>(idPlayer), &spUser)))
-  if (FAILED(hr = GetSheet()->GetServer()->get_FindUser(bstrName, &spUser)))
+
+  //CAllSrvUISheet* sheet = m_mpSheet;
+  //IAdminServer* server = sheet->GetServer();
+  hr = m_mpSheet->GetServer()->get_FindUser(bstrName, &spUser);
+
+  if (FAILED(hr))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
 
@@ -563,7 +569,7 @@ void CPagePlayers::AddPlayer(IAGCEvent* pEvent)
   IAdminShipPtr spShip;
   if (FAILED(hr = spUser->get_Ship(&spShip)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
 
@@ -656,14 +662,14 @@ void CPagePlayers::TeamInfoChange(IAGCEvent* pEvent)
 BOOL CPagePlayers::OnInitDialog() 
 {
   // Register for events of interest
-  GetSheet()->GetSession()->ActivateEvents(EventID_GameCreated, -1);
-  GetSheet()->GetSession()->ActivateEvents(EventID_GameDestroyed, -1);
-  GetSheet()->GetSession()->ActivateEvents(EventID_LoginGame, -1);
-  GetSheet()->GetSession()->ActivateEvents(EventID_LogoutGame, -1);
-  GetSheet()->GetSession()->ActivateEvents(EventID_ShipChangesSectors, -1);
-  GetSheet()->GetSession()->ActivateEvents(EventID_LeaveTeam, -1);
-  GetSheet()->GetSession()->ActivateEvents(EventID_JoinTeam, -1);
-  GetSheet()->GetSession()->ActivateEvents(EventID_TeamInfoChange, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_GameCreated, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_GameDestroyed, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_LoginGame, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_LogoutGame, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_ShipChangesSectors, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_LeaveTeam, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_JoinTeam, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_TeamInfoChange, -1);
 
   // Perform default processing
   CPropertyPage::OnInitDialog();
@@ -806,14 +812,14 @@ void CPagePlayers::OnBootPlayers()
     IAdminUserPtr spUser;
     if (FAILED(hr = pShip->get_User(&spUser)))
     {
-      GetSheet()->HandleError(hr, pszContext, false);
+      m_mpSheet->HandleError(hr, pszContext, false);
       return;
     }
 
     // Boot the player from the game
     if (FAILED(hr = spUser->Boot()))
     {
-      GetSheet()->HandleError(hr, pszContext, false);
+      m_mpSheet->HandleError(hr, pszContext, false);
       return;
     }
   }

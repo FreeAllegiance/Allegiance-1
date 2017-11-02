@@ -1,6 +1,9 @@
 #ifndef _token_h_
 #define _token_h_
 
+#include "tmap.h"
+#include "zstring.h"
+
 //////////////////////////////////////////////////////////////////////////////
 //
 //  Translate escape sequences \?

@@ -1,4 +1,5 @@
-#include "pch.h"
+#include "zstring.h"
+#include "zassert.h"
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -278,7 +279,7 @@ ZString ZString::GetProfileString(const ZString& strSection, const ZString& strK
 {
     char buf[256];
 
-    DWORD dw = ::GetProfileString(strSection, strKey, "", buf, 256);
+    uint32_t dw = ::GetProfileString(strSection, strKey, "", buf, 256);
 
     return ZString(buf, (int)dw);
 }

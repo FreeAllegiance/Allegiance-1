@@ -564,12 +564,7 @@ void StringPane::Paint(Surface* psurface)
 	}
 
 	WinPoint origin = WinPoint( nXStart, 0 ) + psurface->GetOffset();
-	m_pfont->DrawString(	NULL, 
-							origin, 
-							WinRect(	origin.X(), 
-										origin.Y(),
-										origin.X() + m_size.X(),
-										origin.Y() + m_size.Y() ),
+	m_pfont->DrawString(	origin,
 							strClipped, 
 							IsSelected() ? m_textColorSelected : m_textColor );
 
@@ -846,12 +841,7 @@ public:
 		//psurface->DrawString(m_pfont, m_textColor, WinPoint(0, 0), m_strClipped);
 
 		WinPoint origin = psurface->GetOffset();
-		m_pfont->DrawString(	NULL, 
-								origin, 
-								WinRect(	origin.X(), 
-											origin.Y(),
-											origin.X() + m_size.X(),
-											origin.Y() + m_size.Y() ),
+		m_pfont->DrawString(	origin,
 								m_strClipped, 
 								m_textColor );								
 

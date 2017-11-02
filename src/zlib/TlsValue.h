@@ -3,13 +3,11 @@
 #ifndef __TlsValue_h__
 #define __TlsValue_h__
 
+#include <mutex>
+
 /////////////////////////////////////////////////////////////////////////////
 // TlsValue.h : Declaration of the TlsValue template class.
 //
-
-#include "AutoCriticalSection.h"
-
-
 /////////////////////////////////////////////////////////////////////////////
 // TlsValue
 
@@ -153,19 +151,19 @@ public:
 
 // Implementation
 protected:
-  static ZAutoCriticalSection& GetSyncObject()
+  static std::mutex &GetSyncObject()
   {
     // Shared by all instances, which is not a big deal since this is only
     // used when first allocating the TLS slot.
-    static ZAutoCriticalSection s_cs;
+    static std::mutex s_cs;
     return s_cs;
   }
-  DWORD GetSlot()
+  uint32_t GetSlot()
   {
     if (m_dwSlot)                // Check for initialized slot
       return m_dwSlot;
 
-    GetSyncObject().Lock();      // Lock the sync object
+	std::lock_guard<std::mutex> lock(GetSyncObject());
     if (!m_dwSlot)               // Check (again) for uninitialized slot
     {
       m_dwSlot = TlsAlloc();     // Allocate a TLS slot
@@ -175,32 +173,25 @@ protected:
         TlsFree(0);              // Free the zero index
       }
     }
-    GetSyncObject().Unlock();    // Unlock the sync object
     return m_dwSlot;             // Return the (non-zero) slot
   }
 
 
 // Data Members
 protected:
-  DWORD m_dwSlot;
+  uint32_t m_dwSlot;
 };
 
 
 /////////////////////////////////////////////////////////////////////////////
 
-typedef TlsValue<DWORD > tlsDWORD;
-typedef TlsValue<WORD  > tlsWORD;
-typedef TlsValue<int   > tlsINT;
-typedef TlsValue<UINT  > tlsUINT;
-typedef TlsValue<SHORT > tlsSHORT;
-typedef TlsValue<USHORT> tlsUSHORT;
-typedef TlsValue<LONG  > tlsLONG;
-typedef TlsValue<ULONG > tlsULONG;
-typedef TlsValue<TCHAR > tlsTCHAR;
-typedef TlsValue<WCHAR > tlsWCHAR;
-typedef TlsValue<CHAR  > tlsCHAR;
-typedef TlsValue<BOOL  > tlsBOOL;
-typedef TlsValue<bool  > tlsBool;
+typedef TlsValue<int32_t > tlsINT32;
+typedef TlsValue<uint32_t> tlsUINT32;
+typedef TlsValue<int16_t > tlsINT16;
+typedef TlsValue<uint16_t> tlsUINT16;
+typedef TlsValue<char16_t> tlsCHAR16;
+typedef TlsValue<char    > tlsCHAR8;
+typedef TlsValue<bool    > tlsBool;
 
 
 /////////////////////////////////////////////////////////////////////////////

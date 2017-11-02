@@ -95,6 +95,12 @@ ScaleTransform::ScaleTransform(float scale) :
     m_vec(scale, scale, scale)
 {
 }
+
+ScaleTransform::ScaleTransform(Number* pscale) :
+	m_pScale(pscale),
+	m_vec(pscale->GetValue(), pscale->GetValue(), pscale->GetValue())
+{
+}
                                
 ScaleTransform::ScaleTransform(const Vector& vec) :
     m_vec(vec)
@@ -103,6 +109,10 @@ ScaleTransform::ScaleTransform(const Vector& vec) :
 
 void ScaleTransform::Evaluate()
 {
+	if (m_pScale && m_pScale->HasChanged())
+	{
+		SetScale(m_pScale->GetValue());
+	}
     GetValueInternal().SetScale(m_vec);
 }
 

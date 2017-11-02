@@ -454,9 +454,41 @@ void FetchGlobalAttributeSet(GlobalAttributeID gaid, GlobalAttributeSet& gas)
   #endif // !defined(ALLSRV_STANDALONE)
 }
 
+bool IsAnotherPlayerUsingThisName(const char * playerName, ImissionIGC * pMission)
+{
+	ShipLinkIGC* psl;
+	for (psl = pMission->GetShips()->first(); (psl != NULL); psl = psl->next())
+	{
+		CFSShip* pfsShip = (CFSShip *)(psl->data()->GetPrivateData());
+		if (pfsShip->IsPlayer())
+		{
+			CFSPlayer* pfsPlayerOther = pfsShip->GetPlayer();
+
+			if (_stricmp(playerName, pfsPlayerOther->GetName()) == 0)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 
 void JoinMission(CFSPlayer * pfsPlayer, DWORD dwCookie, const char * szPW)
 {
+
+	// BT - STEAM - Rearching some complaints of stats not being logged. It turns out that US East 1 wasn't in the official game sevrer list. Derp.
+	// Leaving this here for now so I can debug some achievement stuff as well. 
+	//CSteamID id(uint64(76561198028193684));
+	//CSteamAchievements ach(id);
+	//int currScore;
+	//for (int i = 0; i < 20; i++)
+	//{
+	//	ach.GetStat(EStats::SUM_SCORE, &currScore);
+	//	ach.SetStat(EStats::SUM_SCORE, 3 + currScore);
+	//}
+	//ach.SaveStats();
+
   // Get the mission in question
   CFSMission * pfsMission;
   if (NA == (int)dwCookie && CFSMission::GetMissions()->n() > 0)
@@ -490,10 +522,41 @@ void JoinMission(CFSPlayer * pfsPlayer, DWORD dwCookie, const char * szPW)
     return;
   }
 
+  ImissionIGC * pMission = pfsMission->GetIGCMission();
+
+  if (IsAnotherPlayerUsingThisName(pfsPlayer->GetName(), pMission) == true)
+  {
+	  for (int nameIndexCounter = 1; nameIndexCounter < 100; nameIndexCounter++)
+	  {
+		  ZString currentPlayerName = pfsPlayer->GetName();
+		  ZString namePart = currentPlayerName;
+		  ZString tagPart = "";
+		  if (currentPlayerName.Find("@") > -1)
+		  {
+			  namePart = currentPlayerName.LeftOf("@");
+			  tagPart = currentPlayerName.RightOf("@");
+		  }
+
+		  if (currentPlayerName.GetLength() > 23)
+			  namePart = namePart.Left(namePart.GetLength() - 2);
+
+		  namePart += nameIndexCounter;
+
+		  if (tagPart.GetLength() > 0)
+			  namePart += "@" + tagPart;
+
+		  if (IsAnotherPlayerUsingThisName((PCC)namePart, pMission) == false)
+		  {
+			  pfsPlayer->SetName((char *)(PCC)namePart);
+			  break;
+		  }
+	  }
+  }
+
 
   if(UTL::PrivilegedUser(pfsPlayer->GetName(),-1)){ //Avalanche: Let admins bypass most checks. //Imago 6/10 #2
   // check to see if the mission is running and whether joiners are allowed
-  ImissionIGC * pMission = pfsMission->GetIGCMission();
+  
   OldPlayerLink*    popi = pfsMission->GetOldPlayerLink(pfsPlayer->GetName());
   const MissionParams*    pmp = pMission->GetMissionParams();
   SideID iSide=SIDE_TEAMLOBBY;
@@ -539,7 +602,7 @@ if (pfsMission->RequiresInvitation())
     }
   }
 
-  ImissionIGC * pMission = pfsMission->GetIGCMission();
+  //ImissionIGC * pMission = pfsMission->GetIGCMission();
 
   #if defined(ALLSRV_STANDALONE)
   if (g.fm.GetHostApplicationGuid() == FEDSRV_STANDALONE_PRIVATE_GUID)
@@ -3590,11 +3653,16 @@ void SendShipUpdates(CFSMission * pfsMission)
                         pfmShipStatus->status = *pssOld = *pss;         //Also update the old status
                     }
 
-					//Xynth Add a periodic check for achievements
+					//Xynth Add a periodic check for achievements and IGC Score triggers
 					
 					if (ISPLAYER(pship))
 					{
 						CSteamAchievements *pSteamAchievements = pfsShip->GetPlayer()->GetSteamAchievements();
+						PlayerScoreObject * pso = pfsShip->GetPlayerScoreObject();
+						if ((pship->GetAchievementMask() & c_achmProbeSpot) > 0)
+							pso->AddProbeSpot();
+						if ((pship->GetAchievementMask() & c_achmNewRepair) > 0)
+							pso->SetRepair(int(pship->GetRepair()));
 
 						pSteamAchievements->AwardIGCAchievements(pship->GetAchievementMask());
 						pship->ClearAchievementMask();
@@ -4426,7 +4494,7 @@ HRESULT FedSrvSiteBase::OnNewConnection(FedMessaging * pthis, CFMConnection & cn
   // we don't do anything until they login
 
   // mmf 10/08 Log ip address (code provided by Imago)
-  char szRemote[16];
+  char szRemote[64];
   pthis->GetIPAddress(cnxn, szRemote);
   debugf("New connection ID: %x IP: %s\n",cnxn.GetID(),szRemote);
 
@@ -5838,23 +5906,51 @@ HRESULT FedSrvSiteBase::OnAppMessage(FedMessaging * pthis, CFMConnection & cnxnF
 
 			ZString responseText("Bypassed Login");
 
-			// Kick off the rank retrieval from the lobby. The response from that request will complete the client logon, and then the user will be allowed into the server.
-			BEGIN_PFM_CREATE(g.fmLobby, pfmPlayerRank, LS, PLAYER_RANK)
-				FM_VAR_PARM(PCC(pqd->szCharacterName), CB_ZTS)
-				FM_VAR_PARM(PCC(responseText), CB_ZTS)
-				FM_VAR_PARM(PCC(pqd->szPassword), CB_ZTS)
-				FM_VAR_PARM(PCC(pqd->szCDKey), CB_ZTS)
-				END_PFM_CREATE
+			if (g.fmLobby.IsConnected())
+			{
+				// Kick off the rank retrieval from the lobby. The response from that request will complete the client logon, and then the user will be allowed into the server.
+				BEGIN_PFM_CREATE(g.fmLobby, pfmPlayerRank, LS, PLAYER_RANK)
+					FM_VAR_PARM(PCC(pqd->szCharacterName), CB_ZTS)
+					FM_VAR_PARM(PCC(responseText), CB_ZTS)
+					FM_VAR_PARM(PCC(pqd->szPassword), CB_ZTS)
+					FM_VAR_PARM(PCC(pqd->szCDKey), CB_ZTS)
+					END_PFM_CREATE
 
 				pfmPlayerRank->characterID = pqd->characterID;
-			pfmPlayerRank->fCanCheat = pqd->fCanCheat;
-			pfmPlayerRank->fRetry = pqd->fRetry;
-			pfmPlayerRank->dwCookie = pqd->dwCookie;
-			pfmPlayerRank->fValid = true;
-			pfmPlayerRank->dwConnectionID = pqd->dwConnectionID;
+				pfmPlayerRank->fCanCheat = pqd->fCanCheat;
+				pfmPlayerRank->fRetry = pqd->fRetry;
+				pfmPlayerRank->dwCookie = pqd->dwCookie;
+				pfmPlayerRank->fValid = true;
+				pfmPlayerRank->dwConnectionID = pqd->dwConnectionID;
 
-			if (g.fmLobby.IsConnected())
 				g.fmLobby.SendMessages(g.fmLobby.GetServerConnection(), FM_GUARANTEED, FM_FLUSH);
+			}
+			else
+			{
+				CQLogonStats * logonDetailsQuery = new CQLogonStats(GotLogonDetails);
+				CQLogonStatsData * logonDetailsQueryData = logonDetailsQuery->GetData();
+
+				lstrcpy(logonDetailsQueryData->szCDKey, pqd->szCDKey);
+				lstrcpy(logonDetailsQueryData->szCharacterName, pqd->szCharacterName);
+				lstrcpy(logonDetailsQueryData->szPassword, pqd->szPassword);
+				lstrcpy(logonDetailsQueryData->szReason, "Login Success.");
+
+				logonDetailsQueryData->characterID = pqd->characterID;
+				logonDetailsQueryData->fCanCheat = pqd->fCanCheat;
+				logonDetailsQueryData->fRetry = pqd->fRetry;
+				logonDetailsQueryData->dwCookie = pqd->dwCookie;
+				logonDetailsQueryData->fValid = true;
+				logonDetailsQueryData->dwConnectionID = pqd->dwConnectionID;
+
+				logonDetailsQueryData->rank = 7;
+				logonDetailsQueryData->sigma = 0;
+				logonDetailsQueryData->mu = 0;
+				logonDetailsQueryData->commandRank = 0;
+				logonDetailsQueryData->commandSigma = 0;
+				logonDetailsQueryData->commandMu = 0;
+
+				PostThreadMessage(g.idReceiveThread, wm_sql_querydone, (WPARAM)NULL, (LPARAM)logonDetailsQuery);
+			}
 		}
 
 		//DWORD threadID;
@@ -10688,7 +10784,8 @@ class ThingSiteImpl : public ThingSite
 										ObjectID spottedID = pmodel->GetObjectID();
 										IshipIGC* pSpottedShip = pmodel->GetSide()->GetShip(spottedID);	
 
-										if (pSpottedShip != nullptr)
+										// Guarding against server crash.
+										if (pSpottedShip != nullptr && pSpottedShip->GetHullType() != nullptr && pSpottedShip->GetHullType()->GetData() != nullptr)
 										{
 											AssetMask am = GetAssetMask(pSpottedShip, pSpottedShip->GetHullType(), false);
 											short hvMask = c_amEnemyMiner | c_amEnemyBuilder | c_amEnemyCapital | c_amEnemyCarrier | c_amEnemyBomber | c_amEnemyAPC | c_amEnemyTeleportShip;
@@ -11839,7 +11936,7 @@ void FedSrvSiteBase::DamageShipEvent(Time now, IshipIGC* ship, ImodelIGC* launch
                                      droneWatchFireSound, "Watch your fire");
                         }
                     }
-                    else if (launcher->GetObjectType() == OT_ship)
+                    else if (launcher != nullptr && launcher->GetObjectType() == OT_ship)
                     {
                         CFSShip*    pfsLauncher = (CFSShip*)(((IshipIGC*)(launcher))->GetPrivateData());
                         if (pfsLauncher->IsPlayer())
@@ -11906,7 +12003,7 @@ void FedSrvSiteBase::DamageStationEvent(IstationIGC* station, ImodelIGC* launche
                                  droneWatchFireSound, "Watch your fire");
                     }
                 }
-                else if (launcher->GetObjectType() == OT_ship)
+                else if (launcher != nullptr && launcher->GetObjectType() == OT_ship)
                 {
                     CFSShip*    pfsLauncher = (CFSShip*)(((IshipIGC*)(launcher))->GetPrivateData());
                     if (pfsLauncher->IsPlayer())

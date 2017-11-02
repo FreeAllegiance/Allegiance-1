@@ -15,6 +15,7 @@
 #include <sqloledb.h>
 #include <atldbcli.h>
 #include <..\test\TCLib\TCThread.h>
+#include <mutex>
 
 class CSQLCore;
 class CSQLQuery;
@@ -118,9 +119,9 @@ public:
 
   void DumpErrorInfo(IUnknown * punk, IID iid, bool * pfRetry)
   {
-    m_cs.Lock(); // don't think this is thread safe, and since it's only called on errors, it doesn't affect performance
-    
-    CDBErrorInfo errorInfo;
+    std::lock_guard<std::mutex> lock(m_cs);
+
+	CDBErrorInfo errorInfo;
     ULONG        cRecords;
     HRESULT      hr;
     ULONG        iError; 
@@ -195,7 +196,6 @@ public:
       debugf("!!DBERR: retry not attempted !!!!\n");
     }
 
-    m_cs.Unlock();
     return;
   }
     
@@ -219,7 +219,7 @@ private:
   MListQueries  m_listQueriesNotify; // queries that need a reply
   MListQueries  m_listQueriesSilent; // queries that are send and forget
   DWORD         m_nThreadIDNotify; // thread to send completion notification to
-  ZAutoCriticalSection m_cs;
+  std::mutex m_cs;
   TRef<ISQLSite2> m_psqlsite;
 };
 

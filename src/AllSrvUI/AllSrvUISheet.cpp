@@ -41,7 +41,11 @@ CAllSrvUISheet::CAllSrvUISheet(CWnd* pParentWnd, UINT iSelectPage) :
   CPropertySheet(AFX_IDS_APP_TITLE, pParentWnd, iSelectPage),
   m_dwConnectionCookie(0),
   m_bInitDone(false),
-  m_bMultiMode(false)
+  m_bMultiMode(false),
+m_PageConnect(this),
+m_PagePlayers(this),
+m_PageChat(this),
+m_PageGameCreate(this)
 {
   // Add a single page
   AddPage(&m_PageConnect);

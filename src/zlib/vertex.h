@@ -7,6 +7,8 @@
 #ifndef _HVector_H_
 #define _HVector_H_
 
+#include "vector.h"
+
 class HVector {
 public:
     float x, y, z, w;

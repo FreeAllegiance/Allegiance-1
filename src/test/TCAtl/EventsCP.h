@@ -12,7 +12,6 @@
 #include <..\TCLib\WorkerThread.h>
 #include <..\TCLib\ObjectLock.h>
 
-
 /////////////////////////////////////////////////////////////////////////////
 // TCComEventsCP is the base class for a connection point that has an
 // *IUnknown* derived v-table sink interface.
@@ -77,7 +76,7 @@ public:
   // Declares a vector type of /IV/ interface pointers.
   typedef std::vector<IV*> vector_vtbl;
   // Declares a vector iterator type for vector_vtbl.
-  typedef VSNET_TNFIX vector_vtbl::iterator it_vtbl;
+  typedef typename vector_vtbl::iterator it_vtbl;
 
 // Overrides
 protected:
@@ -306,8 +305,8 @@ void TCComEventsCP<T, IV, piid>::RemoveFailedSink(HRESULT hr, IV* pIfVtbl)
   class ATL_NO_VTABLE className : public TCComEventsCP<T, IV, &IID_vtbl>    \
   {                                                                         \
   protected:                                                                \
-    typedef VSNET_TNFIX TCComEventsCP<T, IV, &IID_vtbl>::TIV TIV;                       \
-    typedef VSNET_TNFIX TCComEventsCP<T, IV, &IID_vtbl>::PIV PIV;
+    typedef typename TCComEventsCP<T, IV, &IID_vtbl>::TIV TIV;                       \
+    typedef typename TCComEventsCP<T, IV, &IID_vtbl>::PIV PIV;
 
 /////////////////////////////////////////////////////////////////////////////
 // {partof:BEGIN_TCComEventsCP}

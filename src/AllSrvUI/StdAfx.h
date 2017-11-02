@@ -85,6 +85,8 @@ const int c_cMaxChatsInRegistry = 30;
 //const int LVS_EX_LABELTIP = 0x00004000;
 
 
+
+
 /////////////////////////////////////////////////////////////////////////////
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.

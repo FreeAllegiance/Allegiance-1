@@ -109,7 +109,7 @@ void CallsignTagInfo::LoadFromRegistry()
 		RegQueryValueEx(hKey, "SteamOfficerToken", NULL, &dwType, (BYTE *)&szSteamOfficerToken, &cbSteamOfficerToken);
 		RegCloseKey(hKey);
 	}
-
+#ifdef STEAM_APP_ID
 	CSteamID targetGroupID(strtoull(szSteamClanID, NULL, NULL));
 
 	CSteamID currentUser = SteamUser()->GetSteamID();
@@ -125,6 +125,7 @@ void CallsignTagInfo::LoadFromRegistry()
 	}
 
 	UpdateStringValues(szSteamOfficerToken);
+#endif
 }
 
 void CallsignTagInfo::SaveToRegistry()

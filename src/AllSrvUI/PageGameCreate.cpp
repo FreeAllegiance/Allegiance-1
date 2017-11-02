@@ -75,8 +75,9 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // Construction
 
-CPageGameCreate::CPageGameCreate() :
-  CPropertyPage(CPageGameCreate::IDD)
+CPageGameCreate::CPageGameCreate(CAllSrvUISheet *pSheet) :
+  CPropertyPage(CPageGameCreate::IDD),
+	m_mpSheet(pSheet)
 {
   //{{AFX_DATA_INIT(CPageGameCreate)
   m_iGameVisibility = -1;
@@ -113,9 +114,9 @@ void CPageGameCreate::OnEvent(IAGCEvent* pEvent)
     case EventID_GameStateChange:
     {
       // Get the current Game Parameters
-      HRESULT hr = GetSheet()->GetGame()->get_GameParameters(&m_spGameParameters);
+      HRESULT hr = m_mpSheet->GetGame()->get_GameParameters(&m_spGameParameters);
       if (FAILED(hr))
-        GetSheet()->HandleError(hr, "retrieving Game Parameters object", true);
+        m_mpSheet->HandleError(hr, "retrieving Game Parameters object", true);
 
       // Update the data members from the game parameters
       UpdateFromGameParameters();
@@ -183,7 +184,7 @@ void CPageGameCreate::UpdateUI(bool bUpdateData)
     UpdateData();
 
   // Determine if a game is in progress or not
-  bool bGameInProgress = NULL != GetSheet()->GetGame();
+  bool bGameInProgress = NULL != m_mpSheet->GetGame();
 
   // Enable/disable the controls as needed
   m_btnPrivateGame.EnableWindow(!bGameInProgress);
@@ -211,7 +212,7 @@ void CPageGameCreate::UpdateFromGameParameters()
   HRESULT hr;
   if (FAILED(hr = m_spGameParameters->get_GameName(&bstr)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
   m_strGameName = bstr;
@@ -219,7 +220,7 @@ void CPageGameCreate::UpdateFromGameParameters()
   // GamePassword
   if (FAILED(hr = m_spGameParameters->get_GamePassword(&bstr)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
   m_strGamePassword = bstr;
@@ -227,7 +228,7 @@ void CPageGameCreate::UpdateFromGameParameters()
   // KGJV- GameCore
   if (FAILED(hr = m_spGameParameters->get_IGCStaticFile(&bstr)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
   m_strGameCore = bstr;
@@ -237,7 +238,7 @@ void CPageGameCreate::UpdateFromGameParameters()
   short cMaxPlayers;
   if (FAILED(hr = m_spGameParameters->get_TotalMaxPlayers(&cMaxPlayers)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
   CString strMaxPlayers;
@@ -250,7 +251,7 @@ void CPageGameCreate::UpdateFromGameParameters()
   VARIANT_BOOL bLockGameOpen;
   if (FAILED(hr = m_spGameParameters->get_LockGameOpen(&bLockGameOpen)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
   m_bLockGameOpen = !!bLockGameOpen;
@@ -259,7 +260,7 @@ void CPageGameCreate::UpdateFromGameParameters()
   VARIANT_BOOL bAET;
   if (FAILED(hr = m_spGameParameters->get_AllowEmptyTeams(&bAET)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
   m_bAET = !!bAET;
@@ -275,22 +276,22 @@ BOOL CPageGameCreate::OnInitDialog()
   HRESULT hr;
 
   // Register for events of interest
-  GetSheet()->GetSession()->ActivateEvents(EventID_GameStateChange, -1);
-  GetSheet()->GetSession()->ActivateEvents(EventID_GameDestroyed, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_GameStateChange, -1);
+  m_mpSheet->GetSession()->ActivateEvents(EventID_GameDestroyed, -1);
 
   // Get the Game Parameters of the current game, if any
-  if (GetSheet()->GetGame())
+  if (m_mpSheet->GetGame())
   {
-    hr = GetSheet()->GetGame()->get_GameParameters(&m_spGameParameters);
+    hr = m_mpSheet->GetGame()->get_GameParameters(&m_spGameParameters);
     if (FAILED(hr))
-      return S_OK == GetSheet()->HandleError(hr, "retrieving Game Parameters object", true);
+      return S_OK == m_mpSheet->HandleError(hr, "retrieving Game Parameters object", true);
   }
   else
   {
     // Create an instance of the AGC Game Parameters
     hr = m_spGameParameters.CreateInstance(CLSID_AGCGameParameters);
     if (FAILED(hr))
-      return S_OK == GetSheet()->HandleError(hr, "creating Game Parameters object", true);
+      return S_OK == m_mpSheet->HandleError(hr, "creating Game Parameters object", true);
 
     // Set the default game name
     TCHAR szUserName[UNLEN + 1];
@@ -305,7 +306,7 @@ BOOL CPageGameCreate::OnInitDialog()
 #endif
     hr = m_spGameParameters->put_GameName(CComBSTR(szDefaultGameName));
     if (FAILED(hr))
-      return S_OK == GetSheet()->HandleError(hr, "setting Game Parameters property", true);
+      return S_OK == m_mpSheet->HandleError(hr, "setting Game Parameters property", true);
   }
 
   // Perform default processing
@@ -315,7 +316,7 @@ BOOL CPageGameCreate::OnInitDialog()
   m_AutoSizer.SetWindowAndRules(*this, _AutoSizerMap);
 
   // Show/hide buttons depending on server mode
-  bool bMultiMode = GetSheet()->IsServerInMultiMode();
+  bool bMultiMode = m_mpSheet->IsServerInMultiMode();
   m_btnGameSelect.ShowWindow (bMultiMode ? SW_SHOW : SW_HIDE);
   m_btnGameCreate.ShowWindow (bMultiMode ? SW_HIDE : SW_SHOW);
   m_btnGameDestroy.ShowWindow(bMultiMode ? SW_HIDE : SW_SHOW);
@@ -327,13 +328,13 @@ BOOL CPageGameCreate::OnInitDialog()
   CRegKey key;
   key.Create(HKEY_LOCAL_MACHINE, HKLM_AllSrvUI);
 
-  if (GetSheet()->GetGame())
+  if (m_mpSheet->GetGame())
   {
     // Get the LobbyServer of the current game
     CComBSTR bstrLobbyServer;
-    hr = GetSheet()->GetServer()->get_LobbyServer(&bstrLobbyServer);
+    hr = m_mpSheet->GetServer()->get_LobbyServer(&bstrLobbyServer);
     if (FAILED(hr))
-      return S_OK == GetSheet()->HandleError(hr, "retriving LobbyServer property", true);
+      return S_OK == m_mpSheet->HandleError(hr, "retriving LobbyServer property", true);
 
     // Set the data members associated with the fields
     if (!bstrLobbyServer.Length())
@@ -410,7 +411,7 @@ void CPageGameCreate::OnGameSettings()
 
 void CPageGameCreate::OnGameSelect() 
 {
-  GetSheet()->SelectGame();
+  m_mpSheet->SelectGame();
 }
 
 void CPageGameCreate::OnGameCreate() 
@@ -428,7 +429,7 @@ void CPageGameCreate::OnGameCreate()
     hr = m_spGameParameters->put_GamePassword(CComBSTR(m_strGamePassword));
   if (FAILED(hr))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
   // KGJV- core
@@ -437,7 +438,7 @@ void CPageGameCreate::OnGameCreate()
 	hr = m_spGameParameters->put_IGCStaticFile(CComBSTR(m_strGameCore));
 	if (FAILED(hr))
 	{
-		GetSheet()->HandleError(hr, pszContext, true);
+		m_mpSheet->HandleError(hr, pszContext, true);
 		return;
 	}
   }
@@ -454,7 +455,7 @@ void CPageGameCreate::OnGameCreate()
   }
   if (FAILED(hr))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
 
@@ -462,7 +463,7 @@ void CPageGameCreate::OnGameCreate()
   VARIANT_BOOL bLockGameOpen = m_bLockGameOpen ? VARIANT_TRUE : VARIANT_FALSE;
   if (FAILED(hr = m_spGameParameters->put_LockGameOpen(bLockGameOpen)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
 
@@ -470,7 +471,7 @@ void CPageGameCreate::OnGameCreate()
   VARIANT_BOOL bAET = m_bAET ? VARIANT_TRUE : VARIANT_FALSE;
   if (FAILED(hr = m_spGameParameters->put_AllowEmptyTeams(bAET)))
   {
-    GetSheet()->HandleError(hr, pszContext, true);
+    m_mpSheet->HandleError(hr, pszContext, true);
     return;
   }
 
@@ -479,16 +480,16 @@ void CPageGameCreate::OnGameCreate()
   bool bLobbyServer = (1 == m_iGameVisibility);
 
   // Create the game
-  hr = GetSheet()->CreateGame(bLobbyServer, m_spGameParameters);
+  hr = m_mpSheet->CreateGame(bLobbyServer, m_spGameParameters);
   if (SUCCEEDED(hr))
   {
     SetDefID(m_btnGameSettings.GetDlgCtrlID());
     m_btnGameSettings.SetFocus();
 
     // Get the game parameters of the just-created game
-    hr = GetSheet()->GetGame()->get_GameParameters(&m_spGameParameters);
+    hr = m_mpSheet->GetGame()->get_GameParameters(&m_spGameParameters);
     if (FAILED(hr))
-      GetSheet()->HandleError(hr, "retrieving Game Parameters object", true);
+      m_mpSheet->HandleError(hr, "retrieving Game Parameters object", true);
 
     // Update the data members from the game parameters
     UpdateFromGameParameters();
@@ -499,7 +500,7 @@ void CPageGameCreate::OnGameCreate()
   else
   { 
     // return now because it is possible that the sheet was destroyed when we 
-    // tried to create a game in GetSheet()->CreateGame().  This can happen
+    // tried to create a game in m_mpSheet->CreateGame().  This can happen
     // if an auto-update is needed.  If we call UpdateUI() in such cases,
     // this app will crash.
     return;
@@ -514,7 +515,7 @@ void CPageGameCreate::OnGameCreate()
   LONG lr = key.Create(HKEY_LOCAL_MACHINE, HKLM_AllSrvUI);
   if (ERROR_SUCCESS != lr)
   {
-    GetSheet()->HandleError(HRESULT_FROM_WIN32(lr), pszContext, false);
+    m_mpSheet->HandleError(HRESULT_FROM_WIN32(lr), pszContext, false);
     return;
   }
 
@@ -536,7 +537,7 @@ void CPageGameCreate::OnGameCreate()
     }
   }
   if (FAILED(hr))
-    GetSheet()->HandleError(hr, pszContext, false);
+    m_mpSheet->HandleError(hr, pszContext, false);
 }
 
 
@@ -545,7 +546,7 @@ void CPageGameCreate::OnGameDestroy()
   CWaitCursor wait;
 
   // Destroy the game
-  HRESULT hr = GetSheet()->DestroyGame();
+  HRESULT hr = m_mpSheet->DestroyGame();
 
   // Update the UI
   UpdateUI();

@@ -54,7 +54,8 @@ TRef<ComboPane> CreateComboPane(
     IPopupContainer* ppopupContainer,
     IEngineFont*     pfont,
     const WinPoint&  size,
-    ComboFacePane*   pface
+    ComboFacePane*   pface,
+    ModifiablePointValue* pmousePosition
 );
 
 #endif

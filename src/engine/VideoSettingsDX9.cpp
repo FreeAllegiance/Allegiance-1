@@ -190,8 +190,8 @@ bool PromptUserForVideoSettings(bool bStartFullscreen, bool bRaise, int iAdapter
 			HMONITOR mymon;
 			g_VideoSettings.pDevData->GetResolutionDetails(iAdapter,i,&myx,&myy,&myrate,&mybbf,&mydf,&mymon);
 			if (g_VideoSettings.d3dDeviceFormat == mydf && g_VideoSettings.d3dBackBufferFormat == mybbf) {
-				if (800 == myx && 600 == myy) { //intentional 800x600
-					if (myrate > g_DX9Settings.m_refreshrate && myrate <= maxrate)
+				if (x == myx && y == myy) {
+					if (myrate >= g_DX9Settings.m_refreshrate && myrate <= maxrate)
 						iBestMode = i;
 				}
 			}
@@ -202,8 +202,9 @@ bool PromptUserForVideoSettings(bool bStartFullscreen, bool bRaise, int iAdapter
 											iAdapter,
 											iBestMode,
 											&g_VideoSettings.iNumResolutions,
-											&g_VideoSettings.iSelectedResolution,
+											&g_VideoSettings.iCurrentMode,
 											&g_VideoSettings.pResolutionSet );
+		g_VideoSettings.iCurrentMode = iBestMode;
 
         logFile.OutputStringV("\n\nFOUND RESOLUTIONS (MODE %i) (MAXRATE: %i):\n",iBestMode,maxrate);
 		for (int i=0;i<g_VideoSettings.iNumResolutions;i++) {

@@ -28,21 +28,16 @@ public:
 //
 /////////////////////////////////////////////////////////////////////////////
 
-TopPane::TopPane(Engine* pengine, SurfaceType stype, bool bColorKey, TopPaneSite* psite, Pane* pchild) :
+TopPane::TopPane(Engine* pengine, bool bColorKey, TopPaneSite* psite, Pane* pchild) :
     Pane(pchild),
     m_pengine(pengine),
-    m_stype(stype),
 //    m_psurface(pengine->CreateSurface(WinPoint(1, 1), stype, new TopPaneSurfaceSite(this))),
-    m_psurface(pengine->CreateDummySurface(WinPoint(1, 1), new TopPaneSurfaceSite(this))),
-//    m_psurface( NULL ),
+    m_psurface(NULL),
     m_psite(psite),
     m_bColorKey(bColorKey),
     m_bNeedLayout(true)
 { //Fix memory leak -Imago 8/2/09
-    if (m_bColorKey) {
-        m_psurface->SetColorKey(Color(0, 0, 0));
-    }
-    SetSize(WinPoint(1, 1));
+    SetSize(WinPoint(0, 0));
 }
 
 void TopPane::RepaintSurface()
@@ -142,6 +137,9 @@ void TopPane::UpdateBits()
 	{
 		HRESULT hr;
 		bool bRenderTargetRequired;
+
+        ZAssert(m_psurface != NULL);
+
 		PrivateSurface* pprivateSurface; CastTo(pprivateSurface, m_psurface);
 		bRenderTargetRequired = pprivateSurface->GetSurfaceType().Test(SurfaceTypeRenderTarget() ) == true;
 
@@ -218,8 +216,12 @@ const WinPoint& TopPane::GetSurfaceSize()
 Surface* TopPane::GetSurface()
 {
     Evaluate();
-    UpdateBits();
 
+    //when the size is zero, the surface is not initialized
+    if (m_size.X() == 0 || m_size.Y() == 0) {
+        return NULL;
+    }
+    UpdateBits();
     return m_psurface;
 }
 

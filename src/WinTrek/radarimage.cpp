@@ -254,18 +254,13 @@ public:
                 delta = m;
         }
 
-#if (DIRECT3D_VERSION >= 0x0800)
 		pcontext->SetBlendMode(BlendModeSourceAlpha); //imago 7/15/09
         CD3DDevice9::Get()->SetRenderState( D3DRS_MULTISAMPLEANTIALIAS, FALSE );
-#endif
         pcontext->DrawImage3D(psurface, Rect(       0,        0, xsizeMid, ysizeMid), color, true, Point(-delta, -delta));
         pcontext->DrawImage3D(psurface, Rect(xsizeMid,        0,    xsize, ysizeMid), color, true, Point( delta, -delta));
         pcontext->DrawImage3D(psurface, Rect(xsizeMid, ysizeMid,    xsize,    ysize), color, true, Point( delta,  delta));
         pcontext->DrawImage3D(psurface, Rect(       0, ysizeMid, xsizeMid,    ysize), color, true, Point(-delta,  delta));
-
-#if (DIRECT3D_VERSION >= 0x0800)
         CD3DDevice9::Get()->SetRenderState( D3DRS_MULTISAMPLEANTIALIAS, TRUE );
-#endif
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -398,13 +393,7 @@ public:
         if (bIcon)
         {
             pcontext->Translate(positionIcon);
-			
-#if (DIRECT3D_VERSION >= 0x0800)
 			pcontext->SetBlendMode(BlendModeAdd); //Imago 7/10 upgraded #181
-#else
-			pcontext->SetBlendMode(BlendModeSourceAlpha);
-#endif 
-
 
             pcontext->DrawImage3D(psurfaceIcon, colorIcon, true);
         }
@@ -1114,12 +1103,10 @@ public:
             //
             pcontext->SetShadeMode(ShadeModeFlat);
             pcontext->SetLinearFilter(false, true);
-
-#if DIRECT3D_VERSION >= 0x0800
             CD3DDevice9::Get()->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP );
             CD3DDevice9::Get()->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP );
             CD3DDevice9::Get()->SetSamplerState(0, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP );
-#endif
+
 			//
 			// Shrink the rect size by half the size of the gauge bitmap
 			// and center the rect around the origin
@@ -1258,9 +1245,7 @@ public:
 
                 if ((data.m_hull <= 1.0f) || (data.m_fill <= 1.0f))
                 {
-#if (DIRECT3D_VERSION >= 0x0800)
                     CD3DDevice9::Get()->SetRenderState( D3DRS_MULTISAMPLEANTIALIAS, FALSE ); //8/8/09 Imago
-#endif
                     const float c_width = 16.0f;
 
                     float   xOffset = float(floor(offset.X()));
@@ -1309,22 +1294,16 @@ public:
                             pcontext->FillRect(rectHull, Color(1.0f, 0.0f, 0.0f));
                         }
                     }
-
-#if (DIRECT3D_VERSION >= 0x0800)
                     CD3DDevice9::Get()->SetRenderState( D3DRS_MULTISAMPLEANTIALIAS, TRUE ); //8/8/09 Imago
-#endif
                 }
 
                 iter.Next();
             }
 
             m_listTextData.SetEmpty();
-
-#if (DIRECT3D_VERSION >= 0x0800)
             CD3DDevice9::Get()->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
             CD3DDevice9::Get()->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
             CD3DDevice9::Get()->SetSamplerState(0, D3DSAMP_ADDRESSW, D3DTADDRESS_WRAP );
-#endif
         }
     }
 };

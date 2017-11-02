@@ -2,6 +2,8 @@
 #ifndef _OLDDXDEFNS_H_
 #define _OLDDXDEFNS_H_
 
+#include <cstdint>
+
 // KGJV: D3DCOLORVALUE renamned to COLORVALUE and defined here so it becomes independent of DirectX
 
 typedef struct COLORVALUE {
@@ -13,8 +15,6 @@ typedef struct COLORVALUE {
 
 // Older DX definitions included to get the project to build. At some point,
 // they all become redundant.
-
-#if (DIRECT3D_VERSION >= 0x0800)
 
 typedef float D3DVALUE;
 typedef DWORD D3DCOLOR;
@@ -96,7 +96,7 @@ typedef struct _D3DVECTOR {
  */
 
 typedef struct _D3DHVERTEX {
-    DWORD           dwFlags;        /* Homogeneous clipping flags */
+    uint32_t           dwFlags;        /* Homogeneous clipping flags */
     union {
     D3DVALUE    hx;
     D3DVALUE    dvHX;
@@ -173,7 +173,7 @@ typedef struct _D3DLVERTEX {
     D3DVALUE     z;
     D3DVALUE     dvZ;
     };
-    DWORD            dwReserved;
+    uint32_t            dwReserved;
     union {
     D3DCOLOR     color;         /* Vertex color */
     D3DCOLOR     dcColor;
@@ -252,7 +252,5 @@ typedef struct _D3DVERTEX {
                          D3DFVF_SPECULAR | D3DFVF_TEX1 )
 #define D3DFVF_TLVERTEX ( D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | \
                           D3DFVF_TEX1 )
-
-#endif // if (DIRECT3D_VERSION >= 0x0800)
 
 #endif // _OLDDXDEFNS_H_

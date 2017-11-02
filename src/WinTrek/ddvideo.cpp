@@ -2,8 +2,6 @@
 #include "ddvideo.h" //Macros and crap
 #include "ddstream.h" //DShow object
 
-#if (DIRECT3D_VERSION >= 0x0800)
-
 DDVideo::DDVideo()
 {
 	m_hWnd         = NULL;
@@ -134,5 +132,3 @@ BOOL DDVideo::Flip()
 
     return (ddrval == DD_OK);
 }
-
-#endif

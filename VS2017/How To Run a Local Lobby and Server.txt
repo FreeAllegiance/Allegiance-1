@@ -1,0 +1,13 @@
+Get SteamCMD from: https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip
+Unzip it to C:\Steam
+run c:\Steam\SteamCMD
+Run these steamCMDs from inside SteamCMD:
+    login anonymous
+    force_install_dir c:\Allegiance\Server
+    app_update 730810
+    
+Go to C:\Allegiance\Server
+Follow instructions in the readme. 
+
+    
+The batch files are looking for files in these paths, so it would be easiest not to modify them.

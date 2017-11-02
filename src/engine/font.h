@@ -15,9 +15,7 @@ public:
     virtual int      GetHeight()                                                    = 0;
 
     virtual void DrawString(
-              Surface*  psurface, 
-        const WinPoint& point, 
-        const WinRect&  rectClip,
+        const WinPoint& point,
         const ZString&  str, 
         const Color&    color
     ) = 0;

@@ -91,7 +91,7 @@ void WorkerThread::StopThread()
 // performs a single pass through the task list
 bool TaskListThread::ThreadIteration()
 {
-    CriticalSectionLock lock(m_csTaskList);
+	std::lock_guard<std::mutex> lock(m_csTaskList);
 
     for (TaskList::iterator iterTask = m_listTasks.begin(); 
             iterTask != m_listTasks.end();)
@@ -112,24 +112,22 @@ bool TaskListThread::ThreadIteration()
 // Adds a new task to the list.
 void TaskListThread::AddTask(Task* ptask)
 {
-    CriticalSectionLock lock(m_csTaskList);
+	std::lock_guard<std::mutex> lock(m_csTaskList);
     m_listTasks.insert(ptask);
 }
 
 // removes a task from the list.
 void TaskListThread::RemoveTask(Task* ptask)
 {
-    CriticalSectionLock lock(m_csTaskList);
+	std::lock_guard<std::mutex> lock(m_csTaskList);
     m_listTasks.erase(ptask);
 }
 
 // checks to see if we have the given task
 bool TaskListThread::HasTask(Task* ptask)
 {
-    CriticalSectionLock lock(m_csTaskList);
+	std::lock_guard<std::mutex> lock(m_csTaskList);
     return (m_listTasks.find(ptask) != m_listTasks.end());
 }
 
-
 };
-

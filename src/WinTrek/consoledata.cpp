@@ -683,7 +683,8 @@ float ModelData::GetScanRange()
 
 ZString PartWrapper::GetPartName()
 {
-    return m_ppart ? m_ppart->GetPartType()->GetName() : "";
+	// Fix for crash when boosting into base while shooting and turning in TM6.
+    return m_ppart && m_ppart->GetPartType() ? m_ppart->GetPartType()->GetName() : "";
 }
 
 float PartWrapper::GetRange()

@@ -12,10 +12,14 @@
  *-----------------------------------------------------------------------*/
 
 
-#include "pch.h"
+#include "FTPSession.h"
 
+#include <Windows.h>
+#include <WinInet.h>
+#include <cstdio>
+#include <cstdint>
 
-
+#include "zassert.h"
 
 
 template<class TInterfaceClass>
@@ -47,8 +51,8 @@ public:
       m_eventFileCompleted = CreateEvent(NULL, FALSE, FALSE, NULL);
 
       debugf("Creating download thread.\n");
-      DWORD dum;
-      m_threadDownload = CreateThread(NULL, 0, DownloadThread, (void*)this, 0, &dum);
+      uint32_t dum;
+      m_threadDownload = CreateThread(NULL, 0, LPTHREAD_START_ROUTINE(DownloadThread), (void*)this, 0, LPDWORD(&dum));
 
       if (m_pUpdateSink && m_threadDownload == NULL)
           debugf("Failed to create thread.\n");
@@ -273,7 +277,7 @@ protected:
         FILE_COMPLETED,
     };
 
-     static DWORD WINAPI DownloadThread(LPVOID pThreadParameter)
+     static uint32_t WINAPI DownloadThread(LPVOID pThreadParameter)
     {
 		debugf("DownloadThread(): thread started.\r\n");
 
@@ -575,7 +579,7 @@ protected:
      *    dwErrorCode: take a dwErrorCode and print what it means as text    
      * 
      */
-    void FormatErrorMessage(char *szBuffer, DWORD dwErrorCode)
+    void FormatErrorMessage(char *szBuffer, uint32_t dwErrorCode)
     {
 
       sprintf(szBuffer,"(%d) ", dwErrorCode);
@@ -735,7 +739,7 @@ public:
            szPassword,                      // Password, can be NULL
            INTERNET_SERVICE_FTP,            // Flag to use FTP services
            0,                               // Flags (see SDK docs)
-           (DWORD) this);                   // Context for this connection
+           (uint32_t) this);                   // Context for this connection
 
         if(m_hFTPSession== NULL)
         {

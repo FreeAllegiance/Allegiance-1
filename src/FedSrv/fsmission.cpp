@@ -2930,11 +2930,11 @@ void CFSMission::RecordPlayerResults(IshipIGC* pship, CFSPlayer *player, SideID 
 
 	// BT - STEAM
 	CSteamAchievements *pSteamAchievements = player->GetSteamAchievements();
-
+	IshipIGC *pIship = player->GetIGCShip();
 	pSteamAchievements->AwardBetaParticipation();
 	
 	pSteamAchievements->UpdateLeaderboard(ppso);
-	pSteamAchievements->AddUserStats(ppso);
+	pSteamAchievements->AddUserStats(ppso, pIship);	
 
 	pSteamAchievements->SaveStats();
 
@@ -3070,6 +3070,43 @@ void CFSMission::ProcessGameOver()
 
   m_flGameDuration = g.timeNow - m_misdef.misparms.timeStart;
 
+  //Xynth Determine Rank Ratio and load it into PlayerScoreObjects
+  {
+	  int sideCount = 0;
+	  ObjectID sideID[3];
+	  int rank[3];
+	  for (SideLinkIGC* psl = m_pMission->GetSides()->first(); psl != NULL && sideCount < 3; psl = psl->next())
+	  {
+		  IsideIGC* pside = psl->data();
+		  sideID[sideCount] = pside->GetObjectID();
+		  rank[sideCount] = GetSideRankSum(pside,false);
+		  sideCount++;		  
+	  }
+	  if (sideCount == 2) //if more than 2 sides, just use the default 1.0 ratio
+	  {
+		  for (int i = 0; i < 2; i++)
+		  {
+			  if (rank[i] == 0) //avoid divide by zero
+				  rank[i] = 1;
+		  }
+		  float ratio1 = float(rank[0]) / rank[1];
+		  float ratio0 = float(rank[1]) / rank[0];
+		  for (pShiplink = pShips->first(); pShiplink; pShiplink = pShiplink->next())
+		  {
+			  CFSShip * pfsShip = (CFSShip *)pShiplink->data()->GetPrivateData();
+			  if (pfsShip->IsPlayer())
+			  {
+				  PlayerScoreObject*  ppso = pfsShip->GetPlayerScoreObject();
+				  if (pfsShip->GetSide()->GetObjectID() == sideID[0])
+					  ppso->SetRankRatio(ratio0);
+				  else
+					  ppso->SetRankRatio(ratio1);
+			  }
+		  }
+	  }
+
+  }
+  
   //Calculate scores for all players and get a running average of time played.
   float                 totalExperience                = 0.0f;
   float                 sideExperience[c_cSidesMax]    = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
@@ -3253,10 +3290,11 @@ void CFSMission::ProcessGameOver()
   }
 
   // Record the Game Results
-  if (m_misdef.misparms.bScoresCount) // Only if scores count
-  {
+  //if (m_misdef.misparms.bScoresCount) // Only if scores count
+  //{
+  // BT - STEAM - Scores always count. 
     RecordGameResults();
-  }
+  //}
 
   // Queue the GameOver message to all connected users
   g.fm.SetDefaultRecipient(GetGroupMission(), FM_GUARANTEED);

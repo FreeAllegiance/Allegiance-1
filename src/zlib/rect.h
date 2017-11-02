@@ -7,6 +7,8 @@
 #ifndef _rect_h_
 #define _rect_h_
 
+#include "point.h"
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // Template for rectangles
@@ -18,11 +20,11 @@ class TRect : public RectType {
 public:
     TRect() {}
 
-    TRect(const VSNET_TNFIX RectType::PointType min, const VSNET_TNFIX RectType::PointType max) :
+    TRect(const typename RectType::PointType min, const typename RectType::PointType max) :
         RectType(min, max)
     {}
 
-    TRect(VSNET_TNFIX RectType::Number xmin, VSNET_TNFIX RectType::Number ymin, VSNET_TNFIX RectType::Number xmax, VSNET_TNFIX RectType::Number ymax) :
+    TRect(typename RectType::Number xmin, typename RectType::Number ymin, typename RectType::Number xmax, typename RectType::Number ymax) :
         RectType(RectType::PointType(xmin, ymin), RectType::PointType(xmax, ymax))
     {}
 
@@ -47,11 +49,11 @@ public:
 
     static TRect GetZero() { return TRect(0, 0, 0, 0); }
 
-    VSNET_TNFIX RectType::Number XSize() const { return XMax() - XMin(); }
-    VSNET_TNFIX RectType::Number YSize() const { return YMax() - YMin(); }
-    VSNET_TNFIX RectType::PointType Size() const { return Max() - Min(); }
+    typename RectType::Number XSize() const { return XMax() - XMin(); }
+    typename RectType::Number YSize() const { return YMax() - YMin(); }
+    typename RectType::PointType Size() const { return Max() - Min(); }
 
-    VSNET_TNFIX RectType::PointType Center() const 
+    typename RectType::PointType Center() const
     { 
         return (Max() + Min()) / 2;
     }
@@ -61,7 +63,7 @@ public:
         return XMin() >= XMax() || YMin() >= YMax();
     }
 
-    bool Inside(const VSNET_TNFIX RectType::PointType& point) const
+    bool Inside(const typename RectType::PointType& point) const
     {
         return
                 (point.X() >= XMin())
@@ -81,9 +83,9 @@ public:
 
     // operators
 
-    void SetXSize(VSNET_TNFIX RectType::Number x) { SetXMax(XMin() + x); }
-    void SetYSize(VSNET_TNFIX RectType::Number y) { SetYMax(YMin() + y); }
-    void SetSize(const VSNET_TNFIX RectType::PointType size) { SetMax(Min() + size); }
+    void SetXSize(typename RectType::Number x) { SetXMax(XMin() + x); }
+    void SetYSize(typename RectType::Number y) { SetYMax(YMin() + y); }
+    void SetSize(const typename RectType::PointType size) { SetMax(Min() + size); }
 
     void Intersect(const TRect& rect)
     {
@@ -101,18 +103,18 @@ public:
         SetYMax(max(YMax(), rect.YMax()));
     }
 
-    void Offset(const VSNET_TNFIX RectType::PointType& pt)
+    void Offset(const typename RectType::PointType& pt)
     {
         SetMin(Min() + pt);
         SetMax(Max() + pt);
     }
 
-    void MoveTo(const VSNET_TNFIX RectType::PointType& pt) {
+    void MoveTo(const typename RectType::PointType& pt) {
         SetMax(pt + Size());
         SetMin(pt);
     }
 
-    void Expand(VSNET_TNFIX RectType::Number size)
+    void Expand(typename RectType::Number size)
     {
         SetXMin(XMin() - size);
         SetXMax(XMax() + size);
@@ -120,7 +122,7 @@ public:
         SetYMax(YMax() + size);
     }
 
-    VSNET_TNFIX RectType::PointType TransformNDCToImage(const VSNET_TNFIX RectType::PointType& point) const
+    typename RectType::PointType TransformNDCToImage(const typename RectType::PointType& point) const
     {
         return Center() + point * (RectType::Number)((float)XSize() * 0.5f);
     }

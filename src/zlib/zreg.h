@@ -17,9 +17,9 @@ HRESULT LoadRegString(HKEY hkey, LPCTSTR pszValueName, T& strOut)
   strOut = TEXT("");
 
   // Get the size of data from the specified value
-  DWORD dwType;
-  DWORD cbData = 0;
-  long lr = RegQueryValueEx(hkey, pszValueName, NULL, &dwType, NULL, &cbData);
+  uint32_t dwType;
+  uint32_t cbData = 0;
+  long lr = RegQueryValueEx(hkey, pszValueName, NULL, LPDWORD(&dwType), NULL, LPDWORD(&cbData));
   if (ERROR_SUCCESS != lr)
     return HRESULT_FROM_WIN32(lr);
 
@@ -35,7 +35,7 @@ HRESULT LoadRegString(HKEY hkey, LPCTSTR pszValueName, T& strOut)
   LPTSTR pszValue = (LPTSTR)_alloca(cbData + sizeof(TCHAR));
 
   // Attempt to read the specified value
-  lr = RegQueryValueEx(hkey, pszValueName, NULL, NULL, (BYTE*)pszValue, &cbData);
+  lr = RegQueryValueEx(hkey, pszValueName, NULL, NULL, (uint8_t*)pszValue, LPDWORD(&cbData));
   if (ERROR_SUCCESS != lr)
     return HRESULT_FROM_WIN32(lr);
 
@@ -58,9 +58,9 @@ inline HRESULT LoadRegStream(HKEY hkey, LPCTSTR pszValueName, IStream** ppStm)
   *ppStm = NULL;
 
   // Get the size of data from the specified value
-  DWORD dwType;
-  DWORD cbData = 0;
-  long lr = RegQueryValueEx(hkey, pszValueName, NULL, &dwType, NULL, &cbData);
+  uint32_t dwType;
+  uint32_t cbData = 0;
+  long lr = RegQueryValueEx(hkey, pszValueName, NULL, LPDWORD(&dwType), NULL, LPDWORD(&cbData));
   if (ERROR_SUCCESS != lr)
     return HRESULT_FROM_WIN32(lr);
 
@@ -77,7 +77,7 @@ inline HRESULT LoadRegStream(HKEY hkey, LPCTSTR pszValueName, IStream** ppStm)
   void* pvValue = GlobalLock(hGlobal);
 
   // Attempt to read the specified value
-  lr = RegQueryValueEx(hkey, pszValueName, NULL, NULL, (BYTE*)pvValue, &cbData);
+  lr = RegQueryValueEx(hkey, pszValueName, NULL, NULL, (uint8_t*)pvValue, LPDWORD(&cbData));
 
   // Unlock the global block of memory
   GlobalUnlock(hGlobal);
@@ -126,7 +126,7 @@ inline HRESULT SaveRegStream(HKEY hkey, LPCTSTR pszValueName, IStream* pStm)
     return hr;
   if (0 != uli.HighPart)
     return E_OUTOFMEMORY;
-  DWORD cbData = uli.LowPart;
+  uint32_t cbData = uli.LowPart;
 
   // Get a handle to the stream data
   HGLOBAL hGlobal, hGlobalTemp = NULL;
@@ -161,7 +161,7 @@ inline HRESULT SaveRegStream(HKEY hkey, LPCTSTR pszValueName, IStream* pStm)
   {
     // Write the binary data to the registry value
     LONG lr = ::RegSetValueEx(hkey, pszValueName, 0, REG_BINARY,
-      (BYTE*)pvData, cbData);
+      (uint8_t*)pvData, cbData);
     if (ERROR_SUCCESS != lr)
       hr = HRESULT_FROM_WIN32(lr);
 

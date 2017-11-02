@@ -1,4 +1,5 @@
 #pragma once
+#ifdef STEAM_APP_ID
 
 // BT - STEAM
 
@@ -16,3 +17,5 @@ public:
 
 	TVector<CallsignTagInfo, DefaultEquals, DefaultCompare> * GetAvailableCallsignTags();
 };
+
+#endif

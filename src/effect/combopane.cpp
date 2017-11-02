@@ -133,6 +133,7 @@ private:
     TRef<IEngineFont>            m_pfont;
     TRef<ComboFacePane>          m_pface;
     TRef<IPopupContainer>        m_ppopupContainer;
+    TRef<ModifiablePointValue> m_pMousePosition;
     bool                         m_bFirstItem;
     TVector<ZString>             m_vstrItems;
     int                          m_idSelection;
@@ -145,7 +146,8 @@ public:
         IPopupContainer* ppopupContainer,
         IEngineFont*     pfont,
         const WinPoint&  size,
-        ComboFacePane*   pface
+        ComboFacePane*   pface,
+        ModifiablePointValue* pmousePosition
     ) :
         m_peventMouseEnterWhileEnabledSource(new EventSourceImpl()),
         m_peventMenuSelectSource(new EventSourceImpl()),
@@ -156,7 +158,8 @@ public:
         m_bInside(false),
         m_bEnabled(true),
         m_pmodeler(pmodeler),
-        m_pfont(pfont)
+        m_pfont(pfont),
+        m_pMousePosition(pmousePosition)
     {
         InsertAtBottom(
             new JustifyPane(
@@ -352,14 +355,7 @@ public:
     {
         if (button == 0 && m_bEnabled) {
             if (bDown) {
-                Point point =
-                    TransformLocalToImage(
-                        WinPoint(
-                            0,
-                            m_pface->GetSize().Y()
-                        )
-                    );
-
+                Point point = m_pMousePosition->GetValue();
                 m_ppopupContainer->OpenPopup(m_pmenu, Rect(point,point), true, true);
             }
         }
@@ -373,7 +369,8 @@ TRef<ComboPane> CreateComboPane(
     IPopupContainer* ppopupContainer,
     IEngineFont*     pfont,
     const WinPoint&  size,
-    ComboFacePane*   pface
+    ComboFacePane*   pface,
+    ModifiablePointValue* pmousePosition
 ) {
-    return new ComboPaneImpl(pmodeler, ppopupContainer, pfont, size, pface);
+    return new ComboPaneImpl(pmodeler, ppopupContainer, pfont, size, pface, pmousePosition);
 }

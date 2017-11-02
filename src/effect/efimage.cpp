@@ -529,7 +529,7 @@ public:
         #endif
         pcontext->SetShadeMode(ShadeModeGlobalColor);
 		pcontext->SetGlobalColor( Color::White() );
-		pcontext->SetBlendMode( BlendModeAlphaStampThrough );
+		pcontext->SetBlendMode( BlendModeSourceAlpha );
 
         TList<PosterData, DefaultNoEquals>::Iterator iter(m_list);
 

@@ -2,9 +2,7 @@
 // VersionInfo.cpp : Implementation of the ZVersionInfo class.
 //
 
-#include "pch.h"
 #include "VersionInfo.h"
-
 
 /////////////////////////////////////////////////////////////////////////////
 // ZVersionInfo
@@ -63,13 +61,13 @@ bool ZVersionInfo::Load(LPCTSTR szModule)
   assert(!m_pFixed);
 
   // Get the size of the version information of the specified module
-  BYTE* pVerInfo = NULL;
-  DWORD cbVerInfo, dummy;
-  cbVerInfo = GetFileVersionInfoSize(const_cast<LPTSTR>(szModule), &dummy);
+  uint8_t* pVerInfo = NULL;
+  uint32_t cbVerInfo, dummy;
+  cbVerInfo = GetFileVersionInfoSize(const_cast<LPTSTR>(szModule), LPDWORD(&dummy));
   if (cbVerInfo)
   {
     // Allocate space to hold the version information
-    pVerInfo = new BYTE[cbVerInfo];
+    pVerInfo = new uint8_t[cbVerInfo];
     if (!pVerInfo)
     {
       SetLastError(ERROR_NOT_ENOUGH_MEMORY);
@@ -82,7 +80,7 @@ bool ZVersionInfo::Load(LPCTSTR szModule)
   // Attempt to load the version information block
   if (!GetFileVersionInfo(const_cast<LPTSTR>(szModule), 0, cbVerInfo, pVerInfo))
   {
-    DWORD dwLastError = GetLastError();
+    uint32_t dwLastError = GetLastError();
     delete [] pVerInfo;
     SetLastError(dwLastError ? dwLastError : ERROR_NO_MORE_ITEMS);
     return false;
@@ -93,7 +91,7 @@ bool ZVersionInfo::Load(LPCTSTR szModule)
   UINT cbFixed = 0;
   if (!VerQueryValue(pVerInfo, TEXT("\\"), (void**)&pFixed, &cbFixed) || cbFixed != sizeof(*pFixed))
   {
-    DWORD dwLastError = GetLastError();
+    uint32_t dwLastError = GetLastError();
     delete [] pVerInfo;
     SetLastError(dwLastError);
     return false;
@@ -133,7 +131,7 @@ bool ZVersionInfo::Load(const void* pvVerInfo, UINT cbVerInfo)
   Unload();
 
   // Allocate space to hold the version information
-  BYTE* pVerInfo = new BYTE[cbVerInfo];
+  uint8_t* pVerInfo = new uint8_t[cbVerInfo];
   if (!pVerInfo)
   {
     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
@@ -148,7 +146,7 @@ bool ZVersionInfo::Load(const void* pvVerInfo, UINT cbVerInfo)
   UINT cbFixed = 0;
   if (!VerQueryValue(pVerInfo, TEXT("\\"), (void**)&pFixed, &cbFixed) || cbFixed != sizeof(*pFixed))
   {
-    DWORD dwLastError = GetLastError();
+    uint32_t dwLastError = GetLastError();
     delete [] pVerInfo;
     SetLastError(dwLastError ? dwLastError : ERROR_NO_MORE_ITEMS);
     return false;
@@ -201,14 +199,14 @@ ZString ZVersionInfo::GetStringValue(LPCTSTR pszKey, bool* pbExists) const
     MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US) : GetLanguageID());
 
   // Determine if a code page was specified
-  WORD rgwCodePages[] =
+  uint16_t rgwCodePages[] =
   {
     1200,  // Unicode
     1252,  // Windows Multilingual
     0000,  // Neutral
   };
   int cCodePages = sizeofArray(rgwCodePages);
-  if (WORD(-1) != m_wCodePage)
+  if (uint16_t(-1) != m_wCodePage)
   {
     rgwCodePages[0] = m_wCodePage;
     cCodePages = 1;
@@ -228,7 +226,7 @@ ZString ZVersionInfo::GetStringValue(LPCTSTR pszKey, bool* pbExists) const
     // Query the value
     UINT cbValue = 0;
     LPCTSTR pszValue = NULL;
-    if (VerQueryValue(m_pVerInfo, szSubBlock, (void**)&pszValue, &cbValue))
+    if (m_pVerInfo != nullptr && VerQueryValue(m_pVerInfo, szSubBlock, (void**)&pszValue, &cbValue))
     {
       // Indicate that the key exists
       if (pbExists)

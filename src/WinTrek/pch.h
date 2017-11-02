@@ -23,8 +23,6 @@
 #include <commdlg.h>
 #include <commctrl.h>
 
-
-
 //
 // STL headers
 //

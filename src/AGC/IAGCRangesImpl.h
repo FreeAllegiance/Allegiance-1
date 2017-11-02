@@ -43,9 +43,8 @@ public:
   typedef TCObjectLock<T>                            XLock;
   typedef range<RT>                                  XRange;
   typedef rangeset<XRange>			                 XRangeSet;
-// VS.Net 2003 port: typename keyword (VSNET_TNFIX) required; see Compiler Warning (level 1) C4346
-  typedef VSNET_TNFIX XRangeSet::iterator            XRangeIt;
-  typedef VSNET_TNFIX XRangeSet::reverse_iterator    XRangeRevIt;
+  typedef typename XRangeSet::iterator            XRangeIt;
+  typedef typename XRangeSet::reverse_iterator    XRangeRevIt;
   typedef IDispatchImpl<ITF, &__uuidof(ITF), plibid> IAGCRangesImplBase;
 
 // Construction

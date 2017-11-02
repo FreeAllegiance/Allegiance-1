@@ -757,7 +757,7 @@ public:
     {
         //TRef<Surface> psurface = GetModeler()->LoadSurface("fxminebmp", true);
 
-		TRef<ZFile> zf = m_pmodeler->GetFile("fxmine.png","",true);
+		TRef<ZFile> zf = m_pmodeler->GetFile("fxmine.png","",true, m_pmodeler->GetUseHighResTextures());
 
 	ZFile * pFile = (ZFile*) zf;
 		
@@ -1185,7 +1185,6 @@ public:
             CreateVisibleImage(
                 CreatePaneImage(
                     GetEngine(),
-                    SurfaceType2D(),
                     false,
                     ppane
                 ),

@@ -56,7 +56,6 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">..\objs$(PlatformToolset)\$(Configuration)\FedSrv\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">..\objs$(PlatformToolset)\$(Configuration)\FedSrv\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">AllSrv</TargetName>
-    <TargetExt Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">.exe</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">false</LinkIncremental>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">..\objs$(PlatformToolset)\$(Configuration)\FedSrv\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">..\objs$(PlatformToolset)\$(Configuration)\FedSrv\</IntDir>
@@ -75,7 +74,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\src\lib\AllegianceSecurity;..\src\lib\Steam;.\;..\src\guids;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\Inc;..\src\AGC;..\src\test\Inc;..\src\lobby;..\src\Zone;.\$(IntDir)..\Igc;.\$(IntDir)..\FedSrv;.\$(IntDir)..\AGC;.\$(IntDir)..\Guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;_TEST;ALLSRV_STANDALONE;FEDSRV;AGC_HOST;DEBUG;_DEBUG;_WIN32;_WINDOWS;_AFXDLL;_CONSOLE;WIN;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_TEST;ALLSRV_STANDALONE;FEDSRV;AGC_HOST;DEBUG;_DEBUG;_WIN32;_WINDOWS;_AFXDLL;_CONSOLE;WIN;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -123,7 +122,7 @@ xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
     <ClCompile>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>..\src\lib\AllegianceSecurity;..\src\lib\Steam;.\$(IntDir)..\Guids;.\;..\src\guids;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\Inc;..\src\AGC;..\src\test\Inc;..\src\lobby;..\src\Zone;.\$(IntDir)..\Igc;.\$(IntDir)..\FedSrv;.\$(IntDir)..\AGC;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;DEBUG;ALLSRV_STANDALONE;FEDSRV;AGC_HOST;SRVLOG;_WIN32;_WINDOWS;_AFXDLL;_CONSOLE;WIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;ALLSRV_STANDALONE;FEDSRV;AGC_HOST;SRVLOG;_WIN32;_WINDOWS;_AFXDLL;_CONSOLE;WIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>

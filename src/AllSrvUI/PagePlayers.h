@@ -23,6 +23,9 @@ class CAllSrvUISheet;
 
 class CPagePlayers : public CPropertyPage
 {
+private: 
+	CAllSrvUISheet *m_mpSheet;
+
 // Declarations
 public:
   DECLARE_DYNAMIC(CPagePlayers)
@@ -30,7 +33,7 @@ public:
 
 // Construction
 public:
-  CPagePlayers();
+  CPagePlayers(CAllSrvUISheet *pSheet);
 
 // Attributes
 public:
@@ -43,17 +46,21 @@ public:
   public:
   virtual BOOL OnSetActive();
   virtual BOOL PreTranslateMessage(MSG* pMsg);
+
+
   protected:
   virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
   virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
+
+  
   //}}AFX_VIRTUAL
 
 // Implementation
 protected:
-  CAllSrvUISheet* GetSheet()
+ /* CAllSrvUISheet* GetSheet()
   {
     return reinterpret_cast<CAllSrvUISheet*>(GetParent());
-  }
+  }*/
   void LoadFromRegistry();
   void SaveToRegistry();
   void SavePlayerListColumnOrderToRegistry();

@@ -4,6 +4,8 @@
 // basic utilility functions used by the DirectSound3D wrappers.
 //
 
+#include <mutex>
+
 namespace SoundEngine {
 
 // A helper function to convert between versions of vectors
@@ -96,7 +98,7 @@ private:
     TaskList m_listTasks;
 
     // a critical section controling access to the list of tasks.
-    CriticalSection m_csTaskList;
+    std::mutex m_csTaskList;
     
     // performs a single pass through the task list
     virtual bool ThreadIteration();

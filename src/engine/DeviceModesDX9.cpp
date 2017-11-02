@@ -979,12 +979,11 @@ bool CD3DDeviceModeData::GetModeParams(	CD3DDevice9::SD3DDeviceSetupParams * pPa
 	}
 
 	// Copy over windowed mode details if they're valid.
-	// TEMP: Force to 800, 600 for now.
 	if( pWindowedMode != NULL )
 	{
 		pParams->sWindowedMode.mode.Format		= pWindowedMode->mode.Format;
-		pParams->sWindowedMode.mode.Width		= 800;		//pWindowedMode->mode.Width;
-		pParams->sWindowedMode.mode.Height		= 600;		//pWindowedMode->mode.Height;
+		pParams->sWindowedMode.mode.Width		= pWindowedMode->mode.Width;
+		pParams->sWindowedMode.mode.Height		= pWindowedMode->mode.Height;
 		pParams->sWindowedMode.mode.RefreshRate	= pWindowedMode->mode.RefreshRate;
 		pParams->sWindowedMode.fmtDepthStencil	= pWindowedMode->d3dDepthStencil;
 		pParams->bWindowModeValid				= true;

@@ -3347,9 +3347,9 @@ public:
 
         m_pgroupDisplays = new GroupImage();
 
-#if (DIRECT3D_VERSION >= 0x0800)
+		// BUILD_DX9
 		GetModeler()->SetColorKeyHint( true );
-#endif
+
 		
 		m_pconsoleData   = new ConsoleDataImpl(this->GetViewport(), pszFileName);
 

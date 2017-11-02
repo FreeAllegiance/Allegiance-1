@@ -94,7 +94,11 @@ const FloatConstantID    c_fcidPlayerCost           = 36;
 const FloatConstantID    c_fcidBaseClusterCost      = 37;
 const FloatConstantID    c_fcidClusterDivisor       = 38;
 
+//const FloatConstantID    c_fcidPointsProbeSpot      = 39;
+//const FloatConstantID    c_fcidPointsRepair         = 40;
+
 const FloatConstantID    c_fcidMax                  = 40;
+
 
 //
 // Note: if you add or change any new ObjectTypes, then please notify
@@ -766,6 +770,7 @@ const ExpendableAbilityBitMask  c_eabmRescueAny       = c_sabmRescueAny;  //0x40
 typedef short AchievementMask;
 const AchievementMask c_achmProbeKill = 0x01;
 const AchievementMask c_achmProbeSpot = 0x02;
+const AchievementMask c_achmNewRepair = 0x04;
 
 enum    ShipControlStateIGC
 {
@@ -1212,7 +1217,7 @@ struct MissionParams
         bLockTeamSettings               = false;
         bAllowDefections                = false;
         bStations                       = true ;
-        bScoresCount                    = false;
+        bScoresCount                    = true;
         bSquadGame                      = false;
         bDrones                         = true ;
         iResources                      = 0;
@@ -5473,6 +5478,8 @@ class PlayerScoreObject
             m_cPlayerKills = 0.0f;
             m_cBaseKills = 0.0f;
             m_cBaseCaptures = 0.0f;
+			m_cProbeSpot = 0;
+			m_cRepair = 0;
 
             m_cRescues = 0;
 
@@ -5499,9 +5506,15 @@ class PlayerScoreObject
             m_bCommandCredit = false;
 
             m_fScore = 0.0f;
+			m_rankRatio = 1.0f;
 
             assert (!m_bConnected);
         }
+
+		void SetRankRatio(float rankRatio)
+		{
+			m_rankRatio = rankRatio;
+		}
 
         bool    Connected(void) const
         {
@@ -5577,6 +5590,16 @@ class PlayerScoreObject
         {
             m_cAsteroidsSpotted++;
         }
+
+		void	AddProbeSpot(void)
+		{
+			m_cProbeSpot++;
+		}
+		void	SetRepair(int repair)
+		{
+			m_cRepair += repair;
+		}
+
 
         void    KillShip(IshipIGC*      pship,
                          float          fraction)
@@ -5834,6 +5857,8 @@ class PlayerScoreObject
         float                       m_cPlayerKills;
         float                       m_cBaseKills;
         float                       m_cBaseCaptures;
+		short						m_cProbeSpot;
+		int							m_cRepair;
 
         short                       m_cTechsRecovered;
         short                       m_cFlags;
@@ -5854,6 +5879,7 @@ class PlayerScoreObject
         float                       m_fCombatRating;
 
         float                       m_fScore;
+		float						m_rankRatio;
 
         bool                        m_bPlayer;
         bool                        m_bConnected;

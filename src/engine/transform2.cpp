@@ -58,6 +58,11 @@ ScaleTransform2::ScaleTransform2(PointValue* ppoint) :
 {
 }
 
+ScaleTransform2::ScaleTransform2(const Point& point) :
+	Transform2(new PointValue(point))
+{
+}
+
 void ScaleTransform2::Evaluate()
 {
     GetValueInternal().SetScale(GetScale()->GetValue());

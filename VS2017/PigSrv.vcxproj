@@ -56,7 +56,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Pigs\PigSrv;..\src\Inc;..\src\Test\Inc;..\src\zlib;..\src\_Utility;..\src\AGC;..\src\Guids;..\src\Zone;..\src\engine;..\src\lobby;$(OutDir);$(OutDir)..\PigsLib;$(OutDir)..\..\Guids;$(OutDir)..\..\Test\TCObj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;_ATL_STATIC_REGISTRY;_DEBUG;DEBUG;STRICT;_WINDOWS;WIN32;_AFXDLL;_CRT_SECURE_NO_DEPRECATE;AGC_HOST;_ATL_DEBUG_INTERFACES;_ATL_DEBUG_QI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_ATL_STATIC_REGISTRY;_DEBUG;DEBUG;STRICT;_WINDOWS;WIN32;_AFXDLL;_CRT_SECURE_NO_DEPRECATE;AGC_HOST;_ATL_DEBUG_INTERFACES;_ATL_DEBUG_QI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -83,7 +83,7 @@
       <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Pigs\PigSrv;..\src\Inc;..\src\Test\Inc;..\src\zlib;..\src\_Utility;..\src\AGC;..\src\Guids;..\src\Zone;..\src\engine;..\src\lobby;$(OutDir);$(OutDir)..\PigsLib;$(OutDir)..\..\Guids;$(OutDir)..\..\Test\TCObj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>DIRECT3D_VERSION=0x0900;_ATL_STATIC_REGISTRY;STRICT;_WINDOWS;WIN32;_AFXDLL;_CRT_SECURE_NO_DEPRECATE;AGC_HOST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_ATL_STATIC_REGISTRY;STRICT;_WINDOWS;WIN32;_AFXDLL;_CRT_SECURE_NO_DEPRECATE;AGC_HOST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>FLAVOR=\"$(ConfigurationName)\";%(PreprocessorDefinitions)</PreprocessorDefinitions>

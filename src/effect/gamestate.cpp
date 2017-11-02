@@ -112,7 +112,6 @@ public:
         m_pimage = 
             CreatePaneImage(
                 pmodeler->GetEngine(),
-                SurfaceType3D(),
                 true,
                 pcol
             );

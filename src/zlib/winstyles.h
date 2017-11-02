@@ -1,7 +1,10 @@
+#pragma once
+
+#include "mask.h"
 
 // broke these out into another file so this doesn't kill Source Insight
 class StyleBaseType {};
-typedef TBitMask<StyleBaseType, DWORD> Style;
+typedef TBitMask<StyleBaseType, uint32_t> Style;
 
 class StyleChild        : public Style { public: StyleChild       () : Style(WS_CHILD       ) {} };
 class StylePopup        : public Style { public: StylePopup       () : Style(WS_POPUP       ) {} };
@@ -24,7 +27,7 @@ class StyleBSOwnerDraw  : public Style { public: StyleBSOwnerDraw () : Style(BS_
 class StyleESLeft		: public Style { public: StyleESLeft	  () : Style(ES_LEFT		) {} };
 
 class StyleEXBaseType {};
-typedef TBitMask<StyleEXBaseType, DWORD> StyleEX;
+typedef TBitMask<StyleEXBaseType, uint32_t> StyleEX;
 
 class StyleEXTopMost : public StyleEX { public: StyleEXTopMost() : StyleEX(WS_EX_TOPMOST) {} };
 class StyleEXTransparent : public StyleEX { public: StyleEXTransparent() : StyleEX(WS_EX_TRANSPARENT) {} };

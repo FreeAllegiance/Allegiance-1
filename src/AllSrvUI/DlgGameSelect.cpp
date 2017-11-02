@@ -34,7 +34,8 @@ END_MESSAGE_MAP()
 // Construction
 
 CDlgGameSelect::CDlgGameSelect(CAllSrvUISheet* pSheet)
-  : CDialog(CDlgGameSelect::IDD, pSheet)
+  : CDialog(CDlgGameSelect::IDD, pSheet),
+	m_mpSheet(pSheet)
 {
   //{{AFX_DATA_INIT(CDlgGameSelect)
   //}}AFX_DATA_INIT
@@ -69,10 +70,10 @@ void CDlgGameSelect::PopulateGamesList()
 
   // Get the collection of games on the server
   IAdminGamesPtr spGames;
-  HRESULT hr = GetSheet()->GetServer()->get_Games(&spGames);
+  HRESULT hr = m_mpSheet->GetServer()->get_Games(&spGames);
   if (FAILED(hr))
   {
-    GetSheet()->HandleError(hr, pszContext, false);
+    m_mpSheet->HandleError(hr, pszContext, false);
     EndDialog(IDCANCEL);
     return;
   }
@@ -81,14 +82,14 @@ void CDlgGameSelect::PopulateGamesList()
   IUnknownPtr spEnumUnk;
   if (FAILED(hr = spGames->get__NewEnum(&spEnumUnk)))
   {
-    GetSheet()->HandleError(hr, pszContext, false);
+	  m_mpSheet->HandleError(hr, pszContext, false);
     EndDialog(IDCANCEL);
     return;
   }
   IEnumVARIANTPtr spEnum(spEnumUnk);
   if (NULL == spEnum)
   {
-    GetSheet()->HandleError(E_NOINTERFACE, pszContext, false);
+	  m_mpSheet->HandleError(E_NOINTERFACE, pszContext, false);
     EndDialog(IDCANCEL);
     return;
   }
@@ -102,7 +103,7 @@ void CDlgGameSelect::PopulateGamesList()
     ULONG cFetched;
     if (FAILED(hr = spEnum->Next(sizeofArray(games), games, &cFetched)))
     {
-      GetSheet()->HandleError(hr, pszContext, false);
+		m_mpSheet->HandleError(hr, pszContext, false);
       EndDialog(IDCANCEL);
       return;
     }
@@ -114,7 +115,7 @@ void CDlgGameSelect::PopulateGamesList()
       VARTYPE vt = V_VT(&games[i]);
       if (VT_DISPATCH != vt && VT_UNKNOWN != vt)
       {
-        GetSheet()->HandleError(DISP_E_TYPEMISMATCH, pszContext, false);
+		  m_mpSheet->HandleError(DISP_E_TYPEMISMATCH, pszContext, false);
         EndDialog(IDCANCEL);
         return;
       }
@@ -123,7 +124,7 @@ void CDlgGameSelect::PopulateGamesList()
       IAdminGamePtr spGame(V_DISPATCH(&games[i]));
       if (NULL == spGame)
       {
-        GetSheet()->HandleError(E_NOINTERFACE, pszContext, false);
+		  m_mpSheet->HandleError(E_NOINTERFACE, pszContext, false);
         EndDialog(IDCANCEL);
         return;
       }
