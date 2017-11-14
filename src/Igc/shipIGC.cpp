@@ -1225,6 +1225,7 @@ DamageResult CshipIGC::ReceiveDamage(DamageTypeID            type,
 
     float   maxHP = m_myHullType.GetHitPoints();
     float   dtmArmor = GetMyMission()->GetDamageConstant(type, m_myHullType.GetDefenseType());
+	float   repairFraction;
     assert (dtmArmor >= 0.0f);
 
     float leakage;
@@ -1234,18 +1235,22 @@ DamageResult CshipIGC::ReceiveDamage(DamageTypeID            type,
         m_fraction -= amount * dtmArmor / maxHP;
 		if (m_fraction > 1.0f)
 		{
-			amount += (m_fraction - 1.0) * maxHP / dtmArmor; //Set amount to amount that had effect for stat
+			amount += (m_fraction - 1.0) * maxHP / dtmArmor; //Set amount to amount that had effect for stat			
 			m_fraction = 1.0f;
 		}            
         GetThingSite ()->RemoveDamage (m_fraction);
-
+		if (GetMyMission()->GetMissionParams()->bAllowFriendlyFire || //no points when FF is on
+			!((pside == launcher->GetSide()) || IsideIGC::AlliedSides(pside, launcher->GetSide()))) //no points for healing the enemy
+			repairFraction = 0;
+		else
+			repairFraction = fabs(amount * dtmArmor / maxHP);
         leakage = 0.0f;
         dr = c_drNoDamage;
 		if (launcher->GetObjectType() == OT_ship && (pside == launcher->GetSide()) || IsideIGC::AlliedSides(pside, launcher->GetSide()))
 		{
 
 			IshipIGC * pIship = ((IshipIGC*)launcher);
-			pIship->AddRepair(-amount);
+			pIship->AddRepair(repairFraction);
 			pIship->SetAchievementMask(c_achmNewRepair);
 		}
     }

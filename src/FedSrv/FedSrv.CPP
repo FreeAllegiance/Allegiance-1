@@ -3662,7 +3662,7 @@ void SendShipUpdates(CFSMission * pfsMission)
 						if ((pship->GetAchievementMask() & c_achmProbeSpot) > 0)
 							pso->AddProbeSpot();
 						if ((pship->GetAchievementMask() & c_achmNewRepair) > 0)
-							pso->SetRepair(int(pship->GetRepair()));
+							pso->SetRepair(pship->GetRepair());
 
 						pSteamAchievements->AwardIGCAchievements(pship->GetAchievementMask());
 						pship->ClearAchievementMask();

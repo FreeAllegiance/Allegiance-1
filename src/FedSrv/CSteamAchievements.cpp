@@ -408,11 +408,12 @@ void CSteamAchievements::AddUserStats(PlayerScoreObject*  ppso, IshipIGC * pIshi
 			SetStat(EStats::PLAYER_LOSS, tempStat + 1);
 	}
 
-	if (pIship->GetRepair() > 0.0)
+	int repair = floor(100 * ppso->GetRepair());
+	if (repair > 0.0)
 	{
-		getSucceed = GetStat(EStats::REPAIR_AMOUNT, &tempStat);
+		getSucceed = GetStat(EStats::REPAIR_PERCENT, &tempStat);
 		if (getSucceed)
-			SetStat(EStats::REPAIR_AMOUNT, tempStat + floor(pIship->GetRepair()));
+			SetStat(EStats::REPAIR_PERCENT, tempStat + repair);
 	}
 }
 

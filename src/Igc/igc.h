@@ -5605,9 +5605,14 @@ class PlayerScoreObject
 		{
 			m_cProbeSpot++;
 		}
-		void	SetRepair(int repair)
+		void	SetRepair(float repair)
 		{
-			m_cRepair += repair;
+			m_cRepair = repair;
+		}
+		
+		float	GetRepair(void) const
+		{			
+			return m_cRepair;
 		}
 
 
@@ -5868,7 +5873,7 @@ class PlayerScoreObject
         float                       m_cBaseKills;
         float                       m_cBaseCaptures;
 		short						m_cProbeSpot;
-		int							m_cRepair;
+		float						m_cRepair;
 
         short                       m_cTechsRecovered;
         short                       m_cFlags;

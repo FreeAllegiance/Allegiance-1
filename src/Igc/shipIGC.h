@@ -1851,7 +1851,7 @@ class       CshipIGC : public TmodelIGC<IshipIGC>
 		}
 		virtual void AddRepair(float repair)
 		{
-			m_repair += repair; //Xynth amount of nanning performed by ship
+			m_repair += repair; //Xynth amount of nanning performed by ship as a fraction of hull repaired
 		}
 		virtual float GetRepair(void) const
 		{
