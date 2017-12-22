@@ -3655,35 +3655,14 @@ public:
         CloseSink(TrekWindowImpl* pwindow) :
             m_pwindow(pwindow)
         {
+			m_pwindow->DoClose();
         }
-
-        bool OnEvent(IIntegerEventSource* pevent, int value)
-        {
-            if (value == IDOK)
-                m_pwindow->DoClose();
-            else
-                m_pwindow->CloseMessageBox ();
-            return false;
-        }
-    };
 
     TRef<IMessageBox> m_pmessageBox;
 
     void StartClose()
     {
-        if (m_pmessageBox == NULL) {
-            m_pmessageBox = CreateMessageBox("Quit Allegiance?", NULL, true, true);
             m_pmessageBox->GetEventSource()->AddSink(new CloseSink(this));
-            GetPopupContainer()->OpenPopup(m_pmessageBox, false);
-            m_ptrekInput->SetFocus(false);
-        }
-
-        //
-        // Make sure the window isn't minimized
-        //
-
-        if (!GetFullscreen()) {
-            OnCaptionRestore();
         }
     }
 
