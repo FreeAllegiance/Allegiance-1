@@ -23,6 +23,9 @@ bld/
 [Ll]og/
 [Oo]bjs*/
 
+#Artwork
+/Artwork/
+
 # Visual Studio 2015 cache/options directory
 .vs/
 .vscode/
@@ -327,3 +330,5 @@ $RECYCLE.BIN/
 
 # Allow boost library
 !src/Lib/boost/boost/preprocessor/debug
+
+Artwork-master\.zip

@@ -506,6 +506,13 @@ DEFSOUND(salChangeSides)
 DEFSOUND(salEnemyJoiners)
 DEFSOUND(salEnemyLeaves)
 
+
+//Sidethrusters
+DEFSOUND(SidethrustInterior)
+DEFSOUND(SidethrustExterior)
+
+
+
 // pigs
 DEFSOUND(oink1) // Pig response
 DEFSOUND(oink2) // Pig response
@@ -792,8 +799,6 @@ DEFSOUND(tm_slide_8_post_05)
 
 DEFSOUND(tm_0_blank)
 // training missions
-
-
 
 
 //DEFSOUND(energy)
