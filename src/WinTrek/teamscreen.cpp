@@ -3627,6 +3627,10 @@ public:
                     strReason = "The server is shutting down and is not accepting new players.";
                     break;
 
+				case DPR_BotsOnTeam0Only:
+					strReason = "Only pigs are allowed on the yellow team, and you don't have a curly tail.";
+					break;
+
                 default:
                     assert(false);
                 case DPR_Other:

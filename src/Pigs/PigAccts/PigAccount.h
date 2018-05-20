@@ -48,7 +48,7 @@ public:
   HRESULT FinalConstruct();
   void FinalRelease();
   HRESULT Init(CPigAccountDispenser* pDispenser, _bstr_t bstrName,
-    _bstr_t bstrPassword);
+    _bstr_t bstrPassword, _bstr_t bstrCdKey);
 
 // ISupportErrorInfo Interface Methods
 public:
@@ -58,6 +58,7 @@ public:
 public:
   STDMETHODIMP get_Name(BSTR* pbstrName);
   STDMETHODIMP get_Password(BSTR* pbstrPassword);
+  STDMETHODIMP get_CdKey(BSTR* pbstrCdKey);
 
 // Types
 protected:
@@ -66,7 +67,7 @@ protected:
 // Data Members
 protected:
   CPigAccountDispenser* m_pDispenser;
-  _bstr_t               m_bstrName, m_bstrPassword;
+  _bstr_t               m_bstrName, m_bstrPassword, m_bstrCdKey;
 };
 
 

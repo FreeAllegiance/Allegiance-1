@@ -353,7 +353,7 @@ namespace sol {
                 if (stack::check<table>(L, absolute_index)) {
                     table table_list = stack::get<table>(L, absolute_index, tracking);
 
-                    std::list<TRef<T>> result_list = {};
+                    std::vector<TRef<T>> result_list = {};
 
                     int count = table_list.size();
 

@@ -16,9 +16,20 @@
 #ifndef _GOAL_H_
 #include "Goal.h"
 #endif  //_GOAL_H_
+#include "CreateDroneAction.h"
 
 namespace Training
 {
+    class  CreateDroneAction;
+    struct  RespawnData
+    {
+        CreateDroneAction*  pspawnCDA;
+        float               downtime;
+        char                spawnGroup;
+        Time                tDestroyed;
+
+        RespawnData(void) { downtime = 0; spawnGroup = NA; tDestroyed = 0; }
+    };
     //------------------------------------------------------------------------------
     // class definitions
     //------------------------------------------------------------------------------
@@ -36,17 +47,27 @@ namespace Training
                     void                    AddWaitCondition (Condition* pWaitCondition);
             virtual bool                    RecordKeyPress (TrekKey key);
                     void                    AddKeyCondition (Condition* pKeyCondition);
+                    void                    AddRespawn(CreateDroneAction* pCreateDroneAction, float downtime, char spawnGroup, bool waitForFirstSpawn);
+                    void                    RemoveRespawn(ShipID shipID);
                     void                    RecordChat (ChatTarget recipient);
                     void                    SetChatCondition (Condition* pChatCondition);
             virtual bool                    ShipLanded (void);
             virtual void                    ShipDied (ImodelIGC* pLauncher);
             virtual bool                    RestoreShip (void);
+            virtual void                    ShipKilled(IshipIGC* pShip, ImodelIGC* pLauncher);
+            virtual bool                    HandlePickDefaultOrder(IshipIGC* pShip);
+            virtual void                    KillStationEvent(IstationIGC* pStation, ImodelIGC* pLauncher);
                     IshipIGC*               GetCommanderShip (void) const;
                     void                    AddPartToShip (IshipIGC* pShip, PartID part, Mount mount, short ammo = 0);
                     void                    AddPartToShip (PartID part, Mount mount, short ammo = 0);
                     IshipIGC*               CreateDrone (const ZString& name, ShipID shipID, HullID hullID, SideID sideID, PilotType pilotType);
                     void                    SetSkipPostSlideshow (void);
                     bool                    GetCommandViewEnabled(void);
+
+                    int                     GetKillCount()
+                    {
+                        return m_killCount;
+                    }
 
         protected:
             virtual void                    CreateUniverse (void) = 0;
@@ -73,6 +94,8 @@ namespace Training
                     TrekWindow::CameraMode  m_deadCameraMode;
                     bool                    m_bSkipPostSlideShow;
                     bool                    m_commandViewEnabled;
+                    std::list<RespawnData*> m_RespawnList;
+                    int                     m_killCount;
     };
 
     //------------------------------------------------------------------------------

@@ -9,6 +9,8 @@
 #include "inputengine.h"
 #include "menu.h"
 
+#include "Configuration.h"
+
 class Context;
 class EngineApp;
 class GroupImage;
@@ -86,6 +88,8 @@ protected:
     //
     //////////////////////////////////////////////////////////////////////////////
 
+    TRef<UpdatingConfiguration> m_pConfiguration;
+
     TRef<Engine>               m_pengine;
     TRef<Modeler>              m_pmodeler;
     TRef<InputEngine>          m_pinputEngine;
@@ -121,7 +125,7 @@ protected:
     bool                       m_bRestore;
     bool                       m_bMouseInside;
     bool                       m_bMoveOnHide;
-	bool						m_bStartFullScreen;
+	TRef<SimpleModifiableValue<bool>> m_pPreferredFullscreen;
 	bool						m_bWindowStateMinimised;
 	bool						m_bWindowStateRestored;
 	bool						m_bClickBreak;
@@ -223,13 +227,12 @@ protected:
     ZString GetResolutionString();
     ZString GetRenderingString();
     ZString GetPixelFormatString(); // KGJV 32B
-    ZString GetAllow3DAccelerationString();
-    ZString GetAllowSecondaryString();
     void    UpdateMenuStrings();
 
 public:
     EngineWindow(
               EngineApp*   papp,
+        UpdatingConfiguration* pConfiguration,
         const ZString&     strCommandLine,
         const ZString&     strTitle         = ZString(),
               bool         bStartFullscreen = false,
@@ -276,7 +279,6 @@ public:
     void SetSizeable(bool bSizeable);
     void SetFullscreenSize(const Vector& point);
     void ChangeFullscreenSize(bool bLarger);
-    void Set3DAccelerationImportant(bool b3DAccelerationImportant);
     void SetMouseEnabled(bool bEnable);
 
     WinPoint GetSize();
@@ -307,7 +309,12 @@ public:
     virtual ZString GetFPSString(float dtime, float mspf, Context* pcontext);
 
     virtual void EvaluateFrame(Time time) {}
-    virtual void RenderSizeChanged(bool bSmaller) {}
+    virtual void RenderSizeChanged(bool bSmaller) {
+        int x = (int)m_pengine->GetResolutionSizeModifiable()->GetValue().X();
+        int y = (int)m_pengine->GetResolutionSizeModifiable()->GetValue().Y();
+        m_pConfiguration->GetInt("Graphics.ResolutionX", x)->SetValue((float)x);
+        m_pConfiguration->GetInt("Graphics.ResolutionY", y)->SetValue((float)y);
+    }
 
     //
     // ICaptionSite methods

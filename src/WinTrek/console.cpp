@@ -942,7 +942,7 @@ public:
                 !(m_rPreviousMissileLock > 0.0f && m_rPreviousMissileLock < 1.0f))
             trekClient.PostText(false, "Partial missile lock - center the target on screen to improve the lock.");
         else if (rMissileLock == 1.0f && m_rPreviousMissileLock != 1.0f)
-            trekClient.PostText(false, "%s", (const char*)(ZString("Missile lock acquired - press [Ctrl]-[Space] to fire a ")
+            trekClient.PostText(false, "%s", (const char*)(ZString("Missile lock acquired - press the right mouse button to fire a ")
                 + magazine->GetMissileType()->GetName() + " missile at the target."));
         else if (rMissileLock == 0.0f && m_rPreviousMissileLock != 0.0f && !m_fTargetChanged)
             trekClient.PostText(false, "Missile lock lost.");
@@ -2308,7 +2308,7 @@ public:
 
                         // show object name
                         TRef<IEngineFont> pfont = TrekResources::SmallFont();
-                        float   w = (float)(pfont->GetTextExtent(pmodelPick->GetName()).X());
+                        float   w = (float)(pfont->GetTextExtent(GetModelName(pmodelPick)).X());
                         Point   offset = Point(-w / 2, -8 - pfont->GetHeight());
                         pcontext->DrawString(pfont, (psidePick ? psidePick->GetColor() : Color::White()), m_pointMouseStop + offset, ZString(GetModelName(pmodelPick)));
                     }

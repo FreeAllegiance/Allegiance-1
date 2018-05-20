@@ -11,6 +11,9 @@
 
 #include "tref.h"
 
+std::string GetExecutablePath();
+void GlobalConfigureLoggers(bool bLogToOutput, bool bLogToFile);
+
 class ExceptionData {
 public:
     EXCEPTION_RECORD *ExceptionRecord;

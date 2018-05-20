@@ -431,6 +431,8 @@ public:
 
         m_bUpdateMatFull = true;
         m_prasterizer->SetClipRect(m_rectClipScreen);
+
+        GenerateProjectionTransform();
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -505,10 +507,6 @@ public:
         if (!m_bYAxisInversion) {
             matD3D.Scale(Vector(1, -1, 1));
         }
-
-        Point src(0, 0);
-        Point dest;
-        dest = matD3D.Transform(src);
 
 		// Reorganise the perspective matrix.
 		m_matPerspectiveD3D._11 = matD3D[0][0];

@@ -843,10 +843,11 @@ public:
 //		OutputDebugString( "EditPaneImpl::Paint\n");
 //		return;
 
-		//psurface->DrawString(m_pfont, m_textColor, WinPoint(0, 0), m_strClipped);
-
-		WinPoint origin = psurface->GetOffset();
-		m_pfont->DrawStringScreenSpace(	origin,
+        WinPoint textOrigin = psurface->GetOffset();
+        int yFreeSpace = GetSize().Y() - m_pfont->GetTextExtent("B").Y();
+        if (yFreeSpace > 1)
+            textOrigin.y = textOrigin.y + floor(yFreeSpace / 2);
+		m_pfont->DrawStringScreenSpace(textOrigin,
 								m_strClipped, 
 								m_textColor );								
 

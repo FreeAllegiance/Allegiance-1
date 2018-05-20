@@ -21,6 +21,8 @@ public:
     static TRef<Number> Round(Number* a, int decimals);
     static TRef<Number> Sin(Number* a);
     static TRef<Number> Cos(Number* a);
+    static TRef<Number> Sqrt(Number* a);
+    static TRef<Number> Power(Number* a, Number* power);
 };
 
 class PointTransform {
@@ -68,6 +70,7 @@ public:
     static TRef<Boolean> Equals(StringValue* a, StringValue* b);
 
     static TRef<StringValue> Concat(StringValue* a, StringValue* b);
+    static TRef<StringValue> Slice(StringValue* string, Number* start, Number* length);
 };
 
 template<class TransformedType, class OriginalType>
@@ -118,6 +121,29 @@ public:
         OriginalType2 value2 = ((TStaticValue<OriginalType2>*)GetChild(1))->GetValue();
 
         TransformedType evaluated = GetEvaluatedValue(value, value2);
+
+        GetValueInternal() = evaluated;
+    }
+};
+
+template<class TransformedType, class OriginalType, class OriginalType2, class OriginalType3>
+class TransformedValue3 : public TStaticValue<TransformedType> {
+    typedef std::function<TransformedType(OriginalType, OriginalType2, OriginalType3)> CallbackType;
+    CallbackType m_callback;
+
+public:
+    TransformedValue3(CallbackType callback, TStaticValue<OriginalType>* value, TStaticValue<OriginalType2>* value2, TStaticValue<OriginalType3>* value3) :
+        m_callback(callback),
+        TStaticValue(value, value2, value3)
+    {}
+
+    void Evaluate()
+    {
+        OriginalType value = ((TStaticValue<OriginalType>*)GetChild(0))->GetValue();
+        OriginalType2 value2 = ((TStaticValue<OriginalType2>*)GetChild(1))->GetValue();
+        OriginalType3 value3 = ((TStaticValue<OriginalType3>*)GetChild(2))->GetValue();
+
+        TransformedType evaluated = m_callback(value, value2, value3);
 
         GetValueInternal() = evaluated;
     }

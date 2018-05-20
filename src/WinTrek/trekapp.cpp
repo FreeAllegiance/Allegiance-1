@@ -18,7 +18,6 @@
 #include "main.h"
 #include "regkey.h"
 
-#include "json.hpp"
 #include <fstream>
 
 // BUILD_DX9
@@ -194,93 +193,6 @@ bool CheckFreeMemory()
         return false;
 }
 
-
-bool CheckForAllGuard()
-{
-  // KGJV: allways bypass
-  return true;
-  // Bypass any other tests if -nod is specified on the command line
-  ZString strCmdLine(::GetCommandLine());
-  while (!strCmdLine.IsEmpty())
-    if (strCmdLine.GetToken() == "-nod")
-      return true;
-
-  // Load KERNEL32
-  HINSTANCE hinstKernel32 = ::GetModuleHandle("kernel32.dll");
-  assert(hinstKernel32);
-
-  // Get the address of IsDebuggerPresent, if available
-  typedef BOOL (WINAPI* PFNIsDebuggerPresent)(VOID);
-  PFNIsDebuggerPresent pfnIsDebuggerPresent = (PFNIsDebuggerPresent)
-    ::GetProcAddress(hinstKernel32, "IsDebuggerPresent");
-  if (pfnIsDebuggerPresent)
-  {
-    // Indicate that we are being debugged, if we are
-    if ((*pfnIsDebuggerPresent)())
-      return true;
-  }
-  else
-  {
-    // Win95 doesn't support IsDebuggerPresent, so we must check some other ways
-
-    // Format an event name using the current process ID
-    char szEvent[24];
-    sprintf(szEvent, "MSRGuard_%08X", GetCurrentProcessId());
-
-    // Determine if the named event already exists
-    HANDLE hEvent = ::OpenEvent(EVENT_ALL_ACCESS, false, szEvent);
-    if (hEvent)
-    {
-      // Close the event handle and indicate that we are being debugged
-      ::CloseHandle(hEvent);
-      return true;
-    }
-  }
-
-  // Get the command-line options (again)
-  strCmdLine = ::GetCommandLine();
-  strCmdLine.GetToken();
-
-  // Get the fully-qualified path to the current process
-  char szModulePath[_MAX_PATH];
-  GetModuleFileName(NULL, szModulePath, sizeof(szModulePath));
-  char szDrive[_MAX_DRIVE], szDir[_MAX_DIR];
-  _splitpath(szModulePath, szDrive, szDir, NULL, NULL);
-  _makepath(szModulePath, szDrive, szDir, NULL, NULL);
-
-  // Get the ArtPath, since that's where AllGuard.exe should be
-  HKEY hKey = NULL;
-  if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-    return true; // If it can't be read, just keep running
-  char szArtPath[_MAX_PATH];
-  DWORD cbArtPath = sizeof(szArtPath);
-  if (ERROR_SUCCESS != ::RegQueryValueEx(hKey, "ArtPath", NULL, NULL, (BYTE*)&szArtPath, &cbArtPath))
-  {
-    lstrcpy(szArtPath, szModulePath);
-    lstrcat(szArtPath, "artwork\\");
-    cbArtPath = lstrlen(szArtPath);
-  }
-  else if ('\\' != szArtPath[cbArtPath - 1])
-  {
-    lstrcat(szArtPath, "\\");
-    ++cbArtPath;
-  }
-  ::RegCloseKey(hKey);
-
-  // Append the AllGuard.exe filename and parameters
-  char szAllGuard[_MAX_PATH * 4];
-  sprintf(szAllGuard, "\"%sAllGuard.exe\" %s", szArtPath, (LPCSTR)strCmdLine);
-
-  // Create the AllGuard.exe process
-  STARTUPINFO si = {sizeof(si)};
-  PROCESS_INFORMATION pi;
-  if (!::CreateProcess(NULL, szAllGuard, NULL, NULL, false, 0, NULL, szModulePath, &si, &pi))
-    return true; // If it can't be created, just keep running
-
-  // Indicate false to exit this instance of the process
-  return false;
-}
-
 ZString ReadAuthPipe()
 {
 	const int LENGTH = 64;
@@ -429,43 +341,7 @@ public:
 
           *p = 0; // erase filename
           ::SetCurrentDirectory(path);
-
-          HKEY hKey;
-          DWORD dwType;
-          char  szValue[MAX_PATH];
-          DWORD cbValue = MAX_PATH;
-
-          // NOTE: please keep reloader.cpp's GetArtPath() in sync with this!!!
-          if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-          {
-              // Get MoveInProgress from registry
-              if (ERROR_SUCCESS == ::RegQueryValueEx(hKey, "MoveInProgress", NULL, &dwType, (unsigned char*)&szValue, &cbValue) &&
-                  *((DWORD*)szValue) == 1)
-              {
-                  if (::MessageBox(NULL, "The AutoUpdate process failed to finish.  Try again to finish?  (YES is recommended)", "Error", MB_ICONERROR | MB_YESNO) == IDYES)
-                  {
-                      if (!LaunchReloaderAndExit(false))
-                      {
-                          ::MessageBox(NULL, "Couldn't launch Reloader.exe", "Fatal Error", MB_ICONERROR);
-                          ::ExitProcess(0);
-                          return S_FALSE;
-                      }
-                  }
-                  else
-                  {
-                      ::ExitProcess(0);
-                      return S_FALSE;
-                  }
-              }
-              ::RegCloseKey(hKey);
-          }
         }
-
-        //
-        // Check to see if we are being debugged
-        //
-        if (!CheckForAllGuard())
-          return S_FALSE;
 
 
         //
@@ -519,119 +395,69 @@ public:
         //
         // get the artpath
         //
+        PathString pathStr = GetConfiguration()->GetStringValue(
+            "Data.Path",
+            GetConfiguration()->GetStringValue(
+                "ArtPath",
+                GetExecutablePath() + "\\Artwork" 
+            )
+        ).c_str();
 
-        PathString pathStr; // = ZString::GetProfileString("Federation", "ArtPath");
+        bool bLogFrameData = GetConfiguration()->GetBoolValue(
+            "Debug.LogFrameData",
+            GetConfiguration()->GetBoolValue(
+                "LogFrameData",
+                ""
+            )
+        );
 
-        HKEY hKey;
-        DWORD dwType;
-        char  szValue[MAX_PATH];
-        DWORD dwValue;
-        DWORD cbValue = MAX_PATH;
+        std::string pathLogFrameData = GetConfiguration()->GetStringValue(
+            "Debug.LogFrameDataPath",
+            GetConfiguration()->GetStringValue(
+                "LogFrameDataPath",
+                ""
+            )
+        );
 
-        // NOTE: please keep reloader.cpp's GetArtPath() in sync with this!!!
-        if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
+        if (bLogFrameData && pathLogFrameData.length() > 0)
         {
+            ZString strFile = pathLogFrameData.c_str();
+            g_pzfFrameDump = new ZWriteFile(strFile);
+            // check for a valid file handle
+            if (g_pzfFrameDump->IsValid())
             {
-                nlohmann::json json;
-                std::ifstream filestream("config.json");
-
-                try {
-                    // Get the art path from the config file
-                    filestream >> json;
-                    pathStr = json["ArtPath"].get<std::string>().c_str();
-                }
-                catch (std::exception e) {
-                    // Get the art path from the registry
-                    if (ERROR_SUCCESS != ::RegQueryValueEx(hKey, "ArtPath", NULL, &dwType, (unsigned char*)&szValue, &cbValue))
-                    {
-                        // Set ArtPath to be relative to the application path
-                        GetModuleFileNameA(NULL, szValue, MAX_PATH);
-                        char*   p = strrchr(szValue, '\\');
-                        if (!p)
-                            p = szValue;
-                        else
-                            p++;
-
-                        strcpy(p, "artwork");
-
-                        //Create a subdirectory for the artwork (nothing will happen if it already there)
-                        CreateDirectoryA(szValue, NULL);
-                    }
-                    pathStr = szValue;
-                }
+                // dump out the header row of data
+                g_pzfFrameDump->Write(
+                    "Mspf,"
+                    "Fps,"
+                    "Warps,"
+                    "Ships,"
+                    "Projectiles,"
+                    "Asteroids,"
+                    "Stations,"
+                    "Treasures,"
+                    "Missiles,"
+                    "SectorWarps,"
+                    "SectorShips,"
+                    "SectorProjectiles,"
+                    "SectorAsteroids,"
+                    "SectorStations,"
+                    "SectorTreasures,"
+                    "SectorMissiles,"
+                    "Triangles,"
+                    "DrawStringCalls,"
+                    "Chars"
+                    "\n"
+                );
             }
- 
-            cbValue = MAX_PATH; // reset this
-
-            // Start the frame rate data log, if necessary
-            if (ERROR_SUCCESS == ::RegQueryValueEx(hKey, "LogFrameData", NULL, &dwType, (unsigned char*)&dwValue, &cbValue))
-            {
-                cbValue = MAX_PATH;
-                if (dwValue==1)
-                {
-                    if (ERROR_SUCCESS == ::RegQueryValueEx(hKey, "LogFrameDataPath", NULL, &dwType, (unsigned char*)&szValue, &cbValue))
-                    {
-                        if (strlen(szValue)>0)
-                        {
-                            ZString strFile = szValue;
-                            g_pzfFrameDump = new ZWriteFile(strFile);
-                            // check for a valid file handle
-                            if (g_pzfFrameDump->IsValid()) 
-                            {
-                                // dump out the header row of data
-                                g_pzfFrameDump->Write(
-                                        "Mspf,"
-                                        "Fps,"
-                                        "Warps,"
-                                        "Ships,"
-                                        "Projectiles,"
-                                        "Asteroids,"
-                                        "Stations,"
-                                        "Treasures,"
-                                        "Missiles,"
-                                        "SectorWarps,"
-                                        "SectorShips,"
-                                        "SectorProjectiles,"
-                                        "SectorAsteroids,"
-                                        "SectorStations,"
-                                        "SectorTreasures,"
-                                        "SectorMissiles,"
-                                        "Triangles,"
-                                        "DrawStringCalls,"
-                                        "Chars"
-                                        "\n"
-                                    );
-                            }
-                            else
-                            {
-                              // pop up error message box
-                              MessageBox(NULL, "Framerate log file location is invalid.\n"
-                                               "Use CliConfig to set the framerate log file location to "
-                                               "a valid location.",
-                                               "Framerate Logging Error", MB_ICONEXCLAMATION | MB_OK);
-                            }
-                        }
-                    }
-                }
-            }
-
-            ::RegCloseKey(hKey);
-        }
-
-        if (pathStr.IsEmpty()) {
-            // marksn: to make everyone consistent, this should go back to getmodulefilename path
-            //         like for convex hull and sounds
-            // pathStr = PathString::GetCurrentDirectory() + "artwork";
-
-            char    logFileName[MAX_PATH + 16];
-            GetModuleFileName(NULL, logFileName, MAX_PATH);
-            char*   p = strrchr(logFileName, '\\');
-            if (!p)
-                p = logFileName;
             else
-                p++;
-            strcpy(p, "artwork");
-            pathStr = logFileName;
+            {
+                // pop up error message box
+                MessageBox(NULL, "Framerate log file location is invalid.\n"
+                    "Use CliConfig to set the framerate log file location to "
+                    "a valid location.",
+                    "Framerate Logging Error", MB_ICONEXCLAMATION | MB_OK);
+            }
         }
 		
 		//Imago 8/16/09
@@ -639,39 +465,7 @@ public:
 		debugf("Running %s %s\nArtpath: %s\nCommand line: %s\n", (PCC) vi.GetInternalName(), 
 			(PCC) vi.GetStringValue("FileVersion"),(PCC) pathStr, (PCC) strCommandLine);
 
-// BUILD_DX9
-		// Now set later for D3D build, as modeller isn't valid yet.
-		//GetModeler()->SetArtPath(pathStr);
-// BUILD_DX9
  		UTL::SetArtPath(pathStr);
-		
-		/*{
-			HRESULT hr = FirstRunEula(pathStr);
-		
-          if (hr == E_FAIL)
-          {
-              ::MessageBox(NULL, "Error while trying to load ebueula.dll. Please reboot and retry.  If it still fails, reinstall Allegiance", "Initialization Error", MB_OK);
-              return S_FALSE;
-          }
-          else
-          if (hr == S_FALSE) 
-          {
-              ::MessageBox(NULL, "You must accept the End User License Agreement before playing the Allegiance", "Allegiance", MB_OK);
-              return S_FALSE;
-          }
-          else
-          {
-            assert(hr == S_OK);
-          }
-        }*/
-
-// BUILD_DX9
-        //
-        // load the fonts
-        //
-
-//        TrekResources::Initialize(GetModeler());
-// BUILD_DX9
 
         //
         // Initialize the runtime
@@ -687,10 +481,6 @@ public:
         bool bStartOffline    = false;
         bool bMovies          = true;
         bool bSingleInstance  = true;
-        bool bSoftware        = false;
-        bool bHardware        = false;
-        bool bPrimary         = false;
-        bool bSecondary       = false;
 		bool bStartFullscreen = true;
 
 
@@ -709,16 +499,8 @@ public:
                     bStartTraining = true;
                     bLogonDialog = false;
                     bMovies = false;
-                } else if (str == "software") {
-                    bSoftware = true;
-                } else if (str == "hardware") {
-                    bHardware = true;
-                } else if (str == "primary") {
-                    bPrimary = true;
-                } else if (str == "secondary") {
-                    bSecondary = true;
                 } else if (str == "nooutput") {
-                    g_bOutput = false;
+                    //todo, change logging based on this
                 } else if (str == "quickstart") {
 					//Imago dont quickstart if no saved name 7/21/09
 					if (trekClient.GetSavedCharacterName().GetLength())
@@ -765,7 +547,7 @@ public:
                     g_bAskForCDKey = true;
                 // wlp 2006 - added debug option to turn on debug output
 				} else if (str == "debug") {
-                    g_outputdebugstring  = true;           //wlp allow debug outputs
+                    //todo, change logging based on this
                 } else if (str.Left(9) == "callsign=") { // wlp - 2006, added new ASGS token
                     trekClient.SaveCharacterName(str.RightOf(9)) ; // Use CdKey for ASGS callsign storage
                     g_bAskForCallSign = false ; // wlp callsign was entered on commandline
@@ -855,9 +637,8 @@ public:
 		//   Raise dialog only if "Safe Mode" activated (any software/primary/secondary switches sent) 
 		// imago 6/29/09 7/1/09 removed hardware, asgs sends this under normal conditions
 		// BT - 10/17 - Force the client to launch windowed, then we'll take it full screen later. 
-		//bool bRaise = (bSoftware || bPrimary || bSecondary) ? true : false;
-		bool bRaise = false; // BT - 10/17 - The video picker no longer creates devices that work with the create texture D3D functions. This may be from me forcing it to load windowed and then pulling it full screen. However, starting windowed and then pulling full screen seems to have fixed a whole bunch of start up issues. 
-		if( PromptUserForVideoSettings(false, bRaise, iUseAdapter, GetModuleHandle(NULL), pathStr , ALLEGIANCE_REGISTRY_KEY_ROOT) == false )
+		// BT - 10/17 - The video picker no longer creates devices that work with the create texture D3D functions. This may be from me forcing it to load windowed and then pulling it full screen. However, starting windowed and then pulling full screen seems to have fixed a whole bunch of start up issues. 
+		if( PromptUserForVideoSettings(false, iUseAdapter, GetModuleHandle(NULL), pathStr , GetConfiguration()) == false )
 		{
 			return E_FAIL;
 		}
@@ -869,24 +650,8 @@ public:
                 this, 
                 strCommandLine,
 				pathStr,
-                bMovies,
-                bSoftware,
-                bHardware,
-                bPrimary,
-                bSecondary
+                bMovies
             );
-// #else
-        //TRef<TrekWindow> pwindow = 
-        //    TrekWindow::Create(
-        //        this, 
-        //        strCommandLine,
-        //        bMovies,
-        //        bSoftware,
-        //        bHardware,
-        //        bPrimary,
-        //        bSecondary
-        //    );
-// BUILD_DX9
 
         if (!pwindow->IsValid()) {
             return E_FAIL;

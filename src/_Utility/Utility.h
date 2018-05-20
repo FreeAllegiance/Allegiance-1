@@ -1293,9 +1293,6 @@ class UTL
         {
             return s_artworkPath;
         }
-        static LONG GetPathFromReg(IN  HKEY hkey,
-                                   IN  const char * szSubKey, 
-                                   OUT char * szPath);
 
         // converts char * of hex to int.  Assumes uppercase for 'A' to 'F'.
         static int hextoi(const char * pHex);

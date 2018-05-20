@@ -1556,7 +1556,7 @@ HRESULT FedMessaging::JoinSessionInstance( GUID guidApplication, GUID guidInstan
   if (FAILED(hr))
     return hr;
 
-      
+  debugf("DirectPlay: Connecting synchronously");
   hr = m_pDirectPlayClient->Connect( &dpnAppDesc,        // Application description
                                      addr,               // Session host address
                                      device,             // Address of device used to connect to the host (mdvalley: formerly 0)
@@ -1567,8 +1567,11 @@ HRESULT FedMessaging::JoinSessionInstance( GUID guidApplication, GUID guidInstan
                                      DPNOP_SYNC );       // Connect synchronously  //Fix memory leak -Imago 8/2/09
 
   delete[] playerInfo.pwszName;
-  if (FAILED(hr))
-    return hr;
+  if (FAILED(hr)) {
+      debugf("DirectPlay: Connect failed");
+      return hr;
+  }
+  debugf("DirectPlay: Connect success");
 
   m_guidInstance = guidInstance;
   m_fConnected = true;

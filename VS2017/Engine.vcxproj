@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZDebug'">Debug</VcpkgConfiguration>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZRetail'">Release</VcpkgConfiguration>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
@@ -117,6 +121,7 @@
     <ClCompile Include="..\src\engine\button.cpp" />
     <ClCompile Include="..\src\engine\camera.cpp" />
     <ClCompile Include="..\src\engine\caption.cpp" />
+    <ClCompile Include="..\src\engine\Configuration.cpp" />
     <ClCompile Include="..\src\engine\context.cpp" />
     <ClCompile Include="..\src\engine\controls.cpp" />
     <ClCompile Include="..\src\engine\D3DDevice9.cpp" />
@@ -124,7 +129,6 @@
     <ClCompile Include="..\src\engine\device3d.cpp" />
     <ClCompile Include="..\src\engine\DeviceModesDX9.cpp" />
     <ClCompile Include="..\src\engine\dinput.cpp" />
-    <ClCompile Include="..\src\engine\DX9PackFile.cpp" />
     <ClCompile Include="..\src\engine\engine.cpp" />
     <ClCompile Include="..\src\engine\engineapp.cpp" />
     <ClCompile Include="..\src\engine\enginewindow.cpp" />
@@ -167,12 +171,12 @@
     <ClInclude Include="..\src\engine\button.h" />
     <ClInclude Include="..\src\engine\camera.h" />
     <ClInclude Include="..\src\engine\caption.h" />
+    <ClInclude Include="..\src\engine\Configuration.h" />
     <ClInclude Include="..\src\engine\context.h" />
     <ClInclude Include="..\src\engine\controls.h" />
     <ClInclude Include="..\src\engine\D3DDevice9.h" />
     <ClInclude Include="..\src\engine\ddstruct.h" />
     <ClInclude Include="..\src\engine\DeviceModesDX9.h" />
-    <ClInclude Include="..\src\engine\DX9PackFile.h" />
     <ClInclude Include="..\src\engine\engine.h" />
     <ClInclude Include="..\src\engine\engineapp.h" />
     <ClInclude Include="..\src\engine\enginep.h" />

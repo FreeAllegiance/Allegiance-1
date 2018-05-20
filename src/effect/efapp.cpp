@@ -1,6 +1,5 @@
 #include "efapp.h"
 
-#include <DX9PackFile.h>
 #include <EngineSettings.h>
 #include <base.h>
 #include <button.h>
@@ -60,24 +59,6 @@ IEngineFont* TrekResources::HugeBoldFont()
 
 void TrekResources::Initialize(Modeler* pmodeler)
 {
-	// Import pack files here.
-	if( g_DX9Settings.mbUseTexturePackFiles == true )
-	{
-		bool bResult;
-		CDX9PackFile * pPackFile;
-
-		pPackFile = new CDX9PackFile( pmodeler->GetArtPath(), "CommonTextures" );
-		bResult = pPackFile->ImportPackFile();
-		//_ASSERT( bResult == true ); Imago 8/16/09
-        if (bResult)
-            CDX9PackFile::AddToPackFileList( pPackFile );
-        else {
-            pPackFile->SetUserCancelled(true);
-            delete pPackFile;
-            pPackFile = NULL;
-        }
-	}
-
 	TRef<INameSpace> pns = pmodeler->GetNameSpace("font");
 
 	g_pfontSmall     = pns->FindFont("smallFont");

@@ -42,7 +42,12 @@ HRESULT CbuoyIGC::Initialize(ImissionIGC* pMission, Time now, const void* data, 
               1.0f,
               c_mtStatic | c_mtPredictable);
 
-    SetRadius(20.0f);
+    if (dataBuoy->visible)
+        SetRadius(20.0f);
+    else
+        SetRadius(2.0f);
+    m_visible = dataBuoy->visible;
+
     SetPosition(dataBuoy->position);
     {
         Rotation    r(Vector(0.0f, 0.0f, 1.0f), 0.5f);

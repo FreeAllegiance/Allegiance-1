@@ -14,6 +14,7 @@ class EffectWindow : public EngineWindow {
 public:
     EffectWindow(
               EffectApp* papp,
+        UpdatingConfiguration* pConfiguration,
         const ZString&   strCommandLine,
         const ZString&   strTitle         = ZString(),
               bool       bStartFullscreen = false,

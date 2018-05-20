@@ -61,7 +61,7 @@ public:
 
 // Operations
 public:
-  static ImodelIGC* FindTargetName(CPig* pPig, BSTR bstrTarget);
+  static ImodelIGC* FindTargetName(CPig* pPig, BSTR bstrTarget, bool bFriendsOnly = false);
 
 // Overrides
 public:

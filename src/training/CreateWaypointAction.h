@@ -25,7 +25,7 @@ namespace Training
     class CreateWaypointAction : public CreateObjectAction
     {
         public:
-                    /* void */          CreateWaypointAction (BuoyID buoyID, const Vector& position, SectorID sectorID);
+                    /* void */          CreateWaypointAction (BuoyID buoyID, const Vector& position, SectorID sectorID, BuoyType type = c_buoyWaypoint, bool visible = true);
             virtual /* void */          ~CreateWaypointAction (void);
             virtual void                Execute (void);
 
@@ -33,7 +33,9 @@ namespace Training
                     BuoyID              m_buoyID;
                     Vector              m_position;
                     SectorID            m_sectorID;
+                    BuoyType            m_type;
                     DataBuoyIGC         m_buoyData;
+                    bool                m_visible;
     };
 
     //------------------------------------------------------------------------------

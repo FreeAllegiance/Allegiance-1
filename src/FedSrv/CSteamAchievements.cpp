@@ -305,7 +305,8 @@ void CSteamAchievements::AwardIGCAchievements(AchievementMask am)
 
 void CSteamAchievements::AwardRecoverTechAchievement()
 {
-	SetAchievement(EAchievements::RECOVER_TECH_1_8);
+	if (SetAchievement(EAchievements::RECOVER_TECH_1_8))
+		SaveStats();
 }
 
 void CSteamAchievements::AwardPodPickup()
@@ -415,6 +416,47 @@ void CSteamAchievements::AddUserStats(PlayerScoreObject*  ppso, IshipIGC * pIshi
 		if (getSucceed)
 			SetStat(EStats::REPAIR_PERCENT, tempStat + repair);
 	}
+}
+
+int CSteamAchievements::GetCommELO()
+{
+	bool getSucceed;
+	int playerELO;
+
+	getSucceed = GetStat(EStats::COMM_ELO, &playerELO);
+	if (getSucceed)
+		return playerELO;
+	else
+		return -1;
+
+}
+
+void CSteamAchievements::UpdateCommanderStats(int opponentELO, bool win)
+{
+	bool getSucceed;
+	int numGames;
+	double K;
+	int playerELO;
+	double expectedScore;
+
+	getSucceed = GetStat(EStats::COMM_GAMES, &numGames);
+	getSucceed = getSucceed && GetStat(EStats::COMM_ELO, &playerELO);
+	if (getSucceed)
+	{
+		
+		playerELO = playerELO*numGames + opponentELO + 400 * (win?1:-1);
+		
+		numGames += 1;
+		if (playerELO > 0)
+			playerELO = floor(playerELO / numGames);
+		else
+			playerELO = 0;
+
+		SetStat(EStats::COMM_GAMES, numGames);
+		SetStat(EStats::COMM_ELO, playerELO);
+
+	}
+	
 }
 
 static DWORD WINAPI UpdateLeaderboardThread(LPVOID pThreadParameter)

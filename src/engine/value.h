@@ -130,9 +130,6 @@ private:
     virtual void        Evaluate();
     virtual TRef<Value> Fold();
 
-    void RemoveParent(Value* pvalue);
-    void AddParent(Value* pvalue);
-
 protected:
     Value();
     Value(Value*);
@@ -161,6 +158,9 @@ protected:
 
 public:
     virtual ~Value();
+
+    void RemoveParent(Value* pvalue);
+    void AddParent(Value* pvalue);
 
     void ChangeTo(Value* pvalue);
     bool HasChanged() { return m_bChanged; }

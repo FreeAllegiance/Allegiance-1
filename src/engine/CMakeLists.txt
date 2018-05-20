@@ -8,7 +8,6 @@ INCLUDE_DIRECTORIES(../Inc ../zlib ../Lib/AllegianceSecurity)
 
 SET(Engine_SRC
     D3DDevice9.cpp
-    DX9PackFile.cpp
     DeviceModesDX9.cpp
     HashTable.cpp
     ImageTransfer.cpp

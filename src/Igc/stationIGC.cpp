@@ -76,6 +76,8 @@ HRESULT     CstationIGC::Initialize(ImissionIGC* pMission, Time now, const void*
 
             m_hullFraction = dataStation->bpHull;
             SetShieldFraction(dataStation->bpShield);
+
+            this->GetSide()->UpdateTerritory();
         }
 
         m_timeLastDamageReport = now;
@@ -291,7 +293,8 @@ const ShipListIGC*        CstationIGC::GetShips(void) const
 void CstationIGC::Launch(IshipIGC* pship)
 {
 	Orientation orientation;
-    Vector position(random(-0.5f, 0.5f), random(-0.5f, 0.5f), random(-0.5f, 0.5f));
+    const float maxRandomOffset = 5.0f;
+    Vector position(random(-maxRandomOffset, maxRandomOffset), random(-maxRandomOffset, maxRandomOffset), random(-maxRandomOffset, maxRandomOffset));
     Vector forward;
 
     const Orientation&  o = GetOrientation();
@@ -334,7 +337,7 @@ void CstationIGC::Launch(IshipIGC* pship)
             }
         }
 
-        position += forward * (GetRadius() + pship->GetRadius() + vLaunch * 0.5f);
+        position += forward * (GetRadius() + pship->GetRadius() + vLaunch * 0.5f + maxRandomOffset);
     }
     else
     { 
@@ -347,10 +350,10 @@ void CstationIGC::Launch(IshipIGC* pship)
 		float	m_fDeltaTime = (float)(lastUpdate - lastLaunch);
 		//debugf(" *** %s(%i) launch time cluster delta = %f\n\n", m_myStationType.GetName(), m_myStationType.GetObjectID(), m_fDeltaTime);
 		if (m_fDeltaTime <= 0.1f) {
-			 position += forward * (pship->GetRadius() + vLaunch * 0.85f);
+			 position += forward * (pship->GetRadius() + vLaunch * 0.85f + maxRandomOffset);
 			 //debugf("*** %s(%i) position adjusted to ensure smooth take-off\n",pship->GetName(),pship->GetObjectID());
 		} else {
-			 position += forward * (pship->GetRadius() + vLaunch * 0.5f);
+			 position += forward * (pship->GetRadius() + vLaunch * 0.5f + maxRandomOffset);
 		}
 		//
 

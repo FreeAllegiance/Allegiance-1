@@ -359,7 +359,8 @@ enum DelPositionReqReason
     DPR_CantLeadSquad,
     DPR_ServerPaused,
     DPR_DuplicateLogin,
-    DPR_Other
+    DPR_Other,
+	DPR_BotsOnTeam0Only
 };
 
 DEFINE_FEDMSG(CS, DELPOSITIONREQ, 42) // cancel/reject a pending request

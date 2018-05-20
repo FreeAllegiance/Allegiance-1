@@ -80,47 +80,6 @@ BOOL CDShow::Open(ZString& pFileName, IDirectDraw7 *pDD)
 		return FALSE; 
 	}
 
-	//7/10 #110
-	FILTER_INFO FilterInfo;
-	pAMStream->GetFilterGraph(&pGb);
-	pGb->EnumFilters(&pEfs);
-
-    IBaseFilter *pFilter;
-	unsigned long cFetched;
-    while(pEfs->Next(1, &pFilter, &cFetched) == S_OK) {
-		FILTER_INFO FilterInfo;
-		pFilter->QueryFilterInfo(&FilterInfo);
-		char szName[MAX_FILTER_NAME];
-		long cch = WideCharToMultiByte(CP_ACP,0,FilterInfo.achName,MAX_FILTER_NAME,szName,MAX_FILTER_NAME,0,0);
-		if (cch > 0) {
-			if (!strcmp("WMAudio Decoder DMO",szName)) {
-				// set the volume to music level
-				FilterInfo.pGraph->QueryInterface(IID_IBasicAudio,(void**)&pBa);
-				HKEY hKey;
-				DWORD dwResult = 0;
-				if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT,0, KEY_READ, &hKey)) {
-					DWORD dwSize = sizeof(dwResult);
-					DWORD dwType = REG_DWORD;
-					::RegQueryValueEx(hKey, "MusicGain", NULL, &dwType, (BYTE*)&dwResult, &dwSize);
-					::RegCloseKey(hKey);
-					if (dwType != REG_DWORD)
-						dwResult = 0;
-				}
-				long vol = (dwResult * -1) * 100;
-				if (vol < -5000) {
-					vol = -10000;
-				}
-				pBa->put_Volume(vol);
-				pBa->Release();
-			}
-           if (FilterInfo.pGraph != NULL)
-               FilterInfo.pGraph->Release();
-           pFilter->Release();
-		}
-	}
-	pEfs->Release();
-	pGb->Release();
-
     // Assign member to temperary stream pointer.
 	m_pMMStream = pAMStream;
 	

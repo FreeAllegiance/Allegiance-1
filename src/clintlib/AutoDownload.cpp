@@ -219,7 +219,7 @@ public:
 
     ///////////////////////////////////////////////////////////////////////////////////////
 
-    void BeginUpdate(IAutoUpdateSink * pSink, bool bForceCRCCheck, bool bSkipReloader)
+    void BeginUpdate(IAutoUpdateSink * pSink, bool bForceCRCCheck)
     {
         //
         // Make sure the current path is where Allegiance.exe is for the AutoUpdate: 
@@ -240,8 +240,6 @@ public:
         m_bNeedToRestart = false;
         m_bForceCRCCheck = bForceCRCCheck;
         m_cFilesDownloaded = 0;
-
-        m_bSkipReloader = bSkipReloader;
 
         assert(pSink);
         m_pSink = pSink;
@@ -969,39 +967,14 @@ private:
         // At this point we are done downloading everything.  
         //
 
-        if (!m_bSkipReloader)
-        {
-            // Set registry's MoveInProgress to one, meaning move is in progress
-            HKEY hKey;
-            DWORD dwValue = 1;
-            if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_WRITE, &hKey))
-            {
-              ::RegSetValueEx(hKey, "MoveInProgress", 0, REG_DWORD, (unsigned char*)&dwValue, sizeof(DWORD));
-            }
-        }
-
         //
         // Move Files from AutoUpdate folder to Artwork (or EXE-containing) folder
         //
         char szErrorMsg[2*MAX_PATH+50];
 
-        if (!CAutoDownloadUtil::MoveFiles(".\\AutoUpdate\\", m_szArtPath, !m_bSkipReloader, &m_bNeedToRestart, m_bSkipReloader, szErrorMsg, m_pSink))
+        if (!CAutoDownloadUtil::MoveFiles(".\\AutoUpdate\\", m_szArtPath, false, &m_bNeedToRestart, szErrorMsg, m_pSink))
         {
             DoError("Error while moving downloaded files (be sure dest file isn't already open): %s", szErrorMsg);
-        }
-
-        if (m_bNeedToRestart && !m_bSkipReloader)
-        {
-            // since we are going to exit process soon, we should signal restart
-            m_pSink->OnAutoUpdateSystemTermination(m_bErrorHasOccurred, m_bNeedToRestart);
-
-            if (!LaunchReloaderAndExit(m_bReadmeUpdated))
-            {
-                const char * sz = "Couldn't complete update process; couldn't launch Reloader.exe.";
-                DoError(sz);
-                ::MessageBox(NULL, sz, "Fatal Error", MB_ICONERROR);
-                ::ExitProcess(0);
-            }
         }
 
         delete this;
@@ -1040,7 +1013,6 @@ private: // Data members
     bool                 m_bErrorHasOccurred;
     bool                 m_bForceCRCCheck;
     bool                 m_bReadmeUpdated;
-    bool                 m_bSkipReloader;
 
     float                m_fBytesPerMillisecond;
     unsigned             m_cbLastReading;

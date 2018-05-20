@@ -93,24 +93,11 @@ ZString CallsignTagInfo::Render(ZString callsign)
 
 void CallsignTagInfo::LoadFromRegistry()
 {
-	char szSteamClanID[120];
-	szSteamClanID[0] = '\0';
-	DWORD cbClanID = sizeof(szSteamClanID);
+    std::string strSteamClanId = GetConfiguration()->GetStringValue("Steam.ClanId", GetConfiguration()->GetStringValue("SteamClanID", ""));
+    std::string strSteamOfficierToken = GetConfiguration()->GetStringValue("Steam.OfficerToken", GetConfiguration()->GetStringValue("SteamOfficerToken", ""));
 
-	char szSteamOfficerToken[5];
-	szSteamOfficerToken[0] = '\0';
-	DWORD cbSteamOfficerToken = sizeof(szSteamOfficerToken);
-
-	HKEY hKey;
-	DWORD dwType;
-	if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-	{
-		RegQueryValueEx(hKey, "SteamClanID", NULL, &dwType, (BYTE *)&szSteamClanID, &cbClanID);
-		RegQueryValueEx(hKey, "SteamOfficerToken", NULL, &dwType, (BYTE *)&szSteamOfficerToken, &cbSteamOfficerToken);
-		RegCloseKey(hKey);
-	}
 #ifdef STEAM_APP_ID
-	CSteamID targetGroupID(strtoull(szSteamClanID, NULL, NULL));
+	CSteamID targetGroupID(strtoull(strSteamClanId.c_str(), NULL, NULL));
 
 	CSteamID currentUser = SteamUser()->GetSteamID();
 
@@ -124,7 +111,7 @@ void CallsignTagInfo::LoadFromRegistry()
 		}
 	}
 
-	UpdateStringValues(szSteamOfficerToken);
+	UpdateStringValues(strSteamOfficierToken.c_str());
 #endif
 }
 
@@ -136,15 +123,8 @@ void CallsignTagInfo::SaveToRegistry()
 	char token[5];
 	sprintf(token, m_callsignToken);
 
-	HKEY hKey;
-	DWORD dwType;
-	if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ | KEY_WRITE, &hKey))
-	{
-		RegSetValueEx(hKey, "SteamClanID", 0, REG_SZ, (BYTE * )steamGroupID, sizeof(steamGroupID));
-		RegSetValueEx(hKey, "SteamOfficerToken", 0, REG_SZ, (BYTE *) token, sizeof(token));
-
-		RegCloseKey(hKey);
-	}
+    GetConfiguration()->GetString("Steam.ClanId", "")->SetValue(steamGroupID);
+    GetConfiguration()->GetString("Steam.OfficerToken", "")->SetValue(token);
 
 	UpdateStringValues(m_callsignToken);
 }

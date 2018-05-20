@@ -172,6 +172,13 @@ namespace Training
     }
 
     //------------------------------------------------------------------------------
+    int             GetKillCount(void)
+    {
+        assert(g_pMission);
+        return g_pMission->GetKillCount();
+    }
+
+    //------------------------------------------------------------------------------
     void            SetupShipAndCamera (void)
     {
         assert (g_pMission);
@@ -216,6 +223,28 @@ namespace Training
         if (g_pMission)
             return g_pMission->RestoreShip ();
         return true;
+    }
+
+    //------------------------------------------------------------------------------
+    void            ShipKilled(IshipIGC* pShip, ImodelIGC* pLauncher)
+    {
+        if (g_pMission)
+            g_pMission->ShipKilled(pShip, pLauncher);
+    }
+
+    //------------------------------------------------------------------------------
+    bool            HandlePickDefaultOrder(IshipIGC* pShip)
+    {
+        if (g_pMission)
+            return g_pMission->HandlePickDefaultOrder(pShip);
+        return false;
+    }
+
+    //------------------------------------------------------------------------------
+    void            KillStationEvent(IstationIGC* pStation, ImodelIGC* pLauncher)
+    {
+        if (g_pMission)
+            return g_pMission->KillStationEvent(pStation, pLauncher);
     }
 
     //------------------------------------------------------------------------------

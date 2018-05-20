@@ -1,0 +1,19 @@
+﻿regsvr32 .\AGC\AGC.dll /u
+regsvr32 .\AGC\AGC.dll
+regsvr32 .\Test\TCObj\TCObj.dll /u
+regsvr32 .\Test\TCObj\TCObj.dll
+regsvr32 .\Pigs\PigsLib\PigsLib.dll /u
+regsvr32 .\Pigs\PigsLib\PigsLib.dll
+PigAccts.exe -RegServer [USER] [PASS]
+PigSrv.exe -RegServer [USER] [PASS]
+
+Create Scripts directory at /PigSrv
+Copy *.pig into Scripts
+
+// AppID = Pigs
+// {F132B4E3-C6EF-11D2-85C9-00C04F68DEB0}
+// HKCR/AppID/{F132B4E3-C6EF-11D2-85C9-00C04F68DEB0}/ArtPath
+// HKCR/AppID/{F132B4E3-C6EF-11D2-85C9-00C04F68DEB0}/MissionServer property
+// HKCR/AppID/{F132B4E3-C6EF-11D2-85C9-00C04F68DEB0}/Account
+// HKCR/AppID/{F132B4E3-C6EF-11D2-85C9-00C04F68DEB0}/ZoneAuthServer
+// HKCR/AppID/{F132B4E3-C6EF-11D2-85C9-00C04F68DEB0}/MaxPigs

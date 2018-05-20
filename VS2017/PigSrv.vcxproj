@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZDebug'">Debug</VcpkgConfiguration>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZRetail'">Release</VcpkgConfiguration>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
@@ -20,12 +24,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -52,11 +56,17 @@
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'" />
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
+    <IncludePath>$(DXSDK_DIR)\Include;$(VC_IncludePath);$(WindowsSdk_71A_IncludePath);</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">
+    <IncludePath>$(DXSDK_DIR)\Include;$(VC_IncludePath);$(WindowsSdk_71A_IncludePath);</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Pigs\PigSrv;..\src\Inc;..\src\Test\Inc;..\src\zlib;..\src\_Utility;..\src\AGC;..\src\Guids;..\src\Zone;..\src\engine;..\src\lobby;$(OutDir);$(OutDir)..\PigsLib;$(OutDir)..\..\Guids;$(OutDir)..\..\Test\TCObj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_ATL_STATIC_REGISTRY;_DEBUG;DEBUG;STRICT;_WINDOWS;WIN32;_AFXDLL;_CRT_SECURE_NO_DEPRECATE;AGC_HOST;_ATL_DEBUG_INTERFACES;_ATL_DEBUG_QI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Pigs\PigSrv;..\src\Inc;..\src\Test\Inc;..\src\zlib;..\src\_Utility;..\src\AGC;..\src\Guids;..\src\Zone;..\src\engine;..\src\Igc;..\src\lobby;$(OutDir);$(OutDir)..\PigsLib;$(OutDir)..\..\Guids;$(OutDir)..\..\Test\TCObj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NOMINMAX;_TEST;ALLSRV_STANDALONE;FEDSRV;AGC_HOST;DEBUG;_DEBUG;_WIN32;_WINDOWS;_AFXDLL;_CONSOLE;WIN;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -64,13 +74,15 @@
       <WarningLevel>Level2</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <LanguageStandard>stdcpp14</LanguageStandard>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>FLAVOR=\"$(ConfigurationName)\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(OutDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>$(OutDir)..\..\Test\TCLib\TCLib.lib;$(OutDir)..\PigGUID\PigGUID.lib;$(OutDir)..\..\Guids\AGCGuid.lib;$(OutDir)..\..\ZLib\ZLib.lib;$(OutDir)..\..\Engine\Engine.lib;$(OutDir)..\..\_utility\Utility.lib;$(OutDir)..\..\IGC\IGC.lib;$(OutDir)..\..\ClintLib\ClintLib.lib;$(OutDir)..\..\Guids\Guids.lib;..\src\Lib\DirectPlay\dxguid.lib;lz32.lib;wininet.lib;netapi32.lib;winmm.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\src\Lib\AllegianceSecurity\AllegianceSecurityd.lib;..\src\Lib\Steam\steam_api.lib;$(OutDir)..\..\Test\TCLib\TCLib.lib;$(OutDir)..\PigGUID\PigGUID.lib;$(OutDir)..\..\Guids\AGCGuid.lib;$(OutDir)..\..\ZLib\ZLib.lib;$(OutDir)..\..\Engine\Engine.lib;$(OutDir)..\..\_utility\Utility.lib;$(OutDir)..\..\IGC\IGC.lib;$(OutDir)..\..\ClintLib\ClintLib.lib;$(OutDir)..\..\Guids\Guids.lib;..\src\Lib\DirectPlay\dxguid.lib;lz32.lib;wininet.lib;netapi32.lib;winmm.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <TypeLibraryFile>$(TargetDir)/$(ProjectName).tlb</TypeLibraryFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -78,88 +90,37 @@
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy ..\src\lib\steam\steam_api.dll $(OutDir) /s /d /y
+xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Pigs\PigSrv;..\src\Inc;..\src\Test\Inc;..\src\zlib;..\src\_Utility;..\src\AGC;..\src\Guids;..\src\Zone;..\src\engine;..\src\lobby;$(OutDir);$(OutDir)..\PigsLib;$(OutDir)..\..\Guids;$(OutDir)..\..\Test\TCObj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Pigs\PigSrv;..\src\Inc;..\src\Test\Inc;..\src\zlib;..\src\_Utility;..\src\AGC;..\src\Guids;..\src\Zone;..\src\engine;..\src\Igc;..\src\lobby;$(OutDir);$(OutDir)..\PigsLib;$(OutDir)..\..\Guids;$(OutDir)..\..\Test\TCObj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>_ATL_STATIC_REGISTRY;STRICT;_WINDOWS;WIN32;_AFXDLL;_CRT_SECURE_NO_DEPRECATE;AGC_HOST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;DEBUG;ALLSRV_STANDALONE;FEDSRV;AGC_HOST;SRVLOG;_WIN32;_WINDOWS;_AFXDLL;_CONSOLE;WIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>FLAVOR=\"$(ConfigurationName)\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(OutDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>$(OutDir)..\..\Test\TCLib\TCLib.lib;$(OutDir)..\PigGUID\PigGUID.lib;$(OutDir)..\..\Guids\AGCGuid.lib;$(OutDir)..\..\ZLib\ZLib.lib;$(OutDir)..\..\Engine\Engine.lib;$(OutDir)..\..\_utility\Utility.lib;$(OutDir)..\..\IGC\IGC.lib;$(OutDir)..\..\ClintLib\ClintLib.lib;$(OutDir)..\..\Guids\Guids.lib;..\src\Lib\DirectPlay\dxguid.lib;lz32.lib;wininet.lib;netapi32.lib;winmm.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\src\Lib\AllegianceSecurity\AllegianceSecurity.lib;..\src\Lib\Steam\steam_api.lib;$(OutDir)..\..\Test\TCLib\TCLib.lib;$(OutDir)..\PigGUID\PigGUID.lib;$(OutDir)..\..\Guids\AGCGuid.lib;$(OutDir)..\..\ZLib\ZLib.lib;$(OutDir)..\..\Engine\Engine.lib;$(OutDir)..\..\_utility\Utility.lib;$(OutDir)..\..\IGC\IGC.lib;$(OutDir)..\..\ClintLib\ClintLib.lib;$(OutDir)..\..\Guids\Guids.lib;..\src\Lib\DirectPlay\dxguid.lib;lz32.lib;wininet.lib;netapi32.lib;winmm.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TypeLibraryFile>$(TargetDir)/$(ProjectName).tlb</TypeLibraryFile>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy ..\src\lib\steam\steam_api.dll $(OutDir) /s /d /y
+xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="..\src\Pigs\Piglets\alephjumper.pig" />
-    <None Include="..\src\Pigs\Piglets\bugman.pig" />
-    <None Include="..\src\Pigs\Piglets\bulldozer.pig" />
-    <None Include="..\src\Pigs\Piglets\colbug-a.pig" />
-    <None Include="..\src\Pigs\Piglets\colbug-p.pig" />
-    <None Include="..\src\Pigs\Piglets\colbug-s.pig" />
-    <None Include="..\src\Pigs\Piglets\Default.pig" />
-    <None Include="..\src\Pigs\Piglets\demo.pig" />
-    <None Include="..\src\Pigs\Piglets\dev.pig" />
-    <None Include="..\src\Pigs\Piglets\docker.pig" />
-    <None Include="..\src\Pigs\Piglets\FaceOutpost.pig" />
-    <None Include="..\src\Pigs\Piglets\framerate-dummy.pig" />
-    <None Include="..\src\Pigs\Piglets\framerate.pig" />
-    <None Include="..\src\Pigs\Piglets\it.pig" />
-    <None Include="..\src\Pigs\Piglets\mark2.pig" />
-    <None Include="..\src\Pigs\Piglets\mark2s.pig" />
-    <None Include="..\src\Pigs\Piglets\mark3.pig" />
-    <None Include="..\src\Pigs\Piglets\marksn1.pig" />
     <None Include="..\src\Pigs\Piglets\progress.xls" />
-    <None Include="..\src\Pigs\Piglets\scout2.pig" />
-    <None Include="..\src\Pigs\Piglets\stem.pig" />
-    <None Include="..\src\Pigs\Piglets\Teleporter.pig" />
-    <None Include="..\src\Pigs\Piglets\include\asteroids.js" />
-    <None Include="..\src\Pigs\Piglets\include\AutoStartGame.js" />
-    <None Include="..\src\Pigs\Piglets\include\chatcommand.js" />
-    <None Include="..\src\Pigs\Piglets\include\common.js" />
-    <None Include="..\src\Pigs\Piglets\include\dijkstra.js" />
-    <None Include="..\src\Pigs\Piglets\include\eliza.js" />
-    <None Include="..\src\Pigs\Piglets\include\GetIntoTeam.js" />
-    <None Include="..\src\Pigs\Piglets\moldy\Mark0.pig" />
-    <None Include="..\src\Pigs\Piglets\moldy\Mark1.pig" />
-    <None Include="..\src\Pigs\Piglets\moldy\scout.pig" />
-    <None Include="..\src\Pigs\Scripts\AccountServer.js" />
-    <None Include="..\src\Pigs\Scripts\ArtPath.js" />
-    <None Include="..\src\Pigs\Scripts\create collision test game.vbs" />
-    <None Include="..\src\Pigs\Scripts\create demo game.vbs" />
-    <None Include="..\src\Pigs\Scripts\create scout test game.vbs" />
-    <None Include="..\src\Pigs\Scripts\CreatePig.js" />
-    <None Include="..\src\Pigs\Scripts\CreatePigs.js" />
-    <None Include="..\src\Pigs\Scripts\debugger.js" />
-    <None Include="..\src\Pigs\Scripts\debugger.vbs" />
-    <None Include="..\src\Pigs\Scripts\DeployPigs.js" />
-    <None Include="..\src\Pigs\Scripts\EventLog.js" />
-    <None Include="..\src\Pigs\Scripts\EventViewer.htm" />
-    <None Include="..\src\Pigs\Scripts\immed.js" />
-    <None Include="..\src\Pigs\Scripts\ListAccts.js" />
-    <None Include="..\src\Pigs\Scripts\listpigs.js" />
-    <None Include="..\src\Pigs\Scripts\listpigs2.js" />
-    <None Include="..\src\Pigs\Scripts\LobbyServer.js" />
-    <None Include="..\src\Pigs\Scripts\MaxPigs.js" />
-    <None Include="..\src\Pigs\Scripts\RemAccountServer.js" />
-    <None Include="..\src\Pigs\Scripts\RemCreatePig.js" />
-    <None Include="..\src\Pigs\Scripts\RemCreatePigs.js" />
-    <None Include="..\src\Pigs\Scripts\RemListAccts.js" />
-    <None Include="..\src\Pigs\Scripts\RemListPigs.js" />
-    <None Include="..\src\Pigs\Scripts\RemLobbyServer.js" />
-    <None Include="..\src\Pigs\Scripts\remshutdown.js" />
-    <None Include="..\src\Pigs\Scripts\ScriptDir.js" />
-    <None Include="..\src\Pigs\Scripts\session.js" />
-    <None Include="..\src\Pigs\Scripts\shutdown.js" />
-    <None Include="..\src\Pigs\Scripts\ZoneAuthServer.js" />
-    <None Include="..\src\Pigs\Scripts\ZoneAuthTimeout.js" />
     <None Include="..\src\Pigs\PigSrv\PigSrv.ico" />
     <None Include="..\src\Pigs\PigSrv\PigSrv.rc2" />
     <None Include="..\src\Pigs\PigSrv\Pig.rgs" />
@@ -180,8 +141,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\Pigs\PigSrv\Resource.h" />
-    <ClInclude Include="..\src\Test\Inc\Allegiance.h" />
-    <ClInclude Include="..\src\Pigs\PigSrv\IActiveScriptSiteImpl.h" />
     <ClInclude Include="..\src\Pigs\PigSrv\pch.h" />
     <ClInclude Include="..\src\Pigs\PigSrv\Pig.h" />
     <ClInclude Include="..\src\Pigs\PigSrv\PigBehavior.h" />
@@ -232,6 +191,41 @@
     <ClCompile Include="..\src\Pigs\PigSrv\PigSrv.cpp" />
     <ClCompile Include="..\src\Pigs\PigSrv\PigTimer.cpp" />
     <ClCompile Include="..\src\Pigs\PigSrv\SrcInc.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="AGC.vcxproj">
+      <Project>{1cbf6569-f71c-422a-81dd-8d30a736db21}</Project>
+    </ProjectReference>
+    <ProjectReference Include="ClintLib.vcxproj">
+      <Project>{557ca42c-aa39-4c44-a998-0452f8c55851}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Igc.vcxproj">
+      <Project>{bf99dcb8-4127-4403-82c9-72190c6abf5f}</Project>
+    </ProjectReference>
+    <ProjectReference Include="PigConfig.vcxproj">
+      <Project>{52c64275-da32-486b-ab61-a617e5a07e0a}</Project>
+    </ProjectReference>
+    <ProjectReference Include="PigGUID.vcxproj">
+      <Project>{9edd4786-4508-4f99-89d1-12fa255ac6a3}</Project>
+    </ProjectReference>
+    <ProjectReference Include="PigsLib.vcxproj">
+      <Project>{4276fb1e-16d0-4463-89ce-2d33d78512b1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Server.vcxproj">
+      <Project>{05ead557-56b0-4070-83f0-8a2b6fb9c54d}</Project>
+    </ProjectReference>
+    <ProjectReference Include="TCLib.vcxproj">
+      <Project>{1695996c-f698-4509-bf5c-ade10ada67f9}</Project>
+    </ProjectReference>
+    <ProjectReference Include="TCObj.vcxproj">
+      <Project>{caffb3db-eadd-46a1-abae-3a341011b0a6}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Utility.vcxproj">
+      <Project>{3853a2c5-f219-4c7d-841a-9407a7aeae9d}</Project>
+    </ProjectReference>
+    <ProjectReference Include="ZLibrary.vcxproj">
+      <Project>{21c70ca0-24c5-475b-8c47-6f0226a374b0}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

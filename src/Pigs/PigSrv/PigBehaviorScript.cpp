@@ -566,15 +566,29 @@ STDMETHODIMP CPigBehaviorScript::GetItemInfo(LPCOLESTR pstrName,
 
 STDMETHODIMP CPigBehaviorScript::OnScriptError(IActiveScriptError* pScriptError)
 {
-  // Perform default processing
-  IActiveScriptSiteImplBase::OnScriptError(pScriptError);
+	EXCEPINFO info;
+	BSTR line; // = SysAllocString(L"kljadslkfalsdhflasfdlahdslhasldfjhalsdjfhlasjfdhlajsdhfljashdfljahsdlfjhasldhjlfas");
+	DWORD sourceContext;
+	ULONG lineNumber;
+	LONG charPosition;
+	pScriptError->GetExceptionInfo(&info);
+	pScriptError->GetSourceLineText(&line);
+	pScriptError->GetSourcePosition(&sourceContext, &lineNumber, &charPosition);
 
-  // Save error information
-  m_spAse = pScriptError;
+	printf("Script Error!\n");
+	printf("Exception Info: %S\n", info.bstrDescription);
+	//printf("Source Line Text: %S\n", line);
+	printf("Source Position: %ld, Line: %u, charPosition: %ld\n", sourceContext, lineNumber, charPosition);
 
-  // Indicating that the script is invalid
-//  m_bAppearsValid = false;
-  // TODO: Notify the CPigEngine (to fire an event to the sessions)
+	// Perform default processing
+	IActiveScriptSiteImplBase::OnScriptError(pScriptError);
+
+	// Save error information
+	m_spAse = pScriptError;
+
+	// Indicating that the script is invalid
+	//  m_bAppearsValid = false;
+	// TODO: Notify the CPigEngine (to fire an event to the sessions)
 
   // Indicate success
   return S_OK;

@@ -56,6 +56,9 @@ public:
     PROP_ENTRY("MaxTeamPlayers", dispid_MaxTeamPlayers, CLSID_NULL)
     PROP_ENTRY("MinTeamPlayers", dispid_MinTeamPlayers, CLSID_NULL)
     PROP_ENTRY("MapType"       , dispid_MapType       , CLSID_NULL)
+	//Imago 10/14
+	PROP_ENTRY("GameName"       , dispid_GameName     , CLSID_NULL)
+	PROP_ENTRY("CoreName"       , dispid_CoreName     , CLSID_NULL)
   END_PROP_MAP()
 
 // Construction / Destruction
@@ -78,7 +81,31 @@ public:
   STDMETHODIMP get_MinTeamPlayers(short* pnMinTeamPlayers);
   STDMETHODIMP put_MapType(PigMapType eMapType);
   STDMETHODIMP get_MapType(PigMapType* peMapType);
-
+  //imago 10/14
+  STDMETHODIMP put_TeamKills(short nGoalTemaKills);
+  STDMETHODIMP get_TeamKills(short* nGoalTemaKills);
+  STDMETHODIMP put_GameName(BSTR bstrGameName);
+  STDMETHODIMP get_GameName(BSTR* bstrGameName);
+  STDMETHODIMP put_CoreName(BSTR bstrCoreName);
+  STDMETHODIMP get_CoreName(BSTR* bstrCoreName);
+  STDMETHODIMP put_KillBonus(short KBlevel);
+  STDMETHODIMP get_KillBonus(short* KBlevel);
+  STDMETHODIMP put_Defections(VARIANT_BOOL Defections);
+  STDMETHODIMP get_Defections(VARIANT_BOOL* Defections);
+  STDMETHODIMP put_Miners(short Miners);
+  STDMETHODIMP get_Miners(short* Miners);
+  STDMETHODIMP put_Developments(VARIANT_BOOL Developments);
+  STDMETHODIMP get_Developments(VARIANT_BOOL* Developments);
+  STDMETHODIMP put_Conquest(short Conquest);
+  STDMETHODIMP get_Conquest(short* Conquest);
+  STDMETHODIMP put_Flags(short Flags);
+  STDMETHODIMP get_Flags(short* Flags);
+  STDMETHODIMP put_Artifacts(short Artifacts);
+  STDMETHODIMP get_Artifacts(short* Artifacts);
+  STDMETHODIMP put_Pods(VARIANT_BOOL Pods);
+  STDMETHODIMP get_Pods(VARIANT_BOOL* Pods);
+  STDMETHODIMP put_Experimental(VARIANT_BOOL Experimental);
+  STDMETHODIMP get_Experimental(VARIANT_BOOL* Experimental);
 // IPigMissionParamsPrivate Interface Methods
 public:
   STDMETHODIMP GetData(IStream** ppstm);

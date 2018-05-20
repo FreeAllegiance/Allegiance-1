@@ -143,6 +143,8 @@ enum dispid_PigsIDL
   dispid_Defend,
   dispid_IsRipCording,
   dispid_IsCloaked,
+  dispid_MissileRange,
+  dispid_MissileLock,
   dispid_LockVector,
   dispid_IsVectorLocked,
   dispid_QueuedCommand,
@@ -173,7 +175,24 @@ enum dispid_PigsIDL
   dispid_ZoneAuthServer,
   dispid_ZoneAuthTimeout,
   dispid_LobbyMode,
-
+  dispid_GameName,
+  dispid_CoreName,
+  dispid_TeamKills,
+  dispid_AttackShip,
+  dispid_AttackStation,
+  dispid_KillBonus,
+  dispid_Defections,
+  dispid_Miners,
+  dispid_Developments,
+  dispid_Conquest,
+  dispid_Flags,
+  dispid_Artifacts,
+  dispid_Pods,
+  dispid_Experimental,
+  dispid_Goto,
+  dispid_GotoStationID,
+  dispid_Boost,
+  dispid_CdKey,
   dispid_PigsIDL_End = dispid_PigsIDL_Begin + 0x1000
 };
 
@@ -424,8 +443,8 @@ interface IPigBehavior : IDispatch
     [in] float fAmount, [in] float fLeakage,
     [in] IAGCVector* pVector1, [in] IAGCVector* pVector2);
 
-  [helpstring("Called when the Pig ship is killed.")]
-  HRESULT OnShipKilled([in] IAGCModel* pModelLauncher, [in] float fAmount,
+  [helpstring("Called when any ship is killed.")]
+  HRESULT OnShipKilled([in] IAGCShip* pShip, [in] IAGCModel* pModelLauncher, [in] float fAmount,
     [in] IAGCVector* pVector1, [in] IAGCVector* pVector2);
 
   [helpstring("Called when the Pig ship is transported to a new Sector.")]
@@ -518,13 +537,13 @@ interface IPig : IDispatch
   HRESULT Logoff();
 
   [helpstring("Creates (and joins) a new mission with the specified parameters.")]
-  HRESULT CreateMission([in] IPigMissionParams* pMissionParams);
+  HRESULT CreateMission([in] BSTR bstrServerName, [in] BSTR bstrServerAddr, [in] IPigMissionParams* pMissionParams); //Imago 10/14
 
   [helpstring("Joins a mission, which may be specified by name, by a buddy player, or not at all.")]
   HRESULT JoinMission([in, defaultvalue("")] BSTR bstrMissionOrPlayer);
 
   [helpstring("Requests a position on a team, which may be specified by name, by a buddy player, or not at all.")]
-  HRESULT JoinTeam([in, defaultvalue("")] BSTR bstrTeamOrPlayer);
+  HRESULT JoinTeam([in, defaultvalue("")] BSTR bstrCivName, [in, defaultvalue("")] BSTR bstrTeamOrPlayer);
 
   [helpstring("Quits the current game.")]
   HRESULT QuitGame();
@@ -534,6 +553,15 @@ interface IPig : IDispatch
 
   [helpstring("Forces the pig to exit the game.")]
   HRESULT Shutdown();
+
+  [helpstring("Returns true if player has game control")]
+  HRESULT IsMissionOwner([out, retval] BOOL* bOwner);
+
+  [helpstring("Returns true if player is the team leader")]
+  HRESULT IsTeamLeader([out, retval] BOOL* bLeader);
+
+  [helpstring("Sets the shoot, turn and goto skills")]
+  HRESULT SetSkills([in] float fShoot, [in] float fTurn, [in] float fGoto); //Imago 10/14
 
   [propget, helpstring("Gets the AGCGame object that the Pig is a member of, if any.")]
   HRESULT Game([out, retval] IAGCGame** ppGame);
@@ -547,6 +575,9 @@ interface IPig : IDispatch
   [propget, id(dispid_Host), helpstring("Gets the object used to access the rest of the Pigs object model.")]
   HRESULT Host([out, retval] IPigBehaviorHost** ppHost);
 
+  [helpstring("Sets mission params then starts the game.")]
+  HRESULT StartCustomGame([in] IPigMissionParams* pMissionParams);
+  
   [helpstring("Starts the game.")]
   HRESULT StartGame();
 
@@ -705,8 +736,9 @@ typedef [v1_enum] enum PigMapType
   PigMapType_DiamondRing,
   PigMapType_Snowflake,
   PigMapType_SplitBases,
+  PigMapType_Brawl,
   PigMapType_Count,
-  PigMapType_Default = PigMapType_DoubleRing,
+  PigMapType_Default = PigMapType_Brawl, //imago 10/14
 } PigMapType;
 
 
@@ -740,6 +772,67 @@ interface IPigMissionParams : IDispatch
   HRESULT MapType([in] PigMapType eMapType);
   [propget, id(dispid_MapType)]
   HRESULT MapType([out, retval] PigMapType* peMapType);
+
+  //imago 10/14
+  [propput, helpstring("Gets/sets the death match goal.")]
+  HRESULT TeamKills([in] short nGoalTeamKills);
+  [propget, id(dispid_TeamKills)]
+  HRESULT TeamKills([out, retval] short* nGoalTeamKills);
+  
+  [propput, helpstring("Gets/sets the game name for the mission.")]
+  HRESULT GameName([in] BSTR bstrGameName);
+  [propget, id(dispid_GameName)]
+  HRESULT GameName([out, retval] BSTR* bstrGameName);
+  
+  [propput, helpstring("Gets/sets the core for the mission.")]
+  HRESULT CoreName([in] BSTR bstrCoreName);
+  [propget, id(dispid_CoreName)]
+  HRESULT CoreName([out, retval] BSTR* bstrCoreName);
+
+  [propput, helpstring("Gets/sets the KB Level.")]
+  HRESULT KillBonus([in] short KBLevel);
+  [propget, id(dispid_KillBonus)]
+  HRESULT KillBonus([out, retval] short* KBLevel);
+
+  [propput, helpstring("Gets/sets Defections allowed.")]
+  HRESULT Defections([in] VARIANT_BOOL Defections);
+  [propget, id(dispid_Defections)]
+  HRESULT Defections([out, retval] VARIANT_BOOL* Defections);
+
+  [propput, helpstring("Gets/sets the number of starting miners.")]
+  HRESULT Miners([in] short Miners);
+  [propget, id(dispid_Miners)]
+  HRESULT Miners([out, retval] short* Miners);
+
+  [propput, helpstring("Gets/sets Developments allowed.")]
+  HRESULT Developments([in] VARIANT_BOOL Developments);
+  [propget, id(dispid_Developments)]
+  HRESULT Developments([out, retval] VARIANT_BOOL* Developments);
+
+  [propput, helpstring("Gets/sets the Conquest goal.")]
+  HRESULT Conquest([in] short Conquest);
+  [propget, id(dispid_Conquest)]
+  HRESULT Conquest([out, retval] short* Conquest);
+
+  [propput, helpstring("Gets/sets the Flags goal.")]
+  HRESULT Flags([in] short Flags);
+  [propget, id(dispid_Flags)]
+  HRESULT Flags([out, retval] short* Flags);
+
+  [propput, helpstring("Gets/sets the Artifacts goal.")]
+  HRESULT Artifacts([in] short Artifacts);
+  [propget, id(dispid_Artifacts)]
+  HRESULT Artifacts([out, retval] short* Artifacts);
+
+  [propput, helpstring("Gets/sets Pods allowed.")]
+  HRESULT Pods([in] VARIANT_BOOL Pods);
+  [propget, id(dispid_Pods)]
+  HRESULT Pods([out, retval] VARIANT_BOOL* Pods);
+
+  [propput, helpstring("Gets/sets Experimental allowed.")]
+  HRESULT Experimental([in] VARIANT_BOOL Experimental);
+  [propget, id(dispid_Experimental)]
+  HRESULT Experimental([out, retval] VARIANT_BOOL* Experimental);
 
 }; // End: interface IPigMissionParams : IDispatch
 
@@ -1044,6 +1137,9 @@ interface IPigShip : IAGCShip
     [in, defaultvalue(ThrustNone)] PigThrust e7,
     [out, retval] BSTR* pbstrResponse);
 
+  [id(dispid_Boost), helpstring("Turns afterburner on/off.")]
+  HRESULT Boost([in] VARIANT_BOOL bOn,[out, retval] BSTR* pbstrResponse);
+
   [id(dispid_FireWeapon), helpstring("Begins/ends the firing of the active weapon.")]
   HRESULT FireWeapon([in, defaultvalue(-1)] VARIANT_BOOL bBegin,
     [out, retval] BSTR* pbstrResponse);
@@ -1104,6 +1200,22 @@ interface IPigShip : IAGCShip
   HRESULT Defend([in] BSTR bstrObject,
     [out, retval] BSTR* pbstrResponse);
 
+  [id(dispid_AttackShip), helpstring("Attacks the specified target ship.")]
+  HRESULT AttackShip([in] IAGCShip* pTarget,
+    [out, retval] BSTR* pbstrResponse);
+
+  [id(dispid_AttackStation), helpstring("Attacks the specified target station.")]
+  HRESULT AttackStation([in] IAGCStation* pTarget,
+	  [out, retval] BSTR* pbstrResponse);
+
+  [id(dispid_Goto), helpstring("Goto the specified target.")]
+  HRESULT Goto([in] BSTR bstrObject, [in] VARIANT_BOOL bFriendly,
+    [out, retval] BSTR* pbstrResponse);
+
+  [id(dispid_GotoStationID), helpstring("Goto the specified station ID.")]
+  HRESULT GotoStationID([in] short oid,
+    [out, retval] BSTR* pbstrResponse);
+
   [propput, helpstring("Gets/sets the AutoPilot state.")]
   HRESULT AutoPilot([in] VARIANT_BOOL bEngage);
   [propget, id(dispid_AutoPilot)]
@@ -1137,6 +1249,12 @@ interface IPigShip : IAGCShip
 
   [propget, id(dispid_IsCloaked), helpstring("Indicates whether the ship is cloaked.")]
   HRESULT IsCloaked([out, retval] VARIANT_BOOL* pbCloaked);
+
+  [propget, id(dispid_MissileRange), helpstring("Gets the max range of the current missile")]
+  HRESULT MissileRange([out, retval] float* pfRange);
+
+  [propget, id(dispid_MissileLock), helpstring("Gets the currnt missile lock 0.0 to 1.0")]
+  HRESULT MissileLock([out, retval] float* pfLock);
 
   [propput, helpstring("Gets/sets the ship's throttle. The valid range is 0 to 100.")]
   HRESULT Throttle([in] float fThrottle);
@@ -1237,6 +1355,9 @@ interface IPigAccount : IDispatch
 
   [propget, id(dispid_Password), helpstring("Gets the account password.")]
   HRESULT Password([out, retval] BSTR* pbstrPassword);
+
+  [propget, id(dispid_CdKey), helpstring("Gets the account CDKEY.")]
+  HRESULT CdKey([out, retval] BSTR* pbstrCdKey);
 
 }; // End: interface IPigAccount : IDispatch
 

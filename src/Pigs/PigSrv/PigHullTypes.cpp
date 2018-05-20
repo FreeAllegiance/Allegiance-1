@@ -90,10 +90,24 @@ STDMETHODIMP CPigHullTypes::get__NewEnum(IUnknown** ppunkEnum)
   CEnum* pEnum = new CEnum;
   assert(NULL != pEnum);
 
+  CComVariant* pargTemp = new CComVariant [m_HullTypesIGC.size()];
+
+  int i = 0;
+  for (std::vector<CComVariant>::iterator iter = vecTemp.begin(); iter != vecTemp.end(); iter++)
+  {
+	  pargTemp[i] = *iter;
+
+	  //pargTemp[i].Copy((VARIANT *) &iter);
+	  //pargTemp[i] = &((CComVariant) &iter);
+	  i++;
+  }
+
+
   // Initialize enumerator object with the temporary CComVariant vector
   // VS.Net 2003 port - accomodate change in iterators under VC.Net 200x (see 'breaking changes' in vsnet doc)
 #if _MSC_VER >= 1310
-  HRESULT hr = pEnum->Init(&(*vecTemp.begin()), &(*vecTemp.end()), NULL, AtlFlagCopy);
+  //HRESULT hr = pEnum->Init(&(*vecTemp.begin()), &(*vecTemp.end()), NULL, AtlFlagCopy);
+  HRESULT hr = pEnum->Init(&pargTemp[0], &pargTemp[m_HullTypesIGC.size() - 1], NULL, AtlFlagCopy);
 #else
   HRESULT hr = pEnum->Init(vecTemp.begin(), vecTemp.end(), NULL, AtlFlagCopy);
 #endif

@@ -70,6 +70,12 @@ public:
         table["Cos"] = [](sol::object a) {
             return NumberTransform::Cos(wrapValue<float>(a));
         };
+        table["Sqrt"] = [](const TRef<Number>& value) {
+            return NumberTransform::Sqrt(value);
+        };
+        table["Power"] = [](const TRef<Number>& value, const TRef<Number>& power) {
+            return NumberTransform::Power(value, power);
+        };
 
         m_pLua->new_usertype<TRef<Number>>("Number",
             sol::meta_function::addition, [](sol::object a, sol::object b) {

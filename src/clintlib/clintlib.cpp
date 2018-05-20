@@ -593,9 +593,6 @@ void ChatInfo::SetChat(ChatTarget       ctRecipient,
                        bool             bFromObjectModel,
                        bool             bFromLeader)
 {
-
-	logchat(strText);  // mmf added log chat
-
     m_ctRecipient = ctRecipient;
 
     m_cidCommand = cid;
@@ -1288,27 +1285,7 @@ HRESULT BaseClient::ConnectToServer(ConnectInfo & ci, DWORD dwCookie, Time now, 
 			hr = m_fm.JoinSession(FEDSRV_STANDALONE_PRIVATE_GUID, ci.strServer, ci.szName);		  
 		}
 		else {
-			//imago moved this up first 8/1/09 due to longer timeout
-            HKEY hKey;
-            DWORD cbValue = c_cbName;
-            char szServer[c_cbName];
-            szServer[0] = '\0';
-            if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey)) {
-                ::RegQueryValueEx(hKey,"ServerAddress", NULL, NULL, (unsigned char*)&szServer, &cbValue);
-                ::RegCloseKey(hKey);
-            }
-            if (szServer[0] != '\0') {
-                ZString strServer = ZString(szServer).LeftOf(":");
-                DWORD dwPort = ZString(szServer).RightOf(":").GetInteger();
-
-                hr = m_fm.JoinSession(FEDSRV_GUID, strServer, ci.szName, dwPort);
-			} else {
-				hr = -1;
-			}
-
-			if(FAILED(hr)) 
-				hr = m_fm.JoinSession(FEDSRV_GUID, ci.strServer, ci.szName, ci.dwPort);
-
+            hr = m_fm.JoinSession(FEDSRV_GUID, ci.strServer, ci.szName, ci.dwPort);
         }
     }
 
@@ -1356,6 +1333,8 @@ HRESULT BaseClient::ConnectToServer(ConnectInfo & ci, DWORD dwCookie, Time now, 
 HRESULT BaseClient::ConnectToLobby(ConnectInfo * pci) // pci is NULL if relogging in
 {
     HRESULT hr = S_OK;
+
+    debugf("ConnectToLobby: Start");
     
     // review:  in the event of retry logon after logon failure 
     // we need to treat this as a reconnect and dump first connection...
@@ -1371,6 +1350,7 @@ HRESULT BaseClient::ConnectToLobby(ConnectInfo * pci) // pci is NULL if reloggin
 
     // but we always use config-specified lobby server. Is this too restrictive to derived clients?
     m_ci.strServer = GetIsZoneClub() ? GetCfgInfo().strClubLobby : GetCfgInfo().strPublicLobby;
+    debugf("ConnectToLobby: Server address is " + m_ci.strServer);
 
     assert(IFF(m_ci.cbZoneTicket > 0, m_ci.pZoneTicket));
     
@@ -1378,11 +1358,16 @@ HRESULT BaseClient::ConnectToLobby(ConnectInfo * pci) // pci is NULL if reloggin
     if (m_strCDKey.IsEmpty())
         m_strCDKey = ZString(m_ci.szName).ToUpper();
 
-    if (m_fmLobby.IsConnected())
+    debugf("ConnectToLobby: CDKey " + m_strCDKey);
+
+    if (m_fmLobby.IsConnected()) {
+        debugf("ConnectToLobby: Already connected");
         return S_OK;
+    }
 
     assert(m_fLoggedOnToLobby == false);
-    
+
+    debugf("ConnectToLobby: Clearing list of already loaded missions");
     TMapListWrapper<DWORD, MissionInfo*>::Iterator iterMissions(m_mapMissions);
     while (!iterMissions.End())
     {
@@ -1391,20 +1376,12 @@ HRESULT BaseClient::ConnectToLobby(ConnectInfo * pci) // pci is NULL if reloggin
     }
     m_mapMissions.SetEmpty();
 
-	// Mdvalley: Pull lobby port from registry
-/*    DWORD dwPort = 2302;		// Default to 2302
-	HKEY hKey;
-	if(ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-	{
-		DWORD dwSize = sizeof(DWORD);
-		::RegQueryValueEx(hKey, "LobbyPort", NULL, NULL, (BYTE*)&dwPort, &dwSize);
-		::RegCloseKey(hKey);
-	}
-*/
 	hr = m_fmLobby.JoinSession(GetIsZoneClub() ? FEDLOBBYCLIENTS_GUID : FEDFREELOBBYCLIENTS_GUID, m_ci.strServer, m_ci.szName, GetCfgInfo().dwLobbyPort);
     assert(IFF(m_fmLobby.IsConnected(), SUCCEEDED(hr)));
     if (m_fmLobby.IsConnected())
     {
+        debugf("ConnectToLobby: Session started with the lobby");
+
         DWORD dwTime = Time::Now().clock();
         int crcFileList = (g_bCheckFiles ? 0 : FileCRC("FileList.txt", NULL));
         char * szEncryptionKey = (char *)_alloca(strlen(CL_LOGON_KEY) + 30);
@@ -1432,6 +1409,14 @@ HRESULT BaseClient::ConnectToLobby(ConnectInfo * pci) // pci is NULL if reloggin
     retailf("$$MSRGuard:Set:UserName=%s\n", m_szLobbyCharName);
     m_cUnansweredPings = 0;
     m_serverOffsetValidF = false;
+
+    if (SUCCEEDED(hr)) {
+        debugf("ConnectToLobby: Completed succesfully");
+    }
+    else {
+        debugf("ConnectToLobby: Completed with error");
+    }
+
     return hr;
 }
 
@@ -1659,7 +1644,7 @@ void    BaseClient::ResetShip(void)
     m_pmodelServerTarget = NULL;
 }
 
-void    BaseClient::ResetClusterScanners(IsideIGC*  pside)
+/*void    BaseClient::ResetClusterScanners(IsideIGC*  pside)
 {
     SideID  sid = pside->GetObjectID();
 
@@ -1678,7 +1663,7 @@ void    BaseClient::ResetClusterScanners(IsideIGC*  pside)
     {
         //Probes ...
     }
-}
+}*/
 
 void    BaseClient::BuyLoadout(IshipIGC*    pshipLoadout, bool bLaunch)
 {
@@ -1712,6 +1697,13 @@ void    BaseClient::BuyLoadout(IshipIGC*    pshipLoadout, bool bLaunch)
         m_ship->PurchaseShipLoadout (size, static_cast <ShipLoadout*> (ptr));
         m_pClientEventSource->OnPurchaseCompleted (true);
         free(ptr);
+
+        if (bLaunch) {
+            assert(m_ship->GetStation());
+            IstationIGC* s = m_ship->GetStation();
+            m_ship->SetStation(NULL);
+            s->Launch(m_ship);
+        }
     }
 }
 
@@ -1948,12 +1940,16 @@ void BaseClient::JoinMission(MissionInfo * pMission, const char* szMissionPasswo
     BEGIN_PFM_CREATE(m_fmLobby, pfmJoinGameReq, C, JOIN_GAME_REQ)
     END_PFM_CREATE
     pfmJoinGameReq->dwCookie = pMission->GetCookie();
-    SendLobbyMessages();
-    m_dwCookieToJoin = pMission->GetCookie();
-    assert(strlen(szMissionPassword) < c_cbGamePassword);
-    strncpy(m_strPasswordToJoin, szMissionPassword, c_cbGamePassword);
-    m_strPasswordToJoin[c_cbGamePassword - 1] = '\0';
-    // waiting for FM_L_JOIN_GAME_ACK. When we get that we can join it
+
+	if (m_fmLobby.IsConnected() == true)
+	{
+		SendLobbyMessages();
+		m_dwCookieToJoin = pMission->GetCookie();
+		assert(strlen(szMissionPassword) < c_cbGamePassword);
+		strncpy(m_strPasswordToJoin, szMissionPassword, c_cbGamePassword);
+		m_strPasswordToJoin[c_cbGamePassword - 1] = '\0';
+		// waiting for FM_L_JOIN_GAME_ACK. When we get that we can join it
+	}	
 }
 
 
@@ -2905,6 +2901,12 @@ void BaseClient::KillMissileEvent(ImissileIGC*            pmissile, const Vector
     else
         pmissile->Disarm();
 }
+void BaseClient::KillTreasureEvent(ItreasureIGC* ptreasure)
+{
+    if (!m_fm.IsConnected()) {
+        ptreasure->Terminate();
+    }
+}
 void BaseClient::KillShipEvent(Time now, IshipIGC* pShip, ImodelIGC* pLauncher, float flAmount, const Vector& p1, const Vector& p2)
 {
     if (!m_fm.IsConnected())
@@ -2919,7 +2921,7 @@ void BaseClient::KillShipEvent(Time now, IshipIGC* pShip, ImodelIGC* pLauncher, 
                 IpartIGC*   p = plink->data();
 
                 if (randomInt(0, 4) == 0)
-                    CreateTreasureLocal(now, pShip, p, p->GetPartType(), p1, 100.0f);
+                    CreateTreasureLocal(now, pShip, p, p->GetPartType(), p1, 100.0f, 60.0f);
                 p->Terminate();
             }
 
@@ -2933,7 +2935,7 @@ void BaseClient::KillShipEvent(Time now, IshipIGC* pShip, ImodelIGC* pLauncher, 
 
                     if (randomInt(0, 4) == 0)
                         CreateTreasureLocal(now, pShip, ammo, pptAmmo, p1, 100.0f, 30.0f);
-                    pShip->SetAmmo(0);
+                    //pShip->SetAmmo(0); //What's the point .. let's not trigger reload here
                 }
             }
             //Ditto for fuel
@@ -2946,7 +2948,7 @@ void BaseClient::KillShipEvent(Time now, IshipIGC* pShip, ImodelIGC* pLauncher, 
 
                     if (randomInt(0, 4) == 0)
                         CreateTreasureLocal(now, pShip, fuel, pptFuel, p1, 100.0f, 30.0f);
-                    pShip->SetFuel(0.0f);
+                    //pShip->SetFuel(0.0f);
                 }
             }
         }
@@ -3008,8 +3010,7 @@ void BaseClient::KillShipEvent(Time now, IshipIGC* pShip, ImodelIGC* pLauncher, 
 void BaseClient::DamageStationEvent(IstationIGC* pStation,
                                     ImodelIGC* pLauncher,
                                     DamageTypeID type, 
-                                    float flAmount,
-                                    float flLeakage)
+                                    float amount)
 {
     if ((NULL != pStation->GetCluster()) &&
         (pStation->GetCluster() == GetCluster()))
@@ -3021,26 +3022,13 @@ void BaseClient::DamageStationEvent(IstationIGC* pStation,
     }
 }
 
-
-void BaseClient::KillStationEvent(IstationIGC* pStation,
-                                  ImodelIGC* pLauncher,
-                                  float flAmount,
-                                  float flLeakage)
-{
-    if (!m_fm.IsConnected())
-    {
-        pStation->GetCluster()->GetClusterSite()->AddExplosion(pStation, c_etLargeStation);
-        pStation->Terminate();
-    }
-}
-
 void BaseClient::FireMissile(IshipIGC* pShip,
                             ImagazineIGC* pMagazine,
                             Time timeFired,
                             ImodelIGC* pTarget,
                             float flLock)
 {
-    assert (pShip == m_ship);
+    assert (pShip == m_ship || !m_fm.IsConnected());
 
     if (pTarget &&
         ((pTarget->GetCluster() != m_ship->GetCluster()) ||
@@ -3159,14 +3147,18 @@ void BaseClient::FireMissile(IshipIGC* pShip,
         //
         if (Reload(pShip, pMagazine, ET_Magazine))
         {
-            PlayNotificationSound(salReloadingMissilesSound, GetShip());
-            PlaySoundEffect(startReloadSound, GetShip());
-            PostText(false, "Reloading missiles...");
+            if (pShip == m_ship) {
+                PlayNotificationSound(salReloadingMissilesSound, GetShip());
+                PlaySoundEffect(startReloadSound, GetShip());
+                PostText(false, "Reloading missiles...");
+            }
         }
         else
         {
-            PlayNotificationSound(salMissilesDepletedSound, GetShip());
-            PostText(false, "Missiles depleted.");
+            if (pShip == m_ship) {
+                PlayNotificationSound(salMissilesDepletedSound, GetShip());
+                PostText(false, "Missiles depleted.");
+            }
         }
     }
 }
@@ -3175,7 +3167,7 @@ void BaseClient::FireExpendable(IshipIGC* pShip,
                                 IdispenserIGC* pDispenser,
                                 Time timeFired)
 {
-    assert (pShip == m_ship);
+    assert(pShip == m_ship || !m_fm.IsConnected());
 
     this->PlayFFEffect(effectFire, pShip);
 
@@ -3185,19 +3177,21 @@ void BaseClient::FireExpendable(IshipIGC* pShip,
     IexpendableTypeIGC* pet = pDispenser->GetExpendableType();
     ObjectType type = pet->GetObjectType();
 
-    switch (type)
-    {
-    case OT_chaffType:
-        this->PlaySoundEffect(deployChaffSound, pShip);
-        break;
+    if (pShip == m_ship) {
+        switch (type)
+        {
+        case OT_chaffType:
+            this->PlaySoundEffect(deployChaffSound, pShip);
+            break;
 
-    case OT_mineType:
-        this->PlaySoundEffect(deployMineSound, pShip);
-        break;
+        case OT_mineType:
+            this->PlaySoundEffect(deployMineSound, pShip);
+            break;
 
-    case OT_probeType:
-        this->PlaySoundEffect(deployProbeSound, pShip);
-        break;
+        case OT_probeType:
+            this->PlaySoundEffect(deployProbeSound, pShip);
+            break;
+        }
     }
 
     if (!m_fm.IsConnected())
@@ -3209,7 +3203,7 @@ void BaseClient::FireExpendable(IshipIGC* pShip,
         {
             assert (type == OT_chaffType);
 
-            //Drop the chaff "behind" the player's ship
+            //Drop the chaff "behind" the ship
 
             DataChaffIGC   dataChaff;
 
@@ -3224,7 +3218,30 @@ void BaseClient::FireExpendable(IshipIGC* pShip,
                                                                   OT_chaff,
                                                                   &dataChaff,
                                                                   sizeof(dataChaff)));
-            assert (c != NULL);
+            assert(c != NULL);
+
+            //Confuse any missiles lauched at the ship
+            for (MissileLinkIGC*  pml = pCluster->GetMissiles()->first(); (pml != NULL); pml = pml->next()) {
+                ImissileIGC*    pmissile = pml->data();
+                if (pmissile->GetTarget() == pShip)
+                {
+                    //A missile aimed at me .. does the chaff work?
+                    float   chaff = ((IchaffTypeIGC*)pet)->GetChaffStrength();
+                    float   missile = pmissile->GetMissileType()->GetChaffResistance();
+
+                    //The following is equivalent to random(0, chaff) > random(0, missile)
+                    float   cm = chaff * missile;
+                    float   f = (chaff > missile)
+                        ? (cm - 0.5f * missile * missile)
+                        : (0.5f * chaff * chaff);
+
+                    if (random(0.0f, cm) <= f) {
+                        //Missile lost lock
+                        pmissile->SetTarget(c);
+                    }
+                }
+            }
+
             c->Release();
         }
         else
@@ -3305,22 +3322,24 @@ void BaseClient::FireExpendable(IshipIGC* pShip,
         //
         if (Reload(pShip, pDispenser, pet->GetEquipmentType()))
         {
-            switch (pet->GetObjectType())
-            {
-            case OT_chaffType:
-                PlayNotificationSound(salReloadingChaffSound, GetShip());
-                PostText(false, "Reloading chaff...");
-                break;
+            if (pShip == m_ship) {
+                switch (pet->GetObjectType())
+                {
+                case OT_chaffType:
+                    PlayNotificationSound(salReloadingChaffSound, GetShip());
+                    PostText(false, "Reloading chaff...");
+                    break;
 
-            default:
-                PlayNotificationSound(salReloadingDispenserSound, GetShip());
-                PostText(false, "Reloading dispenser...");
-                break;
+                default:
+                    PlayNotificationSound(salReloadingDispenserSound, GetShip());
+                    PostText(false, "Reloading dispenser...");
+                    break;
+                }
+
+                PlaySoundEffect(startReloadSound, GetShip());
             }
-
-            PlaySoundEffect(startReloadSound, GetShip());
         }
-        else
+        else if (pShip == m_ship)
         {
             switch (pet->GetObjectType())
             {
@@ -3342,7 +3361,7 @@ bool BaseClient::Reload(IshipIGC* pship, IlauncherIGC* plauncher, EquipmentType 
 {
     int         nReloads = 0;
 
-    if (pship == m_ship)
+    if (pship == m_ship || !m_fm.IsConnected())
     {
         const int   c_MaxReloads = 8;
         ReloadData  reloads[c_MaxReloads];
@@ -3610,6 +3629,27 @@ bool BaseClient::Reload(IshipIGC* pship, IlauncherIGC* plauncher, EquipmentType 
                 plauncher->Terminate();
             }
         }
+        else {
+            if (plauncher && (plauncher->GetAmount() == 0))
+                plauncher->Terminate();
+            if (nReloads <= 0 && type == ET_Weapon && pship->GetPilotType() == c_ptWingman) {
+                debugf("Wingman %s out of ammo.\n", pship->GetName());
+
+                int ttMask = c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster;
+                if (pship->GetHullType()->GetCapabilities() & c_habmLandOnCarrier)
+                    ttMask |= c_ttShip;
+                ImodelIGC*  pmodel = FindTarget(pship, ttMask,
+                    NULL, NULL, NULL, NULL, c_sabmReload);
+                debugf("found %s\n", pmodel ? pmodel->GetName() : "NULL");
+
+                if (pmodel) {
+                    pship->SetCommand(c_cmdPlan, pmodel, c_cidGoto);
+                    m_pCoreIGC->GetIgcSite()->SendChat(pship, CHAT_TEAM, GetSide()->GetObjectID(),
+                        NA, "Out of ammo, I'm getting resupplies."); //salNoAmmoSound
+                    pship->SetGettingAmmo(true);
+                }
+            }
+        }
     }
 
     return nReloads > 0;
@@ -3761,7 +3801,7 @@ void BaseClient::CreateDummyShip()
     ds.sideID = NA;
     ds.name[0] = '\0';
     //ds.wingID = 0;
-    ds.pilotType = c_ptCheatPlayer;
+    ds.pilotType = c_ptPlayer;
     ds.abmOrders = 0;
     ds.nDeaths = 0;
     ds.nEjections = 0;

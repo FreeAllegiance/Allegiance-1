@@ -216,13 +216,13 @@ public:
                     mapOptions[strKey] = value.as<sol::function>();
                 });
 
-                return (TRef<Image>)new CallbackImage<UiState>([&context, mapOptions](const UiState& state) {
-                    auto find = mapOptions.find(state.GetName());
+                return (TRef<Image>)new CallbackImage<std::shared_ptr<UiState>>([&context, mapOptions](const std::shared_ptr<UiState>& state) {
+                    auto find = mapOptions.find(state->GetName());
                     if (find == mapOptions.end()) {
                         return (TRef<Image>)Image::GetEmpty();
                     }
-                    return (TRef<Image>)context.WrapCallback<TRef<Image>, const UiState&>(find->second, Image::GetEmpty())(state);
-                }, wrapValue<UiState>(value));
+                    return (TRef<Image>)context.WrapCallback<TRef<Image>, const std::shared_ptr<UiState>&>(find->second, Image::GetEmpty())(state);
+                }, value.as<TRef<UiStateValue>>());
             }
             throw std::runtime_error("Expected value argument of Image.Switch to be either a wrapped or unwrapped bool, int, or string");
         };

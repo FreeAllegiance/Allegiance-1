@@ -63,7 +63,7 @@ HRESULT CPigShipEvent::SetTarget(BSTR bstrTarget)
 /////////////////////////////////////////////////////////////////////////////
 // Operations
 
-ImodelIGC* CPigShipEvent::FindTargetName(CPig* pPig, BSTR bstrTarget)
+ImodelIGC* CPigShipEvent::FindTargetName(CPig* pPig, BSTR bstrTarget, bool bFriendsOnly)
 {
   ImodelIGC* pTarget = NULL;
   if (pPig && BSTRLen(bstrTarget))
@@ -85,8 +85,12 @@ ImodelIGC* CPigShipEvent::FindTargetName(CPig* pPig, BSTR bstrTarget)
       for (ModelLinkIGC* it = pModels->first(); it; it = it->next())
       {
         ImodelIGC* pModel = it->data();
+				if (pModel) { //imago 10/14 (model can disappear here)
         if (0 == _stricmp(GetModelName(pModel), pszTarget))
         {
+						if (bFriendsOnly && pModel->GetSide() != pPig->BaseClient::GetSide()) {
+							//Imago skip! 10/14
+						} else {
           float fDistance = (pModel->GetPosition() - vPig).LengthSquared();
           if (!pTarget || fDistance < fNearest)
           {
@@ -97,6 +101,8 @@ ImodelIGC* CPigShipEvent::FindTargetName(CPig* pPig, BSTR bstrTarget)
       }
     }
   }
+		}
+	}
   return pTarget;
 }
 

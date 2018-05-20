@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "training.h"
 #include "badwords.h"
+//#include "imagetransform.h"
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -313,39 +314,57 @@ public:
               switch (pnumberside)
               {
               case 0:
-				  m_pimageTab = GetModeler()->LoadImage("btnteamyellowbmp", true);
+                  m_pimageTab = GetModeler()->LoadImage("btnteamyellowbmp", true);
                   break;
-                  
+
               case 1:
                   m_pimageTab = GetModeler()->LoadImage("btnteambluebmp", true);
                   break;
-                  
+
               case 2:
                   m_pimageTab = GetModeler()->LoadImage("btnteampurplebmp", true);
                   break;
-                  
+
               case 3:
                   m_pimageTab = GetModeler()->LoadImage("btnteamgreenbmp", true);
                   break;
-                  
+
               case 4:
                   m_pimageTab = GetModeler()->LoadImage("btnteamredbmp", true);
                   break;
-                  
+
               case 5:
                   m_pimageTab = GetModeler()->LoadImage("btnteamwhitebmp", true);
                   break;
-              //
-              // WLP 2005 - added default for NOAT lobby team display
-              //
+                  //
+                  // WLP 2005 - added default for NOAT lobby team display
+                  //
               default:                                                                // WLP 2005 - view lobby
-				  m_pimageTab = GetModeler()->LoadImage("btnteamlobbybmp", true);     // WLP 2005 - view lobby
-				  
+                  m_pimageTab = GetModeler()->LoadImage("btnteamlobbybmp", true);     // WLP 2005 - view lobby
+              }
 
-             }
+              /*if (!trekClient.m_fm.IsConnected()) {
+                  m_pimageTab = GetModeler()->LoadImage("btnteambmp", true);
+              }*/
+
               if (m_pimageTab)
 			  {
-             	psurface->BitBlt(WinPoint(0,0), m_pimageTab->GetSurface());
+                  psurface->BitBlt(WinPoint(0, 0), m_pimageTab->GetSurface());
+                  /*if (!trekClient.m_fm.IsConnected()) {
+                      Color c = pside->GetColor();
+                      if (c.R() + c.G() + c.B() > 2.0f)
+                          c = Color(c.R()*0.7f, c.G()*0.7f, c.B()*0.7f);
+                      debugf("%s using color %f, %f, %f instead of %f, %f, %f\n", pside->GetName(), c.R(), c.G(), c.B(), pside->GetColor().R(), pside->GetColor().G(), pside->GetColor().B());
+
+                      m_pimageTab = ImageTransform::Multiply(m_pimageTab, new ColorValue(c));
+
+                      WinPoint offset = psurface->GetOffset();
+                      auto context = psurface->GetContext();
+                      context->SetYAxisInversion(false);
+                      context->Translate(Point(offset.X(), offset.Y()));
+                      m_pimageTab->Render(context);
+                      psurface->ReleaseContext(context);
+                  }*/
               	if (!m_bSingle){
                 	if (bSelected) 
                   	{

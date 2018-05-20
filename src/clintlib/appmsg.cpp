@@ -1161,8 +1161,8 @@ HRESULT BaseClient::HandleMsg(FEDMESSAGE* pfm,
                         {
                             // The ship has moved to the same cluster as the player
                             debugf("Moving %s/%d to %s\n",
-                                   ship->GetName(), ship->GetObjectID(),
-                                   pcluster->GetName());
+                                ship->GetName(), ship->GetObjectID(),
+                                pcluster->GetName());
 
                             ship->SetCluster(pcluster);
                             ship->SetLastUpdate(time);
@@ -1833,8 +1833,16 @@ HRESULT BaseClient::HandleMsg(FEDMESSAGE* pfm,
                 {
                     ImodelIGC*  pmodel = m_pCoreIGC->GetModel(pfmOC->objectType, pfmOC->objectID);
 
-                    if (pship != m_ship)
+                    if (pship != m_ship) {
                         pship->SetCommand(pfmOC->command, pmodel, pfmOC->commandID);
+
+                        // Post notification for miners
+                        if (pfmOC->commandID == c_cidMine) {
+                            PlayerInfo* ppi = (PlayerInfo*)(pship->GetPrivateData());
+                            if (ppi && pmodel && ppi->LastSeenSector() != pmodel->GetCluster()->GetObjectID())
+                                PostText(false, "%s: Going to mine %s in %s.", pship->GetName(), pmodel->GetName(), pmodel->GetCluster()->GetName());
+                        }
+                    }
                     else if (pfmOC->command == c_cmdCurrent)
                         m_pmodelServerTarget = pmodel;
 
@@ -2166,9 +2174,9 @@ HRESULT BaseClient::HandleMsg(FEDMESSAGE* pfm,
 #endif
 
 				// BT - STEAM
-                OnLogonAck(false, false, "The client and server data files are out of sync. Requesting a file reverification from Steam. Please check the Steam app "
+                OnLogonAck(false, false, "The client and server core files are out of sync. Requesting a file reverification from Steam. Please check the Steam app "
 				"for the download status on any updates, and try re-launching the game in a few minutes. If the problem persists, please un-install and re-install again, "
-				"and feel free to reach out to the help line in the forums.");
+				"and feel free to reach out to the help line on Discord or in the forums.");
             }
             else
             {
@@ -3414,7 +3422,7 @@ HRESULT BaseClient::HandleMsg(FEDMESSAGE* pfm,
             //
             // Let's do it!
             //
-			m_pAutoDownload->BeginUpdate(pAutoUpdateSink, true, false); //#111 force check
+			m_pAutoDownload->BeginUpdate(pAutoUpdateSink, true); //#111 force check
             // m_pAutoDownload could be NULL at this point, if the autodownload system decided
             // not to do a download after all.  This can happen if there is an error or if
             // the client was already up-to-date.

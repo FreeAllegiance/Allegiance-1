@@ -96,6 +96,14 @@ HRESULT CPigAccountDispenser::LoadAccounts()
   // Get the number of user accounts to use
   int cNames = GetPrivateProfileInt(_T("general"), _T("NameCount"), -1, szINI);
 
+  // Get the CDKey to use for all the accounts
+  TCArrayPtr<TCHAR*> szCDKey = new TCHAR[MAX_PATH];
+  if (szCDKey.IsNull())
+	  return E_OUTOFMEMORY;
+
+
+  GetPrivateProfileString(_T("general"), _T("CDKey"), _T("NOTSET"), szCDKey, MAX_PATH, szINI);
+  printf("CDKey: %hS\n", (LPCTSTR)szCDKey);
   // Read all of the account names
   GetPrivateProfileString(_T("accounts"), NULL, _T(""), spsz, cbFile, szINI);
 
@@ -113,6 +121,7 @@ HRESULT CPigAccountDispenser::LoadAccounts()
     xa.m_bstrName     = psz;
     xa.m_bstrPassword = szPassword;
     xa.m_bAvailable   = true;
+	xa.m_bstrCDKey = szCDKey;
     m_Accounts.push_back(xa);
 
     // Advance to the next account name
@@ -162,7 +171,7 @@ STDMETHODIMP CPigAccountDispenser::get_NextAvailable(IPigAccount** ppAccount)
   CComObject<CPigAccount>* pAccount = NULL;
   RETURN_FAILED(pAccount->CreateInstance(&pAccount));
   _SVERIFYE(pAccount->Init(this, m_itAvailable->m_bstrName,
-    m_itAvailable->m_bstrPassword));
+    m_itAvailable->m_bstrPassword, m_itAvailable->m_bstrCDKey));
 
   // QI the new object for the IPigAccount interface
   _SVERIFYE(pAccount->QueryInterface(IID_IPigAccount, (void**)ppAccount));

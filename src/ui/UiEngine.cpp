@@ -27,10 +27,10 @@ void WriteLog(const std::string &text)
     log_file << text << std::endl;
 }
 
-std::string UiEngine::m_stringArtPath;
-void UiEngine::SetGlobalArtPath(std::string path)
+std::shared_ptr<IFileLoader> UiEngine::m_fileLoader;
+void UiEngine::SetGlobalFileLoader(const std::shared_ptr<IFileLoader>& pLoader)
 {
-    m_stringArtPath = path;
+    m_fileLoader = pLoader;
 }
 
 class UiScreenConfigurationImpl : public UiScreenConfiguration {
@@ -38,7 +38,7 @@ class UiScreenConfigurationImpl : public UiScreenConfiguration {
     std::string m_strPath;
 
 public:
-    UiScreenConfigurationImpl(std::string path, std::map<std::string, boost::any> map) :
+    UiScreenConfigurationImpl(std::string path, std::map<std::string, std::shared_ptr<Exposer>> map) :
         UiScreenConfiguration(map)
     {
         m_strPath = path;
@@ -54,18 +54,19 @@ public:
 
 };
 
-std::shared_ptr<UiScreenConfiguration> UiScreenConfiguration::Create(std::string path, std::map<std::string, std::function<bool()>> event_listeners, std::map<std::string, boost::any> map) {
+std::shared_ptr<UiScreenConfiguration> UiScreenConfiguration::Create(std::string path, std::map<std::string, std::function<bool()>> event_listeners, std::map<std::string, std::shared_ptr<Exposer>> map) {
     
     std::for_each(event_listeners.begin(), event_listeners.end(),
         [&map](auto& p) {
-        map[p.first] = (TRef<IEventSink>)new CallbackSink(p.second);
+        std::shared_ptr<Exposer> tmp = std::shared_ptr<Exposer>(new TypeExposer<TRef<IEventSink>>(new CallbackSink(p.second)));
+        map[p.first] = tmp;
     });
 
     return std::make_shared<UiScreenConfigurationImpl>(path, map);
 }
 
-Loader::Loader(sol::state& lua, Engine* pEngine, std::vector<std::string> paths)
-    : m_pathfinder(paths)
+Loader::Loader(sol::state& lua, Engine* pEngine, const std::shared_ptr<IFileLoader>& pFileLoader)
+    : m_pFileLoader(pFileLoader)
 {
     m_pLua = &lua;        
 }
@@ -110,12 +111,13 @@ void Loader::InitNamespaces(LuaScriptContext& context) {
 }
 
 sol::function Loader::LoadScript(std::string subpath) {
-    std::string path = m_pathfinder.FindPath(subpath);
-    if (path == "") {
+    if (m_pFileLoader->HasFile(subpath.c_str()) == false) {
         throw std::runtime_error("File not found: " + subpath);
     }
 
-    sol::load_result script = m_pLua->load_file(path);
+    ZString path = m_pFileLoader->GetFilePath(subpath.c_str());
+
+    sol::load_result script = m_pLua->load_file(std::string(path));
     if (script.valid() == false) {
         sol::error error = script;
         throw error;
@@ -191,20 +193,18 @@ T Executor::Execute(sol::function script, TArgs ... args) {
     }
 };
 
-LuaScriptContext::LuaScriptContext(Engine* pEngine, ISoundEngine* pSoundEngine, std::string stringArtPath, const std::shared_ptr<UiScreenConfiguration>& pConfiguration, std::function<void(std::string)> funcOpenWebsite) :
+LuaScriptContext::LuaScriptContext(Window* pWindow, Engine* pEngine, ISoundEngine* pSoundEngine, const std::shared_ptr<IFileLoader>& pFileLoader, const std::shared_ptr<UiScreenConfiguration>& pConfiguration, std::function<void(std::string)> funcOpenWebsite) :
+    m_pWindow(pWindow),
     m_pEngine(pEngine),
     m_pSoundEngine(pSoundEngine),
     m_pConfiguration(pConfiguration),
-    m_loader(Loader(m_lua, pEngine, {
-        stringArtPath + "/PBUI",
-        stringArtPath
-    })),
-    m_pathFinder(PathFinder({
-        stringArtPath + "/PBUI",
-        stringArtPath
-    })),
+    m_loader(Loader(m_lua, pEngine, pFileLoader)),
+    m_pFileLoader(pFileLoader),
     m_funcOpenWebsite(funcOpenWebsite),
-    m_executor(Executor())
+    m_executor(Executor()),
+    m_pHasKeyboardFocus(new SimpleModifiableValue<bool>(false)),
+    m_pKeyboardCharSource(new TEvent<const KeyState&>::SourceImpl()),
+    m_pKeyboardKeySource(new TEvent<const KeyState&>::SourceImpl())
 {
     m_loader.InitNamespaces(*this);
 }
@@ -218,11 +218,11 @@ sol::function LuaScriptContext::LoadScript(std::string path) {
 }
 
 std::string LuaScriptContext::FindPath(std::string path) {
-    std::string full_path = m_pathFinder.FindPath(path);
-    if (full_path == "") {
+    if (m_pFileLoader->HasFile(path.c_str()) == false) {
         throw std::runtime_error("File path not found: " + path);
     }
-    return full_path;
+    ZString full_path = m_pFileLoader->GetFilePath(path.c_str());
+    return std::string(full_path);
 }
 
 Engine* LuaScriptContext::GetEngine() {
@@ -279,6 +279,7 @@ UiObjectContainer& LuaScriptContext::GetScreenGlobals() {
 class UiEngineImpl : public UiEngine {
 
 private:
+    TRef<Window> m_pWindow;
     TRef<Engine> m_pEngine;
     TRef<ISoundEngine> m_pSoundEngine;
     std::function<void(std::string)> m_funcOpenWebsite;
@@ -287,7 +288,8 @@ private:
 
 
 public:
-    UiEngineImpl(Engine* pEngine, ISoundEngine* pSoundEngine, std::function<void(std::string)> funcOpenWebsite) :
+    UiEngineImpl(Window* pWindow, Engine* pEngine, ISoundEngine* pSoundEngine, std::function<void(std::string)> funcOpenWebsite) :
+        m_pWindow(pWindow),
         m_pEngine(pEngine),
         m_pSoundEngine(pSoundEngine),
         m_pReloadEventSource(new EventSourceImpl()),
@@ -305,15 +307,55 @@ public:
     //
     //}
 
-    class ContextImage : public WrapImage {
+
+    class ValueChangeSource : public Value, public EventSourceImpl {
+    public:
+        ValueChangeSource(const TRef<Value>& value) :
+            Value(value)
+        {
+        }
+
+        void ChildChanged(Value* pvalue, Value* pvalueNew) override {
+            Trigger();
+        }
+    };
+
+    class ContextImage : public WrapImage, public IKeyboardInput {
     private:
         std::unique_ptr<LuaScriptContext> m_pContext;
+        TRef<IEventSource> m_pFocusChangedSource;
+        bool m_bFocus;
+        TRef<IKeyboardInput> m_pPreviousFocus;
 
     public:
         ContextImage(std::unique_ptr<LuaScriptContext> pContext, Image* pImage) :
             WrapImage(pImage),
-            m_pContext(std::move(pContext))
+            m_pContext(std::move(pContext)),
+            m_bFocus(false),
+            m_pPreviousFocus(nullptr)
         {
+            m_pFocusChangedSource = new ValueChangeSource(m_pContext->HasKeyboardFocus());
+            m_pFocusChangedSource->AddSink(new CallbackSink([this]() {
+                auto window = m_pContext->GetWindow();
+                if (m_pContext->HasKeyboardFocus()->GetValue()) {
+                    if (window->GetFocus() != this) {
+                        m_pPreviousFocus = window->GetFocus();
+                        window->SetFocus(this);
+                    }
+                }
+                else {
+                    if (window->GetFocus() == this) {
+                        if (!m_pPreviousFocus) {
+                            window->RemoveFocus(this);
+                        }
+                        else {
+                            window->SetFocus(m_pPreviousFocus);
+                            m_pPreviousFocus = nullptr;
+                        }
+                    }
+                }
+                return true;
+            }));
         }
 
         ~ContextImage() {
@@ -326,6 +368,33 @@ public:
             pcontext->SetYAxisInversion(false);
             WrapImage::Render(pcontext);
             pcontext->SetYAxisInversion(true); //not part of the state, so revert manually
+        }
+
+        void SetFocusState(bool bFocus) override {
+            m_bFocus = bFocus;
+            if (m_pContext->HasKeyboardFocus()->GetValue() != bFocus) {
+                m_pContext->HasKeyboardFocus()->SetValue(bFocus);
+            }
+        }
+
+        bool OnChar(IInputProvider* pprovider, const KeyState& ks) override
+        {
+            switch (ks.vk) {
+            case VK_RETURN:
+            case VK_BACK:
+                //I think only a very limited subset arrives here
+                return false;
+            default:
+                m_pContext->GetKeyboardCharSource()->Trigger(ks);
+                return true;
+            }
+        }
+
+        bool OnKey(IInputProvider* pprovider, const KeyState& ks, bool& fForceTranslate) override
+        {
+            m_pContext->GetKeyboardKeySource()->Trigger(ks);
+
+            return false;
         }
 
         void MouseMove(IInputProvider* pprovider, const Point& point, bool bCaptured, bool bInside) override
@@ -351,7 +420,7 @@ public:
     };
 
     TRef<Image> InnerLoadImageFromLua(const std::shared_ptr<UiScreenConfiguration>& screenConfiguration) {
-        std::unique_ptr<LuaScriptContext> pContext = std::make_unique<LuaScriptContext>(m_pEngine, m_pSoundEngine, m_stringArtPath, screenConfiguration, m_funcOpenWebsite);
+        std::unique_ptr<LuaScriptContext> pContext = std::make_unique<LuaScriptContext>(m_pWindow, m_pEngine, m_pSoundEngine, m_fileLoader, screenConfiguration, m_funcOpenWebsite);
 
         Executor* executor = pContext->GetExecutor();
 
@@ -424,7 +493,7 @@ public:
     }
 };
 
-UiEngine* UiEngine::Create(Engine* pEngine, ISoundEngine* pSoundEngine, std::function<void(std::string)> funcOpenWebsite)
+UiEngine* UiEngine::Create(Window* pWindow, Engine* pEngine, ISoundEngine* pSoundEngine, std::function<void(std::string)> funcOpenWebsite)
 {
-    return new UiEngineImpl(pEngine, pSoundEngine, funcOpenWebsite);
+    return new UiEngineImpl(pWindow, pEngine, pSoundEngine, funcOpenWebsite);
 }

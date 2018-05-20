@@ -32,10 +32,17 @@ enum TrainingOverlay
     TargetTrainingOverlay,
     CommandTrainingOverlay,
     EyeballTrainingOverlay,
-    KillBonusTrainingOverlay
+    KillBonusTrainingOverlay,
+    RollTrainingOverlay,
+    ShiftTabTrainingOverlay,
+    TargetCenterTrainingOverlay,
+    FireGunsTrainingOverlay,
+    TargetEnemyTrainingOverlay,
+    MissileTrainingOverlay,
+    CloakTrainingOverlay
 };
-void        SetTrainingOverlay (TrainingOverlay overlay);
+void        SetTrainingOverlay(TrainingOverlay overlay);
 inline
-void        ClearTrainingOverlay (void) {SetTrainingOverlay (NoTrainingOverlay);}
+void        ClearTrainingOverlay(void) { SetTrainingOverlay(NoTrainingOverlay); }
 
 #endif

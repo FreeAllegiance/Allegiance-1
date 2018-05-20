@@ -34,6 +34,8 @@ enum ScreenID {
     ScreenIDZoneEvents          =   14
 };
 
+//global
+UpdatingConfiguration* GetConfiguration();
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -58,6 +60,7 @@ protected:
     ) :
         EffectWindow(
             papp,
+            GetConfiguration(),
             strCommandLine,
             GetWindowTitle(),
             bStartFullscreen,
@@ -74,11 +77,7 @@ public:
 // BUILD_DX9
 		const ZString& strArtPath,					// Added for DX9 build, due to reordered startup.
 // BUILD_DX9
-        bool           bMovies,
-        bool           bSoftware,
-        bool           bHardware,
-        bool           bPrimary,
-        bool           bSecondary
+        bool           bMovies
     );
 
     static LPCTSTR          GetWindowTitle() { return TEXT("Allegiance"); };
@@ -162,6 +161,8 @@ public:
     virtual void        SetRadarMode(int radarMode) = 0;
     virtual bool        GetRoundRadarMode(void) const = 0;
 
+    virtual bool        GetShowJoystickIndicator(void) const = 0;
+
     virtual CameraMode  GetCameraMode(void) const = 0;
     virtual void        SetCameraMode(CameraMode cm) = 0;
 
@@ -222,10 +223,6 @@ public:
     virtual void                  SoundEngineUpdate (void) = 0;
     virtual TRef<ISoundInstance>  StartSound(ISoundTemplate* ptemplate, ISoundPositionSource* psource = NULL) = 0;
     virtual TRef<ISoundInstance>  StartSound(SoundID soundId, ISoundPositionSource* psource = NULL) = 0;
-
-    virtual void TriggerMusic(SoundID newMusicSound) = 0;
-    virtual bool GetMusicIsOn (void) = 0;
-    virtual void SetMusicOn (bool bMusicOn) = 0;
 
     virtual void PlayFFEffect(ForceEffectID effectID, LONG lDirection = 0) = 0;
     virtual void SetChatListPane(ChatListPane* pchatListPane) = 0;

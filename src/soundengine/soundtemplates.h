@@ -11,6 +11,8 @@
 
 namespace SoundEngine {
 
+    extern bool bConvertToMono;
+
 // creates a sound template for the given wave file
 HRESULT CreateWaveFileSoundTemplate(TRef<ISoundTemplate>& pstDest, const ZString& strFilename);
 

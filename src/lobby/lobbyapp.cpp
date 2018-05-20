@@ -372,6 +372,33 @@ HRESULT CLobbyApp::Init()
 		}
 		RegCloseKey(hk);
 	}
+
+	//Load Pig KEY
+	if (m_dwAuthentication)
+	{
+		HKEY  hk;
+		if (RegCreateKeyEx(HKEY_LOCAL_MACHINE, HKLM_AllLobby, 0, "",
+			REG_OPTION_NON_VOLATILE, KEY_READ, NULL, &hk, NULL) == ERROR_SUCCESS)
+		{
+			if (!_Module.ReadFromRegistry(hk, true, "AUTH_BYPASS_CDKEY", m_szAuthBypassCDKey, NULL)) {
+				uint32_t now = m_timeNow.Now().clock();
+				
+				ZString hashInput = ZString("{481CB2C0-B27D-40D1-A032-7C9A8764D47E}{BAB57D25-A1F2-4F6B-AFBC-5D7226E46113}");
+				int inputlen = hashInput.GetLength();
+				for (int idx = 0; idx < inputlen; idx++) {
+					// char overflow expected
+					m_szAuthBypassCDKey[idx] = hashInput[idx] * now * 17 * 23;
+					// if overflow results in a null, fix it.
+					if (m_szAuthBypassCDKey[idx] == '\0') { 
+						m_szAuthBypassCDKey[idx] = '!';
+					}
+				}
+				// make sure we are still null terminated. 
+				m_szAuthBypassCDKey[MAX_PATH - 1] = '\0'; 
+			}
+		}
+		RegCloseKey(hk);
+	}
   }
 
   return hr;

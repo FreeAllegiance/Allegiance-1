@@ -2583,7 +2583,11 @@ public:
                 m_bButton           = false;
                 m_bAxis             = false;
 
-                SetMessage("Key in use. Press Enter to lose old mapping.  Escape cancels");
+                int infoI;
+                for (infoI = 0; infoI < g_nCommandInfo; infoI++)
+                    if (g_pCommandInfo[infoI].m_tk == index)
+                        break;
+                SetMessage(ZString("Key in use for \"") + ZString(g_pCommandInfo[infoI].m_pcc) + ZString("\". Press Enter to lose old mapping. Escape cancels."));
 
                 return false;
             }
@@ -2627,7 +2631,11 @@ public:
                 m_bButton               = true;
                 m_bAxis                 = false;
 
-                SetMessage("Button in use.  Press Enter to lose old mapping.  Escape cancels");
+                int infoI;
+                for (infoI = 0; infoI < g_nCommandInfo; infoI++)
+                    if (g_pCommandInfo[infoI].m_tk == index)
+                        break;
+                SetMessage(ZString("Button in use for \"") + ZString(g_pCommandInfo[infoI].m_pcc) + ZString("\". Press Enter to lose old mapping. Escape cancels."));
 
                 return false;
             }

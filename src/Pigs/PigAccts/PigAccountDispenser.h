@@ -71,6 +71,7 @@ protected:
   {
     _bstr_t m_bstrName;
     _bstr_t m_bstrPassword;
+	_bstr_t m_bstrCDKey;
     bool    m_bAvailable:1;
   };
   typedef TCObjectLock<CPigAccountDispenser> XLock;

@@ -7,26 +7,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-bool IsWindows9x()
-{
-    static bool bChecked = false;
-    static bool bIs9x;
-
-    if (!bChecked)
-    {
-        OSVERSIONINFO osversioninfo;
-
-        osversioninfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-
-        ZVerify(GetVersionEx(&osversioninfo));
-
-        bIs9x = osversioninfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS;
-        bChecked = true;
-    }
-
-    return bIs9x;
-}
-
 class ZFilePrivate
 {
 public:
@@ -305,7 +285,7 @@ ZString ZFile::GetSha1Hash()
 
 		for (uint32_t i = 0; i < cbHash; i++)
 		{
-			sprintf(hexBuffer, "%c%c", rgbDigits[rgbHash[i] >> 4],
+			snprintf(hexBuffer, sizeof(hexBuffer), "%c%c", rgbDigits[rgbHash[i] >> 4],
 				rgbDigits[rgbHash[i] & 0xf]);
 
 			returnValue += hexBuffer;
@@ -332,13 +312,8 @@ ZString ZFile::GetSha1Hash()
 // https://stackoverflow.com/questions/27217063/how-to-read-filename-of-the-last-modified-file-in-a-directory
 FILETIME ZFile::GetMostRecentFileModificationTime(ZString &searchPath)
 {
-	WIN32_FIND_DATAW ffd;
-	wchar_t currentFile[MAX_PATH], lastModifiedFilename[MAX_PATH];
 	FILETIME currentModifiedTime, lastModified;
-	HANDLE hFile;
 	bool first_file = true;
-
-	char szLocalDate[255], szLocalTime[255];
 
 	currentModifiedTime.dwHighDateTime = 0;
 	currentModifiedTime.dwLowDateTime = 0;
@@ -372,23 +347,6 @@ FILETIME ZFile::GetMostRecentFileModificationTime(ZString &searchPath)
 			// First file time is earlier than second file time.
 			if (CompareFileTime(&lastModified, &findFileData.ftLastWriteTime) == -1)
 			{
-				/* You can uncomment these if you want to see what the actual times are.
-				SYSTEMTIME st;
-				FileTimeToLocalFileTime(&lastModified, &lastModified);
-				FileTimeToSystemTime(&lastModified, &st);
-                GetDateFormatA(LOCALE_USER_DEFAULT, DATE_LONGDATE, &st, nullptr,
-				szLocalDate, 255);
-                GetTimeFormatA(LOCALE_USER_DEFAULT, 0, &st, nullptr, szLocalTime, 255);
-				printf("%s %s - ", szLocalDate, szLocalTime);
-
-				FileTimeToLocalFileTime(&findFileData.ftLastWriteTime, &findFileData.ftLastWriteTime);
-				FileTimeToSystemTime(&findFileData.ftLastWriteTime, &st);
-                GetDateFormatA(LOCALE_USER_DEFAULT, DATE_LONGDATE, &st, nullptr,
-				szLocalDate, 255);
-                GetTimeFormatA(LOCALE_USER_DEFAULT, 0, &st, nullptr, szLocalTime, 255);
-				printf("%s %s\n", szLocalDate, szLocalTime);
-				*/
-
 				lastModified = findFileData.ftLastWriteTime;
 			}
 		}

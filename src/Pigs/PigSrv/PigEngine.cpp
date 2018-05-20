@@ -91,10 +91,6 @@ HRESULT CPigEngine::Construct()
   TCHAR szDrive[_MAX_DRIVE], szDir[_MAX_DIR], szName[_MAX_FNAME];
   _tsplitpath(szModule, szDrive, szDir, szName, NULL);
 
-  // Open the registry key of the AppID
-  CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key, KEY_READ));
-
   // Create the event logger object
   RETURN_FAILED(m_spEventLogger.CreateInstance("AGC.EventLogger"));
 
@@ -104,7 +100,12 @@ HRESULT CPigEngine::Construct()
   IAGCEventLoggerPrivatePtr spPrivate(m_spEventLogger);
   RETURN_FAILED(spPrivate->Initialize(bstrEventSource, bstrRegKey));
 
-  // Load the MissionServer registry value
+  // Open registry
+  CRegKey key;
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ));
+
+
+  // Load the MissionServer registry value - This is the lobby server's IP address.
   LoadRegString(key, TEXT("MissionServer"), m_bstrMissionServer);
 
   // Load the AccountServer registry value
@@ -116,7 +117,9 @@ HRESULT CPigEngine::Construct()
   // Load the ZoneAuthTimeout registry value
   DWORD dwZoneAuthTimeout;
   if (ERROR_SUCCESS == key.QueryValue(dwZoneAuthTimeout, TEXT("ZoneAuthTimeout")))
-    m_nZoneAuthTimeout = static_cast<long>(dwZoneAuthTimeout);
+	  m_nZoneAuthTimeout = static_cast<long>(dwZoneAuthTimeout);
+  else
+	  m_nZoneAuthTimeout = 99999999;
 
   // Load the LobbyMode registry value
   DWORD dwLobbyMode;
@@ -306,16 +309,17 @@ HRESULT CPigEngine::EnsureScriptsAreLoaded()
   if (!m_hDirChange.IsNull() && m_pth)
     return S_OK;
 
+
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key, KEY_READ));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ));
 
-  // Initialize the art path
   TCHAR szArtPath[_MAX_PATH];
   DWORD cch = sizeofArray(szArtPath);
   long lr = key.QueryValue(szArtPath, TEXT("ArtPath"), &cch);
   if (ERROR_SUCCESS != lr)
     return HRESULT_FROM_WIN32(lr);
+
   UTL::SetArtPath(szArtPath);
 
   // Convert the directory name to ANSI
@@ -433,6 +437,7 @@ void CPigEngine::ProcessScriptDirChanges()
         {
           RemoveInvokeCommands(pType);
           pType->SetBaseNonExistant();
+		  printf("Script %S has a base behavior that doesn't exist.", pType->GetScriptFileName());
         }
       }
     }
@@ -461,6 +466,7 @@ void CPigEngine::ProcessScriptDirChanges()
 
         RemoveInvokeCommands(pType);
         pType->SetRecursionError();
+		printf("Script %S has recursive base behavior which is an error.", pType->GetScriptFileName());
         break;
       }
     }
@@ -494,6 +500,7 @@ void CPigEngine::ProcessScriptDirChanges()
         {
           RemoveInvokeCommands(pType);
           pType->SetBaseError();
+		  printf("Script %S has an error in its base behavior.", pType->GetScriptFileName());
         }
       }
     }
@@ -534,11 +541,13 @@ void CPigEngine::AddScriptFile(const WIN32_FIND_DATA* pffd,
     pScript->AddRef();
 
     // Initialize the new object
-    LoadScriptFile(pScript, pffd, strFileName);
+	printf("Loading script %s\n", strFileName.c_str());
+	LoadScriptFile(pScript, pffd, strFileName);
 
     // Add the new object to the map of scripts
     XLock lock(this);
     m_mapScripts.insert(std::make_pair(strFileName, pScript));
+
   }
 }
 
@@ -555,7 +564,7 @@ void CPigEngine::LoadScriptFile(CPigBehaviorScriptType* pScript,
   HRESULT hrEI = GetErrorInfo(0, &pei);
   _com_error err(hr, pei);
   _bstr_t bstrDesc(err.Description());
-  _TRACE2("CPigEngine::LoadScriptFile(%s): %s\n", strFileName.c_str(),
+  printf("CPigEngine::LoadScriptFile(%s): %s\n", strFileName.c_str(),
     (bstrDesc.length()) ? LPCTSTR(bstrDesc) : err.ErrorMessage());
 }
 
@@ -568,7 +577,7 @@ void CPigEngine::ReloadScriptFile(const WIN32_FIND_DATA* pffd,
 
   // Remove the script's invoke commands
   RemoveInvokeCommands(pScript);
-
+  printf("Reloading %S ", strFileName);
   // Reload the script file
   LoadScriptFile(pScript, pffd, strFileName);
 }
@@ -704,7 +713,7 @@ HRESULT CPigEngine::put_ScriptDir(BSTR bstrScriptDir)
 
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ | KEY_WRITE));
 
   // Save the specified value
   USES_CONVERSION;
@@ -729,7 +738,7 @@ HRESULT CPigEngine::put_ArtPath(BSTR bstrArtPath)
 {
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ | KEY_WRITE));
 
   // Save the specified value
   USES_CONVERSION;
@@ -753,7 +762,7 @@ HRESULT CPigEngine::get_ArtPath(BSTR* pbstrArtPath)
 
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key, KEY_READ));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ));
 
   // Read the value
   TCHAR szArtPath[_MAX_PATH];
@@ -772,6 +781,11 @@ HRESULT CPigEngine::get_ArtPath(BSTR* pbstrArtPath)
 
 HRESULT CPigEngine::get_BehaviorTypes(IPigBehaviorTypes** ppBehaviorTypes)
 {
+	// Ensure that the scripts have been loaded
+	{
+		XLock lock(this);
+		RETURN_FAILED(EnsureScriptsAreLoaded());
+	}
   return E_NOTIMPL;
 }
 
@@ -861,7 +875,7 @@ HRESULT CPigEngine::put_MissionServer(BSTR bstrServer)
 
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ | KEY_WRITE));
 
   // Save the specified value
   USES_CONVERSION;
@@ -894,7 +908,7 @@ HRESULT CPigEngine::put_MaxPigs(long nMaxPigs)
 {
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ | KEY_WRITE));
 
   // Save the specified value
   long lr = key.SetValue((DWORD)nMaxPigs, TEXT("MaxPigs"));
@@ -909,7 +923,7 @@ HRESULT CPigEngine::get_MaxPigs(long* pnMaxPigs)
 {
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key, KEY_READ));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ));
 
   // Get the requested value
   DWORD nMaxPigs = DWORD(-1);
@@ -973,7 +987,7 @@ HRESULT CPigEngine::put_AccountServer(BSTR bstrServer)
 
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ | KEY_WRITE));
 
   // Save the specified value
   USES_CONVERSION;
@@ -1018,7 +1032,7 @@ HRESULT CPigEngine::put_ZoneAuthServer(BSTR bstrServer)
 
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ | KEY_WRITE));
 
   // Save the specified value
   USES_CONVERSION;
@@ -1051,7 +1065,7 @@ HRESULT CPigEngine::put_ZoneAuthTimeout(long nMilliseconds)
 {
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ | KEY_WRITE));
 
   // Save the specified timeout to the registry
   long lr = key.SetValue(static_cast<DWORD>(nMilliseconds), TEXT("ZoneAuthTimeout"));
@@ -1094,7 +1108,7 @@ HRESULT CPigEngine::put_LobbyMode(PigLobbyMode eMode)
 
   // Open the registry key of the AppID
   CRegKey key;
-  RETURN_FAILED(_Module.OpenAppIDRegKey(key));
+  RETURN_FAILED(key.Open(HKEY_LOCAL_MACHINE, HKLM_PigSrv, KEY_READ | KEY_WRITE));
 
   // Save the specified lobby mode to the registry
   long lr = key.SetValue(static_cast<DWORD>(eMode), TEXT("LobbyMode"));

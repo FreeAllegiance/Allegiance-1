@@ -410,23 +410,11 @@ public:
 
     void BeginConfigDownload() 
     {
-#ifdef _ALLEGIANCE_PROD_
-        lstrcpy(m_szConfig, "http://allegiance.zaphop.com/allegiance.txt");  //imago updated 7/4/09 // BT - STEAM
-#else
-		lstrcpy(m_szConfig, "http://allegiance.zaphop.com/allegiance.txt");  //imago updated 6/10 // BT - STEAM
-#endif
-        HKEY hKey;
-
-        if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-        {
-            DWORD cbValue = MAX_PATH;
-            char szConfig[MAX_PATH];
-            szConfig[0] = '\0';
-            ::RegQueryValueEx(hKey, "CfgFile", NULL, NULL, (LPBYTE)&szConfig, &cbValue);
-            // if it didn't succeed, we'll just use the default above
-            if (lstrlen(szConfig) > 0)
-              lstrcpy(m_szConfig, szConfig);
-        }
+        std::string configPath = GetConfiguration()->GetStringValue(
+            "Online.ConfigFile",
+            GetConfiguration()->GetStringValue("CfgFile", "http://allegiance.zaphop.com/allegiance.txt")
+        );
+        lstrcpy(m_szConfig, configPath.c_str());
 
         if (!g_bDownloadNewConfig || g_bQuickstart)  //imago added quickstart and reordered 7/4/09
         {
@@ -675,7 +663,7 @@ public:
                         //
                         // Let's do it!
                         //
-                        trekClient.m_pAutoDownload->BeginUpdate(pAutoUpdateSink, bForceFileCheck, false);
+                        trekClient.m_pAutoDownload->BeginUpdate(pAutoUpdateSink, bForceFileCheck);
                         // m_pAutoDownload could be NULL at this point, if the autodownload system decided
                         // not to do a download after all.  This can happen if there is an error or if
                         // the client was already up-to-date.

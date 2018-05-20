@@ -380,7 +380,7 @@ void    CprobeIGC::Update(Time now)
 
                 //If we have a target ... find the closest enemy ship who is a valid target
                 ExpendableAbilityBitMask    eabm = m_probeType->GetCapabilities();
-                float       distance2Min = speed * lifespan / 1.2f;
+                float       distance2Min = speed * lifespan / 1.05f;
                 distance2Min *= distance2Min;
                 Vector      directionMin;
 
@@ -399,25 +399,39 @@ void    CprobeIGC::Update(Time now)
                 }
                 else
                 {
-                    if (eabm & c_eabmShootShips)
+                    if (eabm & c_eabmShootStations)
                     {
-                        //Threats to stations get highest priority
+                        GetTarget((const ModelListIGC*)(pcluster->GetStations()),
+                            pside, myPosition, dtUpdate, accuracy, speed, lifespan, OT_station,
+                            &pmodelTarget, &distance2Min, &directionMin);
+                    }
+
+					bool hasAOE = false;
+					if (GetProjectileType() != nullptr)
+					{
+						hasAOE = (GetProjectileType()->GetBlastRadius() > 1.0f);
+						if (hasAOE && !pmodelTarget && (eabm & c_eabmShootMissiles))
+						{
+							if (pcluster != nullptr && pcluster->GetMissiles() != nullptr)
+							{
+								GetTarget((const ModelListIGC*)(pcluster->GetMissiles()),
+									pside, myPosition, dtUpdate, accuracy, speed, lifespan, OT_missile,
+									&pmodelTarget, &distance2Min, &directionMin);
+							}
+						}
+					}
+
+                    if (!pmodelTarget && (eabm & c_eabmShootShips))
+                    {
                         GetTarget((const ModelListIGC*)(pcluster->GetShips()),
                                   pside, myPosition, dtUpdate, accuracy, speed, lifespan, OT_ship,
                                   &pmodelTarget, &distance2Min, &directionMin);
                     }
 
-                    if (eabm & c_eabmShootMissiles)
+                    if (!hasAOE && !pmodelTarget && (eabm & c_eabmShootMissiles))
                     {
                         GetTarget((const ModelListIGC*)(pcluster->GetMissiles()),
                                   pside, myPosition, dtUpdate, accuracy, speed, lifespan, OT_missile, 
-                                  &pmodelTarget, &distance2Min, &directionMin);
-                    }
-
-                    if (eabm & c_eabmShootStations)
-                    {
-                        GetTarget((const ModelListIGC*)(pcluster->GetStations()),
-                                  pside, myPosition, dtUpdate, accuracy, speed, lifespan, OT_station, 
                                   &pmodelTarget, &distance2Min, &directionMin);
                     }
                 }

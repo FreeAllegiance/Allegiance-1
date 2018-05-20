@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZDebug'">Debug</VcpkgConfiguration>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZRetail'">Release</VcpkgConfiguration>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
@@ -11,6 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\ui\Exposer.h" />
     <ClInclude Include="..\src\ui\items.hpp" />
     <ClInclude Include="..\src\ui\ns_color.hpp" />
     <ClInclude Include="..\src\ui\ns_event.hpp" />
@@ -86,7 +91,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src\Lib\AllegianceSecurity;..\src\Lib\Steam;..\src\Inc;..\src\engine;..\src\soundengine;..\src\Lib\boost;..\src\_Utility;..\src\Lib\sol\include;..\src\ZLib;..\src\Guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src\Lib\AllegianceSecurity;..\src\Lib\Steam;..\src\Inc;..\src\engine;..\src\soundengine;..\src\_Utility;..\src\Lib\sol\include;..\src\ZLib;..\src\Guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NOMINMAX;NOMINMAX;D3D_DEBUG_INFO;_AFXDLL;WIN32;_WINDOWS;STRICT;DIRECTINPUT_VERSION=0x0800;_DEBUG;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -107,7 +112,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>..\src\Lib\AllegianceSecurity;..\src\Lib\Steam;..\src\Inc;..\src\engine;..\src\soundengine;..\src\Lib\boost;..\src\_Utility;..\src\Lib\sol\include;..\src\ZLib;..\src\Lib\lua;..\src\Guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src\Lib\AllegianceSecurity;..\src\Lib\Steam;..\src\Inc;..\src\engine;..\src\soundengine;..\src\_Utility;..\src\Lib\sol\include;..\src\ZLib;..\src\Lib\lua;..\src\Guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NOMINMAX;NOMINMAX;NOMINMAX;STEAMSECURE;_AFXDLL;WIN32;_WINDOWS;STRICT;DIRECTINPUT_VERSION=0x0800;DEBUG;SRVLOG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>

@@ -263,7 +263,7 @@ namespace Training
 		// tm_4_04r
 		// Press the SPACEBAR when you are ready to proceed.
         {
-            Goal*   pGoal = new Goal (new GetKeyCondition (TK_FireWeapon));
+            Goal*   pGoal = new Goal (new GetKeyCondition (TK_ThrustForward));
             pGoal->AddStartAction (new MessageAction ("Press the SPACEBAR when you are ready to proceed."));
             pGoal->AddStartAction (new PlaySoundAction (tm_4_04rSound));
             pGoal->AddConstraintCondition (CreateTooLongCondition (30.0f, tm_4_04rSound));
@@ -297,7 +297,7 @@ namespace Training
 		// Press the SPACEBAR when you are comfortable with quick 
 		// comms.
         {
-            Goal*   pGoal = new Goal (new GetKeyCondition (TK_FireWeapon));
+            Goal*   pGoal = new Goal (new GetKeyCondition (TK_ThrustForward));
             pGoal->AddStartAction (new MessageAction ("Press the SPACEBAR when you are ready to proceed."));
             pGoal->AddConstraintCondition (CreateTooLongCondition (30.0f, tm_4_06rSound));
             pGoalList->AddGoal (pGoal);
@@ -629,7 +629,7 @@ namespace Training
         }
 
         // wait half second
-        pGoalList->AddGoal (new Goal (new ElapsedTimeCondition (0.5f)));
+        pGoalList->AddGoal (new Goal (new ElapsedTimeCondition (0.3f)));
 
 		// tm_4_21
 		// Right now, we are far enough away that none of those enemy 
@@ -637,7 +637,7 @@ namespace Training
         pGoalList->AddGoal (CreatePlaySoundGoal (tm_4_21Sound));
 
         // wait half second
-        pGoalList->AddGoal (new Goal (new ElapsedTimeCondition (0.5f)));
+        pGoalList->AddGoal (new Goal (new ElapsedTimeCondition (0.3f)));
 
 		// tm_4_22
 		// You can tell if the enemy sees you because this eyeball 
@@ -683,7 +683,7 @@ namespace Training
 		// tm_4_24
 		// First, you can stay out of their scan ranges. Enemies can't 
 		// see you if they can't scan you. This includes hiding in the 
-		// shadow of asteroids. ÿEnemies can't scan you unless they 
+		// shadow of asteroids. Enemies can't scan you unless they 
 		// have a line of sight on you. Remember that if any 
 		// individual enemy can see you, then they all can.
         pGoalList->AddGoal (CreatePlaySoundGoal (tm_4_24Sound));
@@ -719,7 +719,8 @@ namespace Training
 		    // Press the K key now to activate your cloak.
             {
                 Goal*   pGoal = new Goal (new ProxyCondition (pGetKeyCondition));
-                pGoal->AddStartAction (new MessageAction ("Press the K key to activate your cloak."));
+                pGoal->AddStartAction (new MessageAction ("Press the G key to activate your cloak."));
+                pGoal->AddStartAction(new SetHUDOverlayAction(CloakTrainingOverlay));
                 pGoal->AddStartAction (new PlaySoundAction (tm_4_26rSound));
                 pGoal->AddConstraintCondition (CreateTooLongCondition (30.0f, tm_4_26rSound));
                 pGoalList2->AddGoal (pGoal);
@@ -796,7 +797,7 @@ namespace Training
             //Goal*                           pGoal = new Goal (new AndCondition (new GetKeyCondition (TK_TargetEnemy), new SoundFinishedCondition (pPlaySoundAction)));
             Goal*                           pGoal = new Goal (new GetKeyCondition (TK_TargetEnemy)); // pkk - Let's start  before sound is finished
             pGoal->AddStartAction (pPlaySoundAction);
-            pGoal->AddStartAction (new MessageAction ("Target an enemy miner with the E key, and destroy it if you can."));
+            pGoal->AddStartAction (new MessageAction ("Target an enemy miner with the T key, and destroy it if you can."));
             pGoal->AddConstraintCondition (CreateTooLongCondition (20.0f, tm_4_29Sound));
             pGoalList->AddGoal (pGoal);
         }
@@ -866,8 +867,8 @@ namespace Training
             pGoal->AddStartAction (pCreateDroneAction);
 
             // command the builder to go to the asteroid on which it will build
-            pGoal->AddStartAction (new SetCommandAction (m_builderID, c_cmdCurrent, OT_asteroid, static_cast<ObjectID>(10332), c_cidBuild));
-            pGoal->AddStartAction (new SetCommandAction (m_builderID, c_cmdAccepted, OT_asteroid, static_cast<ObjectID>(10332), c_cidBuild));
+            pGoal->AddStartAction(new SetCommandAction(m_builderID, c_cmdCurrent, OT_asteroid, static_cast<ObjectID>(10332), c_cidBuild));
+            pGoal->AddStartAction(new SetCommandAction(m_builderID, c_cmdAccepted, OT_asteroid, static_cast<ObjectID>(10332), c_cidBuild));
 
             // create a waypoint for all of the miners to run to, and send them all there
             BuoyID              buoyID = trekClient.GetCore ()->GenerateNewBuoyID ();
@@ -888,8 +889,9 @@ namespace Training
             pGoalList->AddGoal (pGoal);
         }
 
+
         // wait half second
-        pGoalList->AddGoal (new Goal (new ElapsedTimeCondition (0.5f)));
+        pGoalList->AddGoal (new Goal (new ElapsedTimeCondition (0.3f)));
 
 		// tm_4_32
 		// I'm moving your ship around to protect the constructor. 
@@ -907,30 +909,33 @@ namespace Training
 
         // (Wait for enemy scout to get within range)
         {
-            Goal*               pGoal = new Goal (new ObjectWithinRadiusCondition (trekClient.GetShip (), OT_ship, m_enemyScoutID, 1500.0f));
+            Goal*               pGoal = new Goal (new ObjectWithinRadiusCondition (trekClient.GetShip(), OT_ship, m_enemyScoutID, 1500.0f));
             Vector              pos (random(-300.0f, 300.0f), random(-300.0f, 300.0f), random(-300.0f, 300.0f));
             CreateDroneAction*  pCreateDroneAction = new CreateDroneAction ("Enemy Scout", m_enemyScoutID, 310, 1, c_ptWingman);
+            pCreateDroneAction->SetCreatedBehaviour(c_wbbmInRangeAggressive | c_wbbmUseMissiles); // - LANS, prevent scout from running away
             pCreateDroneAction->SetCreatedLocation (1031, pos);
             pGoal->AddStartAction (pCreateDroneAction);
-            pGoal->AddStartAction (new SetCommandAction (m_enemyScoutID, c_cmdCurrent, trekClient.GetShip (), c_cidAttack));
-            pGoal->AddStartAction (new SetCommandAction (m_enemyScoutID, c_cmdAccepted, trekClient.GetShip (), c_cidAttack));
+            //LANS - make the scout attack the constructor, not the player. Not only is this better for teaching, but if the scout attacks the player
+            //and the player is uneyed, this would throw an exception
+            pGoal->AddStartAction (new SetCommandAction (m_enemyScoutID, c_cmdCurrent, OT_ship, m_builderID, c_cidAttack));
+            pGoal->AddStartAction (new SetCommandAction (m_enemyScoutID, c_cmdAccepted, OT_ship, m_builderID, c_cidAttack));
             pGoalList->AddGoal (pGoal);
         }
 
 		// tm_4_33
 		// Enemy scout detected! Intercept it!
         {
-            Goal*               pGoal = new Goal (new GetCommandCondition (trekClient.GetShip (), c_cidAttack));
-            pGoal->AddStartAction (new SetCommandAction (m_builderID, c_cmdCurrent, NA, NA, c_cidDoNothing));
-            pGoal->AddStartAction (new SetCommandAction (m_builderID, c_cmdAccepted, NA, NA, c_cidDoNothing));
-            pGoal->AddStartAction (new SetCommandAction (trekClient.GetShip (), c_cmdQueued, OT_ship, m_enemyScoutID, c_cidAttack));
+            Goal* pGoal = new Goal (new GetCommandCondition (trekClient.GetShip (), c_cidAttack)); 
+            pGoal->AddStartAction (new SetCommandAction(m_builderID, c_cmdCurrent, NA, NA, c_cidDoNothing));
+            pGoal->AddStartAction (new SetCommandAction(m_builderID, c_cmdAccepted, NA, NA, c_cidDoNothing));
+            pGoal->AddStartAction (new SetCommandAction (trekClient.GetShip (), c_cmdQueued, OT_ship, m_enemyScoutID, c_cidAttack));// - Error here?
             pGoal->AddStartAction (new MessageAction ("Press the INSERT key to accept the command."));
             pGoal->AddStartAction (new PlaySoundAction (tm_4_33Sound));
-            pGoal->AddConstraintCondition (CreateTooLongCondition (30.0f, tm_4_33Sound));
+            pGoal->AddConstraintCondition(CreateTooLongCondition(30.0f, tm_4_33Sound));
             pGoalList->AddGoal (pGoal);
         }
 
-        // wait half second
+        // wait half a second
         pGoalList->AddGoal (new Goal (new ElapsedTimeCondition (0.5f)));
 
 		// tm_4_33r
@@ -941,8 +946,7 @@ namespace Training
             pGoal->AddConstraintCondition (CreateTooLongCondition (45.0f, tm_4_33rSound));
             pGoalList->AddGoal (pGoal);
         }
-
-        // wait half second
+        
         {
             Goal*   pGoal = new Goal (new ElapsedTimeCondition (0.5f));
 
@@ -972,8 +976,9 @@ namespace Training
     {
         GoalList*   pGoalList = new GoalList;
 
+
 		// tm_4_34
-		// Good. Now I?ll give our constructor an order to build a 
+		// Good. Now I'll give our constructor an order to build a 
 		// station on an asteroid. Different kinds of asteroids are 
 		// good for different kinds of buildings. Different buildings 
 		// perform different tasks. In this case, we are building an 
@@ -987,16 +992,16 @@ namespace Training
             pGoalList->AddGoal (pGoal);
         }
 
-        // (Wait for command acceptance)
-        pGoalList->AddGoal (new Goal (new GetCommandCondition (trekClient.GetShip (), c_cidGoto)));
-
         // (Wait for building to complete)
         {
-            Goal*   pGoal = new Goal (new GetShipIsDestroyedCondition2(OT_ship, m_builderID));
-            pGoal->AddStartAction (new SetCommandAction (m_builderID, c_cmdCurrent, OT_asteroid, static_cast<ObjectID>(10332), c_cidBuild));
-            pGoal->AddStartAction (new SetCommandAction (m_builderID, c_cmdAccepted, OT_asteroid, static_cast<ObjectID>(10332), c_cidBuild));
-            pGoalList->AddGoal (pGoal);
+            Goal*   pGoal = new Goal(new GetShipIsDestroyedCondition2(OT_ship, m_builderID));
+            pGoal->AddStartAction(new SetCommandAction(m_builderID, c_cmdCurrent, OT_asteroid, static_cast<ObjectID>(10332), c_cidBuild));
+            pGoal->AddStartAction(new SetCommandAction(m_builderID, c_cmdAccepted, OT_asteroid, static_cast<ObjectID>(10332), c_cidBuild));
+            pGoalList->AddGoal(pGoal);
         }
+
+        // (Wait for command acceptance)
+        pGoalList->AddGoal (new Goal (new GetCommandCondition (trekClient.GetShip (), c_cidGoto)));
 
         // wait a few seconds
         {

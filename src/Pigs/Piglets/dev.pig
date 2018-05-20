@@ -26,9 +26,9 @@
 
 var nCorrectionInterval = 2.0;
 var fTimerOn = true;
-var fHostile = false;
+var fHostile = true;
 var nThrottle = 100;
-var strTarget = "Grendel";
+var strTarget = "+BackTrak@Dev";
 var strOldTarget = "";
 var mySector, myShip, myTarget;
 var nShieldValue, nHullValue;
@@ -126,7 +126,7 @@ function OnStateDocked(ePrev)
     Host.Trace("\nOnStateDocked: cHullTypes = " + cHullTypes + "\n");    // Host.Trace
 
     // Buy the best hull (or else we'll be in an eject pod)
-    var v = SelectBestHull(objHullTypes, "Scout", "Interceptor");
+    var v = SelectBestHull(objHullTypes, "Interceptor", "Scout");
     if (cHullTypes)
       Ship.BuyHull(objHullTypes(v))                                      // Pig.Ship.BuyHull
   }
@@ -257,6 +257,7 @@ function CorrectOrbit()
   {
     //Ship.Face("Outpost", "ThrustOrbit();");
     Host.Trace ("$$$$$$$$$$$$$$$$$ bad stuff!! $$$$$$$$$$$$$$$$$$$$$\n");
+	Host.Trace (e.number + ", " + e.description + "\n");
     AllStop();
 		FireWeapon(false);
 		FireMissile(false);

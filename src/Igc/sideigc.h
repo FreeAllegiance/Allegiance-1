@@ -591,8 +591,23 @@ class       CsideIGC : public IsideIGC
 		{
 			return m_data.allies;
 		}
+        void HandleNewEnemyCluster(IclusterIGC* pcluster);
+
+        void UpdateTerritory();
+
+        ClusterListIGC GetTerritory() 
+        {
+            return m_territoryClusters;
+        }
+
+        bool IsTerritory(IclusterIGC* pcluster)
+        {
+            return (m_territoryClusters.find(pcluster) != NULL);
+        }
 		
     private:
+        bool IsSurroundedByTerritory(IclusterIGC* pcluster, ClusterListIGC* clustersLinked, ClusterListIGC* clustersTerritory, int currentDepth = 0);
+
         void    AdjustBuckets(void)
         {
             //Empty the side buckets we can no longer build
@@ -671,6 +686,7 @@ class       CsideIGC : public IsideIGC
         StationListIGC      m_stations;
         BucketListIGC       m_buckets;
         ShipListIGC         m_ships;
+        ClusterListIGC      m_territoryClusters;
 
         StockpileList       m_stockpile;
 

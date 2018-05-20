@@ -90,7 +90,7 @@ namespace Training
         IclusterIGC*    pCluster = pCore->GetCluster(GetStartSectorID ());
 
         // set up the ship
-        trekClient.ResetClusterScanners(pShip->GetSide());
+        //trekClient.ResetClusterScanners(pShip->GetSide());
 
         // put the ship in the station
         pShip->SetStation (pStation);
@@ -156,6 +156,9 @@ namespace Training
         IwarpIGC*           pAlephNeptune = pMission->GetWarp (1050);
         IwarpIGC*           pAlephMars = pMission->GetWarp (1052);
 
+        //Enable "Take me to" button in F6 window
+        m_commandViewEnabled = true;
+
         // generate ship ids that we'll be using throughout the mission
         m_enemyScoutID = pMission->GenerateNewShipID ();
         m_miner1ID = pMission->GenerateNewShipID ();
@@ -177,19 +180,19 @@ namespace Training
         // create the tower builder drones
         Vector              pos = pStationNeptune->GetPosition () + Vector (random(-300.0f, 300.0f), random(-300.0f, 300.0f), random(-300.0f, 300.0f));
         CreateDroneAction*  pCreateDroneAction = new CreateDroneAction ("Tower Layer 01", m_builder1ID, 418, 0, c_ptLayer);
-        pCreateDroneAction->SetExpendableType (431);
+        pCreateDroneAction->SetExpendableType (87);
         pCreateDroneAction->SetCreatedLocation (GetStartSectorID (), pos);
         pGoal->AddStartAction (pCreateDroneAction);
 
 		pos = pStationNeptune->GetPosition () + Vector (random(-300.0f, 300.0f), random(-300.0f, 300.0f), random(-300.0f, 300.0f));
 		pCreateDroneAction = new CreateDroneAction ("Tower Layer 02", m_builder2ID, 418, 0, c_ptLayer);
-        pCreateDroneAction->SetExpendableType (431);
+        pCreateDroneAction->SetExpendableType (87);
         pCreateDroneAction->SetCreatedLocation (GetStartSectorID (), pos);
         pGoal->AddStartAction (pCreateDroneAction);
 
         pos = pStationNeptune->GetPosition () + Vector (random(-300.0f, 300.0f), random(-300.0f, 300.0f), random(-300.0f, 300.0f));
         pCreateDroneAction = new CreateDroneAction ("Tower Layer 03", m_builder3ID, 418, 0, c_ptLayer);
-        pCreateDroneAction->SetExpendableType (431);
+        pCreateDroneAction->SetExpendableType (87);
         pCreateDroneAction->SetCreatedLocation (GetStartSectorID (), pos);
         pGoal->AddStartAction (pCreateDroneAction);
 
@@ -268,7 +271,7 @@ namespace Training
 		// Practice manipulating your view, and then press the 
 		// SPACEBAR when you are ready to proceed.
         {
-            Goal*   pGoal = new Goal (new GetKeyCondition (TK_FireWeapon));
+            Goal*   pGoal = new Goal (new GetKeyCondition (TK_ThrustForward));
             pGoal->AddStartAction (new MessageAction ("Press the SPACEBAR when you are ready to proceed."));
             pGoal->AddStartAction (new PlaySoundAction (tm_5_02Sound));
             pGoal->AddConstraintCondition (CreateTooLongCondition (30.0f, tm_5_02Sound));

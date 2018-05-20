@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZDebug'">Debug</VcpkgConfiguration>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZRetail'">Release</VcpkgConfiguration>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
@@ -64,7 +68,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\;..\src\lib\AllegianceSecurity\;..\src\lib\Steam;..\src\lib\nlohmann\json\include;..\src\lib\sol\include;..\src\lib\lua\include;..\src\lib\boost;..\src\effect;..\src\engine;..\src\ui;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\clintlib;..\src\soundengine;..\src\AGC;..\src\FedSrv;..\src\training;..\src\lobby;..\src\Inc;..\src\guids;..\src\Zone;.\$(OutDir)..\AGC;.\$(OutDir)..\FedSrv;.\$(OutDir)..\Guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\src\lib\AllegianceSecurity\;..\src\lib\Steam;..\src\lib\sol\include;..\src\lib\lua\include;..\src\effect;..\src\engine;..\src\ui;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\clintlib;..\src\soundengine;..\src\AGC;..\src\FedSrv;..\src\training;..\src\lobby;..\src\Inc;..\src\guids;..\src\Zone;.\$(OutDir)..\AGC;.\$(OutDir)..\FedSrv;.\$(OutDir)..\Guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STEAM_APP_ID=700480;NOMINMAX;D3D_DEBUG_INFO;WINTREK;igc_static;IGC_SHIP;_USRDLL;DLL;DIRECTINPUT_VERSION=0x0800;_DEBUG;DEBUG;_WINDOWS;WIN32;AFXDLL;_TRACE;EnablePerformanceCounters;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>StackFrameRuntimeCheck</BasicRuntimeChecks>
@@ -106,7 +110,7 @@ xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">
     <ClCompile>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>.\;..\src\lib\AllegianceSecurity\;..\src\lib\Steam;..\src\lib\nlohmann\json\include;..\src\lib\sol\include;..\src\lib\lua\include;..\src\lib\boost;..\src\effect;..\src\engine;..\src\ui;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\clintlib;..\src\soundengine;..\src\AGC;..\src\FedSrv;..\src\training;..\src\lobby;..\src\Inc;..\src\guids;..\src\Zone;.\$(OutDir)..\AGC;.\$(OutDir)..\FedSrv;.\$(OutDir)..\guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\src\lib\AllegianceSecurity\;..\src\lib\Steam;..\src\lib\sol\include;..\src\lib\lua\include;..\src\effect;..\src\engine;..\src\ui;..\src\zlib;..\src\_Utility;..\src\Igc;..\src\clintlib;..\src\soundengine;..\src\AGC;..\src\FedSrv;..\src\training;..\src\lobby;..\src\Inc;..\src\guids;..\src\Zone;.\$(OutDir)..\AGC;.\$(OutDir)..\FedSrv;.\$(OutDir)..\guids;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>STEAM_APP_ID=700480;NOMINMAX;SRVLOG;DEBUG;WINTREK;igc_static;IGC_SHIP;_USRDLL;DLL;DIRECTINPUT_VERSION=0x0800;_WINDOWS;WIN32;AFXDLL;EnablePerformanceCounters;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -170,6 +174,7 @@ xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
     <ClCompile Include="..\src\WinTrek\CreateGameDialog.h" />
     <ClCompile Include="..\src\WinTrek\ddstream.cpp" />
     <ClCompile Include="..\src\WinTrek\ddvideo.cpp" />
+    <ClCompile Include="..\src\WinTrek\downloader.cpp" />
     <ClCompile Include="..\src\WinTrek\gameoverscreen.cpp" />
     <ClCompile Include="..\src\WinTrek\gamescreen.cpp" />
     <ClCompile Include="..\src\WinTrek\gamesite.cpp" />
@@ -226,6 +231,7 @@ xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
     <ClInclude Include="..\src\WinTrek\consoledata.h" />
     <ClInclude Include="..\src\WinTrek\ddstream.h" />
     <ClInclude Include="..\src\WinTrek\ddvideo.h" />
+    <ClInclude Include="..\src\WinTrek\downloader.h" />
     <ClInclude Include="..\src\WinTrek\gamesite.h" />
     <ClInclude Include="..\src\WinTrek\gametypes.h" />
     <ClInclude Include="..\src\WinTrek\hudimage.h" />

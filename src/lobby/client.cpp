@@ -311,7 +311,10 @@ HRESULT LobbyClientSite::OnAppMessage(FedMessaging * pthis, CFMConnection & cnxn
       }
 
       //Imago - Dogbones's ASGS_ON AllSrv registry entry fiasco... 8/6/09
-      if (g_pLobbyApp->EnforceAuthentication()) {
+      if (g_pLobbyApp->EnforceAuthentication() 
+		  // This is a pre shared secret, the check bypasses Steam Authentication for this client. 
+		  // This is used to allow Pigs to join the lobby.
+		  &&  ZString(pqd->szCDKey) != ZString(g_pLobbyApp->RetrieveAuthBypassCDKey())) {
 	      //char mprthname[9]; 
 	      //mprSprintf(mprthname, sizeof(mprthname), "%d",pqd->dwConnectionID);
 	      //MprThread* threadp = new MprThread(doAuthentication, MPR_NORMAL_PRIORITY, (void*) pquery, mprthname); 

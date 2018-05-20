@@ -162,6 +162,9 @@ END
 STRINGTABLE DISCARDABLE 
 BEGIN
     IDS_E_FMT_OBJNAME       """%ls"" is not an object in the current cluster."
+	//imago 10/14
+	IDS_E_FMT_STATIONOBJID  """%i"" is not a station objectID in the mission."
+    
     IDS_E_PROPUT_PIGSEXIST  "This property cannot be changed when pig objects are running."
     IDS_E_FMT_ACTIONNAME    """%ls"" is not a valid action name."
     IDS_FMT_SHIPEVENT_NAME  "ShipEvent%d"
@@ -201,6 +204,8 @@ BEGIN
                             "Specified LobbyMode is unsupported or invalid."
     IDS_E_LOBBYMODE_OP_UNSUPPORTED 
                             "The requested operation is not available for the current LobbyMode."
+	IDS_E_STARTGAME_SIDE_NOT_READY
+							"One or more sides is not ready."
 END
 
 #endif    // English (U.S.) resources

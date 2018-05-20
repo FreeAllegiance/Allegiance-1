@@ -44,9 +44,6 @@ private:
     bool                      m_bValid;
     bool                      m_bValidDevice;
 	bool					  m_bChanged; //imago 7/7/09
-    bool                      m_bAllowSecondary;
-    bool                      m_bAllow3DAcceleration;
-    bool                      m_b3DAccelerationImportant;
 	bool					  m_bMipMapGenerationEnabled;
     DWORD                     m_dwBPP; // KGJV 32B - user choosen bpp or desktop bbp
 
@@ -88,9 +85,6 @@ public:
 		))),
         m_pointFullscreenCurrent(0, 0),
         m_bFullscreen(new ModifiableBoolean(false)),
-        m_bAllow3DAcceleration(bAllow3DAcceleration),
-        m_bAllowSecondary(bAllowSecondary),
-        m_b3DAccelerationImportant(false),
         m_bValid(false),
         m_bValidDevice(false),
         m_hwndFocus(NULL),
@@ -778,38 +772,6 @@ private:
             ZDebugOutput("InitalizeFullscreen()\n");
         }
 
-        //
-        // Try the secondary device first
-        //
-
-//        DDDevice* pdddevice;
-
-/*        if (
-               m_bAllowSecondary 
-            && m_bAllow3DAcceleration
-            && m_b3DAccelerationImportant
-            && m_pdddeviceSecondary != NULL
-            && m_pdddeviceSecondary->GetAllow3DAcceleration()
-        ) {
-            pdddevice = m_pdddeviceSecondary;
-        } else {
-            pdddevice = m_pdddevicePrimary;
-        }*/
-
-        //
-        // Don't do anything if we don't need to change the device
-        // or resolution
-        //
-
-/*        if (  
-               m_bValidDevice
-            && m_pdddevice              == pdddevice 
-            && m_pointFullscreenCurrent == m_pointFullscreen
-        ) {
-            ZDebugOutput("Device and resolution match\n");
-            return true;
-        }*/
-
 		if( ( CD3DDevice9::Get()->IsDeviceValid() == true ) && 
 			( m_pointFullscreenCurrent == m_sizeResolution->GetValue() ) )
 		{
@@ -876,25 +838,6 @@ private:
     // Set Attributes
     //
     //////////////////////////////////////////////////////////////////////////////
-
-    void SetAllowSecondary(bool bAllowSecondary)
-    {
-        if (m_bAllowSecondary != bAllowSecondary) {
-            m_bAllowSecondary = bAllowSecondary;
-            m_bValid       = false;
-            m_bValidDevice = false;
-        }
-    }
-
-    void SetAllow3DAcceleration(bool bAllow3DAcceleration)
-    {
-        if (m_bAllow3DAcceleration != bAllow3DAcceleration) {
-            m_bAllow3DAcceleration = bAllow3DAcceleration;
-//            m_pdddevicePrimary->SetAllow3DAcceleration(m_bAllow3DAcceleration);
-            m_bValid       = false;
-            m_bValidDevice = false;
-        }
-    }
 
 	void ForceReset()
 	{
@@ -1016,16 +959,6 @@ private:
 		}
 	}
 
-	void SetUsePack(bool bUsePack)
-	{
-		if (g_DX9Settings.mbUseTexturePackFiles != bUsePack)
-		{
-			g_DX9Settings.mbUseTexturePackFiles = bUsePack;
-
-			ForceReset();
-		}
-	}
-
 	void SetAutoGenMipMaps(bool bUseAutoGenMipMaps)
 	{
 		if (g_DX9Settings.m_bAutoGenMipmaps != bUseAutoGenMipMaps)
@@ -1044,14 +977,6 @@ private:
 		m_bMipMapGenerationEnabled = bEnable;
 		CVRAMManager::Get()->SetEnableMipMapGeneration( bEnable );
 	}
-
-    void Set3DAccelerationImportant(bool b3DAccelerationImportant)
-    {
-        if (m_b3DAccelerationImportant != b3DAccelerationImportant) {
-            m_b3DAccelerationImportant = b3DAccelerationImportant;
-            m_bValid = false;
-        }
-    }
 
     void SetFullscreen(bool bFullscreen)
     {
@@ -1157,24 +1082,9 @@ private:
     //
     //////////////////////////////////////////////////////////////////////////////
 
-    bool GetAllowSecondary()  //REVIEW IMAGO REMOVE
-    {
-        return m_bAllowSecondary;
-    }
-
     bool GetFullScreenChanged() //Imago added 7/7/09
     {
         return m_bChanged;
-    }
-
-    bool GetAllow3DAcceleration() //REVIEW IMAGO (RESTORE?)
-    {
-        return m_bAllow3DAcceleration;
-    }
-
-    bool Get3DAccelerationImportant()  //REVIEW IMAGO REMOVE
-    {
-        return m_b3DAccelerationImportant;
     }
 
 	const TRef<ModifiableWinPointValue> GetResolutionSizeModifiable()
@@ -1192,19 +1102,9 @@ private:
         return m_bFullscreen->GetValue() == true;
     }
 
-    bool PrimaryHas3DAcceleration()  //REVIEW IMAGO (RESTORE?)
-    {
-        return true;
-    }
-
     ZString GetDeviceName()
     {
 		return CD3DDevice9::Get()->GetDeviceSetupString();
-    }
-
-    bool GetUsing3DAcceleration()  //REVIEW IMAGO (RESTORE?)
-    {
-		return true;
     }
 
     ZString GetPixelFormatName()

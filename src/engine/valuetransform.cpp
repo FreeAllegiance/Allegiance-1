@@ -233,6 +233,20 @@ TRef<Number> NumberTransform::Cos(Number* pvalue)
     return new CosNumber(pvalue);
 };
 
+TRef<Number> NumberTransform::Sqrt(Number* pvalue)
+{
+    return new TransformedValue<float, float>([](float value) {
+        return sqrt(value);
+    }, pvalue);
+};
+
+TRef<Number> NumberTransform::Power(Number* pvalue, Number* power)
+{
+    return new TransformedValue2<float, float, float>([](float value, float power) {
+        return pow(value, power);
+    }, pvalue, power);
+};
+
 
 // ### Point ###
 
@@ -519,4 +533,44 @@ TRef<Boolean> StringTransform::Equals(StringValue* a, StringValue* b)
 TRef<StringValue> StringTransform::Concat(StringValue* a, StringValue* b)
 {
     return new ConcatenatedString(a, b);
+}
+
+TRef<StringValue> StringTransform::Slice(StringValue* string, Number* start, Number* length)
+{
+    return new TransformedValue3<ZString, ZString, float, float>([](ZString string, float fstart, float flength) {
+        int start = (int)fstart;
+        int length = (int)flength;
+
+        int string_length = string.GetLength();
+
+        if (start < 0) {
+            //negative start values means from end of string
+            start = string_length + start;
+        }
+
+        if (length < 0) {
+            //negative length values means up to the last n characters
+            length = string_length + length;
+        }
+
+        //validation
+        if (start < 0) {
+            start = 0;
+        }
+
+        if (start >= string_length) {
+            return ZString("");
+        }
+
+        if (length <= 0) {
+            return ZString("");
+        }
+
+        if (length > string_length - start) {
+            length = string_length - start;
+        }
+
+        ZString strSlice = string.Middle(start, length);
+        return strSlice;
+    }, string, start, length);
 }

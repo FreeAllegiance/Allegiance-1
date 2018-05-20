@@ -57,6 +57,11 @@ class ClusterSiteImpl : public ClusterSite
                     l->data()->Release();
                     delete l;
                 }
+                while (l = m_enemyScanners.first())  //intentional assignment
+                {
+                    l->data()->Release();
+                    delete l;
+                }
             }
             m_pGroupScene   = NULL;
             m_pposterImage  = NULL;
@@ -284,21 +289,28 @@ class ClusterSiteImpl : public ClusterSite
             if (sid == trekClient.GetSideID() ||
 				trekClient.GetSide()->AlliedSides(trekClient.GetCore()->GetSide(sid),trekClient.GetSide())) //ALLY SCAN 7/13/09 imago
                 AddIbaseIGC((BaseListIGC*)&(m_scanners), scannerNew);
+            else if (!trekClient.m_fm.IsConnected())
+                AddIbaseIGC((BaseListIGC*)&(m_enemyScanners), scannerNew);
         }
         virtual void                    DeleteScanner(SideID   sid, IscannerIGC* scannerOld)
         {
             assert (sid >= 0);
             assert (sid < c_cSidesMax);
             assert (scannerOld);
-            if (sid == trekClient.GetSideID() || 
-				trekClient.GetSide()->AlliedSides(trekClient.GetCore()->GetSide(sid),trekClient.GetSide())) //ALLY SCAN 7/13/09 imago
+            if (sid == trekClient.GetSideID() ||
+                trekClient.GetSide()->AlliedSides(trekClient.GetCore()->GetSide(sid), trekClient.GetSide())) //ALLY SCAN 7/13/09 imago
                 DeleteIbaseIGC((BaseListIGC*)&(m_scanners), scannerOld);
+            else if (!trekClient.m_fm.IsConnected())
+                DeleteIbaseIGC((BaseListIGC*)&(m_enemyScanners), scannerOld);
+                
         }
         virtual const ScannerListIGC*      GetScanners(SideID   sid) const
         {
             assert (sid >= 0);
             assert (sid < c_cSidesMax);
 
+            if (!trekClient.m_fm.IsConnected() && sid != trekClient.GetSide()->GetObjectID()) // Doesn't account for allies
+                return &m_enemyScanners;
             return &(m_scanners);
         }
 
@@ -429,6 +441,7 @@ class ClusterSiteImpl : public ClusterSite
         TRef<ExplosionGeo>      m_pexplosionGeo;
         TRef<PulseGeo>          m_pPulseGeo;
         ScannerListIGC          m_scanners;
+        ScannerListIGC          m_enemyScanners;
         TRef<Geo>               m_pgeoEnvironment;
         AssetMask               m_assetmask;
         AssetMask               m_assetmaskLastWarning;
@@ -740,12 +753,14 @@ private:
     TRef<ISoundInstance> m_pMainThrusterInteriorSound;
     TRef<ISoundInstance> m_pTurnThrusterInteriorSound;
     TRef<ISoundInstance> m_pAfterburnerInteriorSound;
+	TRef<ISoundInstance> m_pSideThrustInteriorSound;
 
     // sounds used outside of a ship
     TRef<ISoundInstance> m_pExteriorSound;
     TRef<ISoundInstance> m_pMainThrusterExteriorSound;
     TRef<ISoundInstance> m_pTurnThrusterExteriorSound;
     TRef<ISoundInstance> m_pAfterburnerExteriorSound;
+	TRef<ISoundInstance> m_pSideThrustExteriorSound;
     TRef<ISoundInstance> m_pMiningSound;
 
     // weapon sounds for each mount
@@ -933,6 +948,12 @@ private:
             }
         }
     };
+
+	//Sidethrusters
+	bool PlaySidethrust()
+	{
+		return m_pship->GetStateM() & (backwardButtonIGC | leftButtonIGC | rightButtonIGC);
+	}
 
     void PlayWeaponSounds()
     {
@@ -1299,6 +1320,14 @@ public:
                 PlaySoundIf(m_pAfterburnerInteriorSound, 
                     GetAfterburnerSoundID(true), 
                     m_psourceEngine, AfterburnerPower() > 0.0f);
+				//Sidethrusters
+				if (m_pship->GetHullType()->HasCapability(c_habmFighter))
+				{	//if its a small ship, play small ship sound
+					PlaySoundIf(m_pSideThrustInteriorSound, SidethrustInteriorSound, GetSoundSource(), PlaySidethrust());
+				}
+				else { //else play capship sound
+					PlaySoundIf(m_pSideThrustInteriorSound, CapSidethrustInteriorSound, GetSoundSource(), PlaySidethrust());
+				}
             }
 
             //
@@ -1316,7 +1345,14 @@ public:
                 GetAfterburnerSoundID(false), 
                 m_psourceEngine,
                 AfterburnerPower() > 0.0f);
-
+			//Sidethrusters
+			if (m_pship->GetHullType()->HasCapability(c_habmFighter))
+			{	//if its a small ship, play small ship sound
+				PlaySoundIf(m_pSideThrustInteriorSound, SidethrustExteriorSound, GetSoundSource(), PlaySidethrust());
+			}
+			else { //else play capship sound
+				PlaySoundIf(m_pSideThrustInteriorSound, CapSidethrustExteriorSound, GetSoundSource(), PlaySidethrust());
+			}
             UpdateEngineSoundLevels(dwElapsedTime);
 
             // if we are inside of the ship...
@@ -1966,10 +2002,12 @@ class ThingSiteImpl : public ThingSitePrivate
 
             if (pcluster)
             {
-                if (((ma & c_mtPredictable) && trekClient.m_fm.IsConnected()) || !m_bSideVisibility)
+                if ((ma & c_mtPredictable) || !m_bSideVisibility)
                 {
                     m_sideVisibility.fVisible(true);
 					m_sideVisibility.CurrentEyed(true);  //Xynth #100 7/2010
+                    m_enemySideVisibility.fVisible(true);
+                    m_enemySideVisibility.CurrentEyed(true);
 
                     switch (pmodel->GetObjectType())
                     {
@@ -2094,11 +2132,85 @@ class ThingSiteImpl : public ThingSitePrivate
                         }
                     }
                 //}
-					m_sideVisibility.CurrentEyed(currentEye);
-					currentEye = currentEye || (m_sideVisibility.fVisible() && (pmodel->GetAttributes() & c_mtPredictable));
-					m_sideVisibility.fVisible(currentEye);        
+
+                    if (!trekClient.m_fm.IsConnected()) {
+                        if (pmodel->GetObjectType() == OT_ship) {
+                            IshipIGC* pShip = (IshipIGC*)pmodel;
+                            if (!m_sideVisibility.CurrentEyed() && currentEye) {
+                                debugf(">>UpdateSideVis for %s\n", pmodel->GetName());
+                                PlayerInfo* ppi = (PlayerInfo*)(pShip->GetPrivateData());
+                                if (ppi) {
+                                    ShipStatus ss = ppi->GetShipStatus();
+                                    ss.SetStateTime(trekClient.m_lastUpdate.clock());
+                                    ss.SetDetected(true);
+                                    ss.SetSectorID(pcluster->GetObjectID());
+                                    ss.SetState(c_ssFlying);
+                                    ss.SetHullID(((IshipIGC*)pmodel)->GetHullType()->GetObjectID());
+                                    if (pmodel->GetCluster())
+                                        ss.SetState(c_ssFlying);
+                                    ppi->SetShipStatus(ss);
+                                }
+                            }
+                            else if (m_sideVisibility.CurrentEyed() && !currentEye) {
+                                debugf(">>UpdateSideVis for %s - hide\n", pmodel->GetName());
+                                PlayerInfo* ppi = (PlayerInfo*)(pShip->GetPrivateData());
+                                if (ppi) {
+                                    ShipStatus ss = ppi->GetShipStatus();
+                                    ss.SetDetected(false);
+                                    ss.SetUnknown();
+                                    ppi->SetShipStatus(ss);
+                                }
+                            }
+                        }
+                    }
+
+                    m_sideVisibility.CurrentEyed(currentEye);
+                    currentEye = currentEye || (m_sideVisibility.fVisible() && (pmodel->GetAttributes() & c_mtPredictable));
+                    m_sideVisibility.fVisible(currentEye);
 			
 			}
+            if (!trekClient.m_fm.IsConnected()) {
+                // Done with player side, now update visibilities for the enemy -- ignore allies for now
+                currentEye = false;
+                if ((pmodel->GetSide() != trekClient.GetSide()) ||
+                    (m_enemySideVisibility.pLastSpotter() && m_enemySideVisibility.pLastSpotter()->InScannerRange(pmodel))) //&& trekClient.GetSide() != m_enemySideVisibility.pLastSpotter()->GetSide()) ||
+                {
+                    currentEye = true;
+                }
+                else
+                {
+                    //do it the hard way
+                    for (ScannerLinkIGC* l = pcluster->GetClusterSite()->GetScanners(1)->first(); (l != NULL); l = l->next())
+                    {
+                        IscannerIGC*   s = l->data();
+
+                        if (s->InScannerRange(pmodel))
+                        {
+                            currentEye = true;
+                            m_enemySideVisibility.pLastSpotter(s);
+                            break;
+                        }
+                    }
+                }
+                m_enemySideVisibility.CurrentEyed(currentEye);
+                currentEye = currentEye || (m_enemySideVisibility.fVisible() && (pmodel->GetAttributes() & c_mtPredictable));
+                m_enemySideVisibility.fVisible(currentEye);
+
+                
+                if (pmodel->GetObjectType() == OT_ship) {
+                    IshipIGC* pShip = (IshipIGC*)pmodel;
+                    if (pShip == trekClient.GetShip()) {
+                        // let the player know if he is eyed
+                        PlayerInfo* ppi = (PlayerInfo*)(pShip->GetPrivateData());
+                        if (ppi) {
+                            ShipStatus ss = ppi->GetShipStatus();
+                            ss.SetDetected(currentEye); // For UI eye
+                            ppi->SetShipStatus(ss);
+                        }
+                    }
+                }
+            }
+
         }
 
         bool GetSideVisibility(IsideIGC* side)
@@ -2107,26 +2219,36 @@ class ThingSiteImpl : public ThingSitePrivate
 
             if (Training::IsTraining ())
             {
-                if ((trekClient.GetShip()->GetSide() != side) && (Training::GetTrainingMissionID() != Training::c_TM_6_Practice_Arena) && (Training::GetTrainingMissionID() != Training::c_TM_10_Free_Flight))
-                    return false;
+                //if ((trekClient.GetShip()->GetSide() != side) && (Training::GetTrainingMissionID() != Training::c_TM_6_Practice_Arena) && (Training::GetTrainingMissionID() != Training::c_TM_10_Free_Flight))
+                //    return false;
+                if (side != trekClient.GetSide())
+                    return m_enemySideVisibility.fVisible();
             }
             return m_sideVisibility.fVisible();
         }
 
 		bool GetCurrentEye(IsideIGC* side)
         {
-            assert (side);            
+            assert (side);
+            if (!trekClient.m_fm.IsConnected() && side != trekClient.GetSide())
+                return m_enemySideVisibility.CurrentEyed();
 			return m_sideVisibility.CurrentEyed();
         }
 
         void SetSideVisibility(IsideIGC* side, bool fVisible)
         {
-            if (m_bSideVisibility && 
-				(side == trekClient.GetSide()))// || (side->AlliedSides(side,trekClient.GetSide()) && trekClient.MyMission()->GetMissionParams().bAllowAlliedViz) ) ) //imago viz ALLY VISIBILITY 7/11/09
-			{
-				m_sideVisibility.fVisible(fVisible);
-				m_sideVisibility.CurrentEyed(fVisible);
-			}
+            if (m_bSideVisibility) {
+                if (side == trekClient.GetSide()) // || (side->AlliedSides(side,trekClient.GetSide()) && trekClient.MyMission()->GetMissionParams().bAllowAlliedViz) ) ) //imago viz ALLY VISIBILITY 7/11/09
+                {
+                    m_sideVisibility.fVisible(fVisible);
+                    m_sideVisibility.CurrentEyed(fVisible);
+                }
+                else if (!trekClient.m_fm.IsConnected())
+                {
+                    m_enemySideVisibility.fVisible(fVisible);
+                    m_enemySideVisibility.CurrentEyed(fVisible);
+                }
+            }
             if (fVisible)
             {
                 switch (m_pmodel->GetObjectType())
@@ -2289,6 +2411,7 @@ class ThingSiteImpl : public ThingSitePrivate
         TRef<TEvent<float>::SourceImpl>   m_peventSourceAleph;
 
         SideVisibility              m_sideVisibility;
+        SideVisibility              m_enemySideVisibility;
         TRef<VisibleGeo>            m_pvisibleGeoBolt;
         TRef<ThingGeo>              m_pthing;
         TRef<Geo>                   m_pthingGeo;
@@ -2334,28 +2457,10 @@ WinTrekClient::WinTrekClient(void)
     m_bFilterQuickComms(false),
 	m_bFilterUnknownChats(true), //TheBored 30-JUL-07: Filter Unknown Chat patch
     m_dwFilterLobbyChats(3), //TheBored 25-JUN-07: Changed value to 3 (Don't Filter Lobby)
-	bTrainingFirstClick(false)
+	bTrainingFirstClick(false),
+    m_pChatLogger(nullptr)
 {
-    // restore the CD Key from the registry
-
-    HKEY hKey;
-
-    if (ERROR_SUCCESS == ::RegCreateKeyEx(HKEY_CURRENT_USER,
-        ALLEGIANCE_REGISTRY_KEY_ROOT,
-        0, "", REG_OPTION_NON_VOLATILE, KEY_READ, NULL, &hKey, NULL))
-    {
-        DWORD dwSize = c_cbCDKey;
-        DWORD dwType;
-        char szCDKey[c_cbCDKey];
-
-        if (::RegQueryValueEx(hKey, "CDKey", NULL, &dwType, 
-                (unsigned char*)szCDKey, &dwSize) == ERROR_SUCCESS
-            && dwType == REG_SZ && dwSize != 0)
-        {
-            BaseClient::SetCDKey(szCDKey);
-        }
-        ::RegCloseKey(hKey);
-    }
+    
 }
 
 WinTrekClient::~WinTrekClient(void)
@@ -2367,6 +2472,29 @@ WinTrekClient::~WinTrekClient(void)
 void WinTrekClient::Initialize(Time timeNow)
 {
     BaseClient::Initialize(timeNow);
+
+    // making sure that this only happens once, instead of also being run on a reset
+    if (m_pChatLogger == nullptr) {
+
+        // I'm not entirely sure if this is used. It was at some point proposed to be used as a way to authenticate bots (pigs) to the servers.
+        auto strCdKeyConfig = GetConfiguration()->GetStringValue(
+            "Online.AuthenticationId",
+            GetConfiguration()->GetStringValue("CDKey", "")
+        );
+        if (strCdKeyConfig != "") {
+            BaseClient::SetCDKey(strCdKeyConfig.c_str());
+        }
+
+        m_pLogChatEnabled = GetConfiguration()->GetBool("Chat.Log", GetConfiguration()->GetBoolValue("LogChat", false));
+        if (m_pLogChatEnabled->GetValue()) {
+            m_pChatLogger = CreateTimestampedFileLogger(GetExecutablePath() + "\\logs\\chat_");
+        }
+        else {
+            m_pChatLogger = NullLogger::GetInstance();
+        }
+
+        SoundEngine::bConvertToMono = GetConfiguration()->GetBool("Sound.ConvertToMono", false == GetConfiguration()->GetBoolValue("MonoOff", false))->GetValue();
+    }
 
     GetShip()->CreateDamageTrack();
 
@@ -2669,6 +2797,27 @@ void WinTrekClient::ChangeStation(IshipIGC*  pship, IstationIGC* pstationOld, Is
 		{
             if (pstationOld == NULL)
 			{
+                if (!m_fm.IsConnected()) {
+                    // Go over the ship's parts and give the side the tech bits for any equipment onboard
+                    TechTreeBitMask ttbm;
+                    ttbm.ClearAll();
+                    for (PartLinkIGC* ppl = pship->GetParts()->first(); (ppl != NULL); ppl = ppl->next())
+                    {
+                        IpartIGC*   ppart = ppl->data();
+
+                        ttbm |= ppart->GetPartType()->GetEffectTechs();
+                        if (pship->GetSide()->IsNewDevelopmentTechs(ppart->GetPartType()->GetEffectTechs()))
+                        {
+                            // send message that player secured new tech
+                            PostText(true, "%s has secured %s", pship->GetName(), ppart->GetPartType()->GetName());
+                        }
+                    }
+
+                    IsideIGC*   pside = pship->GetSide();
+                    assert(pside);
+                    pside->ApplyDevelopmentTechs(ttbm);
+                }
+
                 ConsoleImage*   pconsole = GetWindow()->GetConsoleImage();
                 if (pconsole)
                 {
@@ -2697,7 +2846,7 @@ void WinTrekClient::ChangeStation(IshipIGC*  pship, IstationIGC* pstationOld, Is
 
                     if (GetWindow()->GetCameraMode() != TrekWindow::cmExternalOverride && (pstationNew->GetSide() == trekClient.GetSide()))
                     {
-                        if ((!Training::IsTraining ()) || (Training::GetTrainingMissionID () != Training::c_TM_5_Command_View))
+                        //if ((!Training::IsTraining ()) || (Training::GetTrainingMissionID () != Training::c_TM_5_Command_View))
                         {
                             GetWindow()->SetViewMode(trekClient.GetShip()->IsGhost() 
                                 ? TrekWindow::vmCommand : TrekWindow::vmHangar);
@@ -2948,63 +3097,24 @@ void WinTrekClient::PostText(bool bCritical, const char* pszText, ...)
 void WinTrekClient::EjectPlayer(ImodelIGC*  pcredit)
 {
     GetWindow()->OverrideCamera(trekClient.m_now, pcredit, true);
-    GetWindow()->TriggerMusic(deathMusicSound);
 }
 
 ZString WinTrekClient::GetSavedCharacterName()
 {
-    HKEY hKey;
-    DWORD dwType;
-    DWORD cbName = c_cbName;
-    char szName[c_cbName];
-    szName[0] = '\0';
-    
-    if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-    {
-        RegQueryValueEx(hKey, "CharacterName", NULL, &dwType, (unsigned char*)&szName, &cbName);
-        RegCloseKey(hKey);
-    }
-
-    return szName;
+    return GetConfiguration()->GetStringValue("Online.CharacterName", GetConfiguration()->GetStringValue("CharacterName", "")).c_str();
 }
 
 void WinTrekClient::SaveCharacterName(ZString strName)
 {
-    HKEY hKey;
-    DWORD cbName = c_cbName;
-    char szName[c_cbName];
-    szName[0] = '\0';
-    
-    if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_WRITE, &hKey))
-    {
-        RegSetValueEx(hKey, "CharacterName", NULL, REG_SZ, 
-            (const BYTE*)(const char*)strName, strName.GetLength() + 1);
-        RegCloseKey(hKey);
-    }
+    GetConfiguration()->GetString("Online.CharacterName", std::string(strName))->SetValue(strName);
 }
-int WinTrekClient::GetSavedWingAssignment(){ // kolie 6/10
-	HKEY hKey;
-	DWORD dwType = REG_DWORD;
-    //DWORD dwWing = NA; // Imago 7/10 #149
-	DWORD dwWing = 0; // BT - 9/17 - Default all new players to the command wing.
-    DWORD dwSize = sizeof(DWORD);
-    if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-    {
-        RegQueryValueEx(hKey, "WingAssignment", NULL, &dwType, (PBYTE)&dwWing, &dwSize);
-        RegCloseKey(hKey);
-    }
 
-    return (int)dwWing;
+int WinTrekClient::GetSavedWingAssignment(){ // kolie 6/10
+    return GetConfiguration()->GetIntValue("Ui.DefaultWing", GetConfiguration()->GetIntValue("WingAssignment", 0));
 }
+
 void WinTrekClient::SaveWingAssignment(int index){ // kolie 6/10
-	HKEY hKey;
-	DWORD dwWing;
-	dwWing = (DWORD)index;
-	if ( ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_WRITE, &hKey))
-	{
-		RegSetValueEx(hKey, "WingAssignment", NULL, REG_DWORD,  (PBYTE)&dwWing, sizeof(DWORD) );
-		RegCloseKey(hKey);
-	}
+    GetConfiguration()->GetInt("Ui.DefaultWing", 0)->SetValue((int)index);
 }
 
 // KGJV : added utility functions for cores & server names
@@ -3257,11 +3367,11 @@ public:
 
     virtual void OnProgress(unsigned long cTotalBytes, const char* szCurrentFile, unsigned long cCurrentFileBytes, unsigned nEstimatedSecondsLeft) 
     {
-		if (g_outputdebugstring) { //Imago - was DEBUG ifdef 8/16/09
+		{
 	        char sz[80];
 
 	        sprintf(sz, "%2.2f%%   %i  %s  %i\n", 100.0f*float(cTotalBytes)/float(m_cGrandTotalBytes), cTotalBytes, szCurrentFile, cCurrentFileBytes);
-	        ZDebugOutput(sz);
+            g_pDebugLogger->Log(sz);
 		}
 
         //
@@ -3851,6 +3961,13 @@ bool WinTrekClient::UseRipcord(IshipIGC* pship, ImodelIGC*  pmodel)
             ((IstationIGC*)pmodel)->Launch(pship);
         else
         {
+            //debug
+            const char* name = pship->GetName();
+            const char* modelName = pmodel->GetName();
+            float r1 = pship->GetRadius();
+            float r2 = pmodel->GetRadius();
+            //
+
             float   r = pmodel->GetRadius() + pship->GetRadius() + 25.0f;
             Vector  v = Vector::RandomDirection();
             Orientation o(v);
@@ -3872,8 +3989,19 @@ bool WinTrekClient::UseRipcord(IshipIGC* pship, ImodelIGC*  pmodel)
         }
         
         if (pship == trekClient.GetShip()) {
-            trekClient.PlaySoundEffect(jumpSound, static_cast<ImodelIGC*>(pship)); //Not using trekClient. messes up system sound over time. Persistent after quiting Allegiance.
+            trekClient.PlaySoundEffect(jumpSound, static_cast<ImodelIGC*>(pship)); //Not using trekClient's PlaySoundEffect messes up system sound over time. Persistent after quiting Allegiance.
             trekClient.PostText(true, "");
+        }
+
+        //Set the player data for the minimap
+        if (pship->SeenBySide(trekClient.GetSide())) {
+            PlayerInfo* ppi = (PlayerInfo*)(((IshipIGC*)pship)->GetPrivateData());
+            if (ppi) {
+                ShipStatus ss = ppi->GetShipStatus();
+                ZAssert(pmodel->GetCluster());
+                ss.SetSectorID(pmodel->GetCluster()->GetObjectID());
+                ppi->SetShipStatus(ss);
+            }
         }
 
         return true;
@@ -3979,6 +4107,13 @@ void WinTrekClient::TerminateModelEvent(ImodelIGC* pmodel)
     BaseClient::TerminateModelEvent(pmodel);
 }
 
+bool WinTrekClient::HandlePickDefaultOrder(IshipIGC* pship) {
+    if (!m_fm.IsConnected()) {
+        return Training::HandlePickDefaultOrder(pship);
+    }
+    return false;
+}
+
 bool WinTrekClient::DockWithStationEvent(IshipIGC* pShip, IstationIGC* pStation)
 {
     if (!m_fm.IsConnected())
@@ -3989,16 +4124,125 @@ bool WinTrekClient::DockWithStationEvent(IshipIGC* pShip, IstationIGC* pStation)
 		pShip->SetStateBits(keyMaskIGC, 0);  //Xynth #210 8/2010
         if ((pShip != GetShip ()) || Training::ShipLanded ())
         {
-            // how to make the miners empty out and reset their mission
             IstationIGC*    pOldStation = pShip->GetStation ();
             pShip->SetStation (pStation);
-            pShip->SetStation (pOldStation);
 
-            // now send the ship back out the other side
-            pStation->Launch (pShip);
+            if (pShip == GetShip()) {
+                // let anyone who can see us know that we are docked
+                if ((pShip->GetSide() == GetSide() || pShip->GetSide()->AlliedSides(pShip->GetSide(), GetSide())) || // #ALLY Imago 7/8/09 VISIBILITY?
+                    (pShip->SeenBySide(GetSide()) && pStation->SeenBySide(GetSide())))
+                {
+                    SideID      sideID = pShip->GetSide()->GetObjectID();
+                    PlayerInfo* ppi = (PlayerInfo*)pShip->GetPrivateData();
+                    ShipStatus ss = ppi->GetShipStatus();
+
+                    ss.SetStateTime(m_lastUpdate.clock());
+                    ss.SetState(c_ssDocked);
+                    ss.SetParentID(NA);
+                    ss.SetStationID(pStation->GetObjectID());
+
+                    ppi->SetShipStatus(ss);
+
+                    /*//Adjust the ship status for all of the children as well
+                    {
+                        for (ShipLinkIGC* psl = pShip->GetChildShips()->first(); (psl != NULL); psl = psl->next()) {
+                            IshipIGC*   pship = psl->data();
+                            PlayerInfo* ppi2 = (PlayerInfo*)pship->GetPrivateData();
+                            ShipStatus ss2 = ppi->GetShipStatus();
+                            ss2.SetStateTime(m_lastUpdate.clock());
+                            ss2.SetStationID(pStation->GetObjectID());
+                            ppi2->SetShipStatus(ss2);
+                        }
+                    }*/
+                }
+            }
+            else {
+                //relaunch miners
+                pShip->SetStation (pOldStation);
+                pStation->Launch (pShip);
+            }
 		}
     }
     return true;
+}
+
+bool WinTrekClient::LandOnCarrierEvent(IshipIGC* pshipCarrier, IshipIGC* pship, float tCollision) {
+    if (!m_fm.IsConnected())
+    {
+        trekClient.RestoreLoadoutOnCarrier(pship);
+
+        pship->SetAmmo(SHRT_MAX);
+        pship->SetFuel(FLT_MAX);
+        pship->SetEnergy(pship->GetHullType()->GetMaxEnergy());
+        pship->SetFraction(1.0f);
+        {
+            IshieldIGC* pshield = (IshieldIGC*)(pship->GetMountedPart(ET_Shield, 0));
+            if (pshield)
+                pshield->SetFraction(1.0f);
+        }
+
+        const Orientation&  orientation = pshipCarrier->GetOrientation();
+
+        float   vLaunch = m_pCoreIGC->GetFloatConstant(c_fcidExitStationSpeed);
+
+        Vector  position = pshipCarrier->GetPosition();
+        Vector  velocity = pshipCarrier->GetVelocity();
+
+        position.x += random(-0.5f, 0.5f);
+        position.y += random(-0.5f, 0.5f);
+        position.z += random(-0.5f, 0.5f);
+
+        IhullTypeIGC*   phtCarrier = pshipCarrier->GetBaseHullType();
+
+        Orientation         orientationBfr;
+        const Orientation*  porientation;
+        if (phtCarrier->GetLaunchSlots() == 0)
+        {
+            position -= orientation.GetBackward() * (pshipCarrier->GetRadius() + pship->GetRadius() + vLaunch * 0.5f);
+            velocity -= orientation.GetBackward() * vLaunch;
+
+            porientation = &orientation;
+        }
+        else
+        {
+            short   slot = pshipCarrier->GetLaunchSlot();
+
+            position += phtCarrier->GetLaunchPosition(slot) * orientation;
+
+            Vector  forward = phtCarrier->GetLaunchDirection(slot) * orientation;
+
+            position += forward * (pship->GetRadius() + vLaunch * 0.5f);
+            velocity += forward * vLaunch;
+
+            orientationBfr = orientation;
+            orientationBfr.TurnTo(forward);
+
+            porientation = &orientationBfr;
+        }
+
+        pship->SetPosition(position);
+        pship->SetVelocity(velocity);
+        pship->SetOrientation(*porientation);
+
+        IclusterIGC*    pcluster = pship->GetCluster();
+        pcluster->RecalculateCollisions(tCollision, pship, NULL);
+
+        if (pship == trekClient.GetShip()) {
+            PlayNotificationSound(salRepairedAtCarrierSound, GetShip());
+            OverrideCamera(pshipCarrier);
+        }
+
+        if (pship->GetAutopilot()) {
+            if (pship->GetCommandTarget(c_cmdAccepted) == (ImodelIGC*)pshipCarrier && pship->GetCommandID(c_cmdAccepted) == c_cidGoto) {
+                pship->SetCommand(c_cmdAccepted, pshipCarrier, c_cidDefend);
+                if (pship->GetPilotType() >= c_ptPlayer)
+                    pship->SetCommand(c_cmdPlan, pshipCarrier, c_cidDefend);
+            }
+            else
+                pship->SetCommand(c_cmdPlan, NULL, c_cidNone); // drones will do c_cmdAccepted
+        }
+    }
+    return true; 
 }
 
 void WinTrekClient::KillShipEvent(Time now, IshipIGC* pShip, ImodelIGC* pLauncher, float flAmount, const Vector& p1, const Vector& p2)
@@ -4010,8 +4254,10 @@ void WinTrekClient::KillShipEvent(Time now, IshipIGC* pShip, ImodelIGC* pLaunche
 
         if (pShip == GetShip())
             Training::ShipDied (pLauncher);
-        else
-            BaseClient::KillShipEvent (now, pShip, pLauncher, flAmount, p1, p2);
+        else {
+            BaseClient::KillShipEvent(now, pShip, pLauncher, flAmount, p1, p2);
+            Training::ShipKilled(pShip, pLauncher);
+        }
     }
 }
 
@@ -4067,6 +4313,50 @@ void WinTrekClient::DamageShipEvent(Time now,
     }
 }
 
+void WinTrekClient::KillStationEvent(IstationIGC* pStation, ImodelIGC* pLauncher, float amount)
+{
+    debugf("%s KillStationEvent\n", pStation->GetName());
+    if (!m_fm.IsConnected())
+    {
+        pStation->GetCluster()->GetClusterSite()->AddExplosion(pStation, c_etLargeStation);
+        
+        pStation->GetCluster()->GetClusterSite()->AddExplosion(pStation,
+            pStation->GetStationType()->HasCapability(c_sabmFlag)
+            ? c_etLargeStation
+            : c_etSmallStation);
+
+        if (pStation->GetSide() == trekClient.GetSide())
+            trekClient.PlaySoundEffect(pStation->GetStationType()->GetDestroyedSound());
+        else
+            trekClient.PlaySoundEffect(pStation->GetStationType()->GetEnemyDestroyedSound());
+
+        trekClient.PostText(true, START_COLOR_STRING "%s" END_COLOR_STRING " has destroyed " START_COLOR_STRING "%s's %s" END_COLOR_STRING,
+            (PCC)ConvertColorToString(pLauncher ? pLauncher->GetSide()->GetColor() : Color::White()),
+            (pLauncher ? pLauncher->GetName() : "Unknown"),
+            (PCC)ConvertColorToString(pStation ? pStation->GetSide()->GetColor() : Color::White()),
+            (pStation ? pStation->GetSide()->GetName() : "unknown side"),
+            (pStation ? pStation->GetName() : "unknown station")
+        );
+        /*trekClient.PostText(true, "The " START_COLOR_STRING "%s" END_COLOR_STRING " station has been destroyed.",
+            (PCC)ConvertColorToString(pStation ? pStation->GetSide()->GetColor() : Color::White()),
+            (pStation ? pStation->GetName() : "Unknown station")
+        );*/
+
+        Training::KillStationEvent(pStation, pLauncher);
+
+        if (GetShip()->GetStation() == pStation) {
+            //played docked at this station, launch
+            GetShip()->SetStation(NULL);
+            pStation->Launch(GetShip());
+        }
+
+        pStation->Terminate();
+
+        if (pLauncher)
+            pLauncher->GetSide()->AddBaseKill();
+    }
+}
+
 void WinTrekClient::HitWarpEvent(IshipIGC* ship, IwarpIGC* warp)
 {
     //
@@ -4117,6 +4407,22 @@ void WinTrekClient::HitWarpEvent(IshipIGC* ship, IwarpIGC* warp)
                                   (ship->GetRadius() + 5.0f) * backward);
                 if (ship == trekClient.GetShip())
                     trekClient.PlaySoundEffect(jumpSound, static_cast<ImodelIGC*>(ship));
+
+                //Reset the ship's trail
+                assert(ship->GetThingSite());
+                ship->GetThingSite()->SetTrailColor(ship->GetSide()->GetColor());
+
+                //Set the player data for the minimap
+                if (ship->SeenBySide(trekClient.GetSide())) {
+                    PlayerInfo* ppi = (PlayerInfo*)(((IshipIGC*)ship)->GetPrivateData());
+                    if (ppi) {
+                        ShipStatus ss = ppi->GetShipStatus();
+                        ss.SetStateTime(m_lastUpdate.clock());
+                        ss.SetSectorID(cluster->GetObjectID());
+                        ss.SetState(c_ssFlying);
+                        ppi->SetShipStatus(ss);
+                    }
+                }
 
                 {
                     Time    t = ship->GetLastUpdate();
@@ -4499,6 +4805,8 @@ void      WinTrekClient::ReceiveChat(IshipIGC*   pshipSender,
                               c_cidNone, pmodelTarget, color, bFromPlayer, bObjectModel, bIsLeader);
             trekClient.GetChatList()->last(l);
 
+            m_pChatLogger->Log(std::string(strSender + c_str1 + strRecipient + c_str2 + strOrder));
+
             BaseClient::ReceiveChat(pshipSender,
                                     ctRecipient, oidRecipient,
                                     idSonicChat, pszText,
@@ -4619,30 +4927,6 @@ void            WinTrekClient::Preload(const char*  pszModelName,
 	GetModeler()->SetColorKeyHint( bOldColorKeyValue );
 	GetEngine()->SetEnableMipMapGeneration( false );
 // BUILD_DX9
-}
-
-void WinTrekClient::SetCDKey(const ZString& strCDKey)
-{
-	// BT - 5/21/2012 - ACSS - Debugging for the CDKey.
-	//debugf("SetCDKey() strCDKey = %s\r\n", (const unsigned char*)(PCC) strCDKey);
-
-    HKEY hKey;
-    // wlp 2006 - Cdkey is the ASGS Ticket Now - we don't want to save it
-    //
-    //
-    // save the new key for future use.
-	//
-    // if (ERROR_SUCCESS == ::RegCreateKeyEx(HKEY_CURRENT_USER, 
-    //    ALLEGIANCE_REGISTRY_KEY_ROOT,
-    //    0, "", REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL))
-    // {
-    //    ::RegSetValueEx(hKey, "CDKey", NULL, REG_SZ, 
-    // wlp -        (const unsigned char*)(PCC)strCDKey, strCDKey.GetLength());
-    //      
-    //   ::RegCloseKey(hKey);
-    // }
-    
-    BaseClient::SetCDKey(strCDKey);
 }
 
 TRef<ThingSite> WinTrekClient::CreateThingSite(ImodelIGC* pModel)
@@ -5147,63 +5431,6 @@ Color WinTrekClient::GetEndgameSideColor(SideID sideId)
 
     return m_vsideEndgameInfo[sideId].color;
 };
-
-void  WinTrekClient::SaveSquadMemberships(const char* szCharacterName)
-{
-    DWORD dwMembershipSize = m_squadmemberships.GetCount() * sizeof(SquadID);
-    SquadID* vsquadIDs = (SquadID*)_alloca(dwMembershipSize);
-
-    // only store the IDs (since we don't need anything else yet)
-    int iSquad = 0;
-    for (TList<SquadMembership>::Iterator iterSquad(m_squadmemberships);
-        !iterSquad.End(); iterSquad.Next())
-    {
-        vsquadIDs[iSquad] = iterSquad.Value().GetID();
-        ++iSquad;
-    }
-
-    HKEY hKey;
-
-    if (ERROR_SUCCESS == ::RegCreateKeyEx(HKEY_CURRENT_USER,
-        ALLEGIANCE_REGISTRY_KEY_ROOT "\\SquadMemberships",
-        0, "", REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL))
-    {
-        ::RegSetValueEx(hKey, szCharacterName, NULL, REG_BINARY, 
-            (const unsigned char*)vsquadIDs, dwMembershipSize);
-        ::RegCloseKey(hKey);
-    }
-}
-
-void  WinTrekClient::RestoreSquadMemberships(const char* szCharacterName)
-{
-    m_squadmemberships.SetEmpty();
-
-    HKEY hKey;
-
-    if (ERROR_SUCCESS == ::RegCreateKeyEx(HKEY_CURRENT_USER,
-        ALLEGIANCE_REGISTRY_KEY_ROOT "\\SquadMemberships",
-        0, "", REG_OPTION_NON_VOLATILE, KEY_READ, NULL, &hKey, NULL))
-    {
-        DWORD dwSize = 0;
-        DWORD dwType;
-
-        if (::RegQueryValueEx(hKey, szCharacterName, NULL, &dwType, NULL, &dwSize) == ERROR_SUCCESS
-            && dwType == REG_BINARY && dwSize != 0)
-        {
-            SquadID* vsquadIDs = (SquadID*)_alloca(dwSize);
-            int numSquads = dwSize / sizeof(SquadID);
-
-            ::RegQueryValueEx(hKey, szCharacterName, NULL, NULL, 
-                (unsigned char*)vsquadIDs, &dwSize);
-
-            for (int iSquad = 0; iSquad < numSquads; iSquad++)
-            {
-                m_squadmemberships.PushEnd(SquadMembership(vsquadIDs[iSquad], "<bug>", false, false));
-            }
-        }
-        ::RegCloseKey(hKey);
-    }
-}
 
 CivID WinTrekClient::GetEndgameSideCiv(SideID sideId)
 {

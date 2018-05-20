@@ -49,15 +49,11 @@ public:
     // Attributes
     //
 
-    virtual void SetAllowSecondary(bool bAllowSecondary)                   = 0;
-    virtual void SetAllow3DAcceleration(bool bAllow3DAcceleration)         = 0;
 	virtual void SetEnableMipMapGeneration(bool bEnable)					= 0;
 	virtual void SetMaxTextureSize(int dwMaxTextureSize)					= 0; //yp / imago 7/18/09
 	virtual void SetVSync(bool bEnable)										= 0; //Imago 7/18/09
 	virtual void SetAA(DWORD dwEnable)										= 0; //Imago 7/18/09
-	virtual void SetUsePack(bool bEnable)									= 0; //Imago 7/18/09
 	virtual void SetAutoGenMipMaps(bool bEnable)							= 0; //Imago 7/18/09
-	virtual void Set3DAccelerationImportant(bool b3DAccelerationImportant) = 0;
     virtual void SetFullscreen(bool bFullscreen)                           = 0;
     virtual void SetFullscreenSize(const Vector& point)                  = 0;  //imago enhanced to include refresh rate 7/1/09
     virtual void SetFullscreenSize(const WinPoint& point)                 = 0;
@@ -69,11 +65,6 @@ public:
 	virtual void             EliminateModes(const Vector& size)                   = 0; //imago enhanced to include refresh rate 7/1/90
 
     virtual bool            IsFullscreen()                                 = 0;
-    virtual bool            PrimaryHas3DAcceleration()                     = 0;
-    virtual bool            GetAllowSecondary()                            = 0;
-    virtual bool            GetAllow3DAcceleration()                       = 0;
-    virtual bool            Get3DAccelerationImportant()                   = 0;
-    virtual bool            GetUsing3DAcceleration()                       = 0;
     virtual ZString         GetDeviceName()                                = 0;
 	virtual const TRef<ModifiableWinPointValue> GetResolutionSizeModifiable()		   = 0;
     virtual const WinPoint GetFullscreenSize()							   = 0;

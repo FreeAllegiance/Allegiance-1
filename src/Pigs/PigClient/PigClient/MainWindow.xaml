@@ -1,0 +1,72 @@
+﻿<Window x:Class="PigClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PigClient"
+        mc:Ignorable="d"
+        Title="Pig Client" Height="426" Width="687" Icon="pig-face.png">
+    <Grid>
+        <Button IsEnabled="{Binding Path=pigButtonEnable}" Content="Create Pig" HorizontalAlignment="Left" Margin="10,67,0,0" VerticalAlignment="Top" Width="90" Click="CreatePig_Click"/>
+        <Button Content="Connect" HorizontalAlignment="Left" Margin="10,37,0,0" VerticalAlignment="Top" Width="90" Click="Connect_Click"/>
+        <ComboBox Margin="10,92,0,0" VerticalAlignment="Top" ItemsSource="{Binding Path=pigScripts}" SelectedItem="{Binding Path=pigScript}" HorizontalAlignment="Left" Width="90" />
+        <Button Content="Clear Log" HorizontalAlignment="Left" Margin="10,0,0,10" Width="90" Click="ClearLog_Click" Height="20" VerticalAlignment="Bottom"/>
+        <Button Content="Disconnect" HorizontalAlignment="Left" Margin="10,12,0,0" VerticalAlignment="Top" Width="90" Click="Disconnect_Click"/>
+        <TabControl Margin="105,12,0,0">
+            <TabItem Header="Pigs">
+                <Grid Background="#FFE5E5E5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="14*"/>
+                        <ColumnDefinition Width="485*"/>
+                    </Grid.ColumnDefinitions>
+                    <DataGrid ItemsSource="{Binding Path=pigInfos}" Grid.ColumnSpan="2" >
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Logoff" Command="{Binding Logoff}"  />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <!--<DataGridTemplateColumn>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Launch" Command="{Binding Launch}"  />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn>
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Pig.Ship.Velocity.DisplayString}"  />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>-->
+                        </DataGrid.Columns>
+
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Log">
+                <Grid Background="#FFE5E5E5">
+                    <TextBox Margin="0,0,9,5" TextWrapping="Wrap" Text="{Binding logText}"/>
+                </Grid>
+            </TabItem>
+
+        </TabControl>
+        <ToggleButton Content="Refresh Pigs" ToolTip="Toggle auto refresh of pig data" HorizontalAlignment="Left" Margin="10,142,0,0" VerticalAlignment="Top" Width="90" IsChecked="{Binding RefreshEnabled}" />
+        <ToggleButton Content="Restore Pigs" ToolTip="If PigSrv.exe exits, automatically reconnect and add all the previous pigs" HorizontalAlignment="Left" Margin="10,167,0,0" VerticalAlignment="Top" Width="90" IsChecked="{Binding RestorePigsEnabled}" />
+        <Label Content="{Binding Mode=OneWay, Path=MinPigs, StringFormat='Min Pigs {0}'}" HorizontalAlignment="Left" Margin="69,192,0,0" VerticalAlignment="Top" Width="31"/>
+        <Slider Value="{Binding Path=MinPigs}" HorizontalAlignment="Left" Margin="10,217,0,0" VerticalAlignment="Top" Width="90" Minimum="1" Maximum="25" SmallChange="1" />
+
+        <Label Content="{Binding Mode=OneWay, Path=MinRatio, StringFormat='Min Ratio {0:2f}'}" HorizontalAlignment="Left" Margin="69,240,0,0" VerticalAlignment="Top" Width="31"/>
+        <Slider Value="{Binding Path=MinRatio}" HorizontalAlignment="Left" Margin="10,260,0,0" VerticalAlignment="Top" Width="90" Minimum="0.5" Maximum="5" LargeChange="0.5" />
+
+        <Label Content="{Binding Path=MaxRatio}" HorizontalAlignment="Left" Margin="69,283,0,0" VerticalAlignment="Top" Width="31"/>
+        <Slider Value="{Binding Path=MaxRatio}" HorizontalAlignment="Left" Margin="10,303,0,0" VerticalAlignment="Top" Width="90" Minimum="1" Maximum="6" LargeChange="0.5" />
+        <Label Content="Min Pigs" HorizontalAlignment="Left" Margin="10,191,0,0" VerticalAlignment="Top"/>
+        <Label Content="Min Ratio" HorizontalAlignment="Left" Margin="10,232,0,0" VerticalAlignment="Top"/>
+        <Label Content="Max Ratio" HorizontalAlignment="Left" Margin="10,275,0,0" VerticalAlignment="Top"/>
+
+    </Grid>
+</Window>

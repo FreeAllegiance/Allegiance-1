@@ -1,11 +1,11 @@
 
 #include "UiState.h"
 
-void Write(IMDLBinaryFile* pmdlFile, const UiState& value) {}
-ZString GetString(int indent, const UiState& value) {
+void Write(IMDLBinaryFile* pmdlFile, const std::shared_ptr<UiState>& value) {}
+ZString GetString(int indent, const std::shared_ptr<UiState>& value) {
     return "";
 }
-ZString GetFunctionName(const UiState& value) {
+ZString GetFunctionName(const std::shared_ptr<UiState>& value) {
     return "";
 }
 

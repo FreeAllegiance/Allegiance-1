@@ -56,6 +56,10 @@ public:
             return StringTransform::Concat(wrapString(a), wrapString(b));
         };
 
+        table["Slice"] = [](const TRef<StringValue>& string, const TRef<Number>& start, const TRef<Number>& length) {
+            return StringTransform::Slice(string, start, length);
+        };
+
         table["Equals"] = [](TRef<StringValue> const& a, TRef<StringValue> const& b) {
             return StringTransform::Equals(a, b);
         };
@@ -107,8 +111,13 @@ public:
         };
 
         context.GetLua().new_usertype<TRef<StringValue>>("StringValue", 
-            sol::meta_function::concatenation, [](sol::object a, sol::object b) {
-                return StringTransform::Concat(wrapString(a), wrapString(b));
+            sol::meta_function::concatenation, [](const TRef<StringValue>& a, const TRef<StringValue>& b) {
+                return StringTransform::Concat(a, b);
+            }
+        );
+        context.GetLua().new_usertype<TRef<SimpleModifiableValue<ZString>>>("StringValue",
+            sol::meta_function::concatenation, [](const TRef<StringValue>& a, const TRef<StringValue>& b) {
+                return StringTransform::Concat(a, b);
             }
         );
 

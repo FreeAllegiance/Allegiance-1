@@ -71,10 +71,10 @@ STDMETHODIMP CPigMissionParams::Validate()
   XLock lock(this);
   if (2 > m_mp.nTeams || m_mp.nTeams > 6)
     return Error(IDS_E_TEAMCOUNT, IID_IPigMissionParams);
-  if (1 > m_mp.nMaxPlayersPerTeam || m_mp.nMaxPlayersPerTeam > 45)
-    return Error(IDS_E_MINTEAMPLAYERS, IID_IPigMissionParams);
-  if (1 > m_mp.nMinPlayersPerTeam || m_mp.nMinPlayersPerTeam > 30)
+  if (1 > m_mp.nMaxPlayersPerTeam || m_mp.nMaxPlayersPerTeam > 100) //imago 10/14 max and min were switched around!
     return Error(IDS_E_MAXTEAMPLAYERS, IID_IPigMissionParams);
+  if (1 > m_mp.nMinPlayersPerTeam || m_mp.nMinPlayersPerTeam > 50)
+    return Error(IDS_E_MINTEAMPLAYERS, IID_IPigMissionParams);
   if (m_mp.nMinPlayersPerTeam > m_mp.nMaxPlayersPerTeam)
     return Error(IDS_E_MINMAXREVERSED, IID_IPigMissionParams);
   return S_OK;
@@ -121,6 +121,151 @@ STDMETHODIMP CPigMissionParams::get_MapType(PigMapType* peMapType)
 }
 
 
+//imago 10/14
+STDMETHODIMP CPigMissionParams::put_TeamKills(short nGoalTeamKills)
+{
+  return TCComPropertyPut(this, m_mp.nGoalTeamKills, nGoalTeamKills, dispid_TeamKills);
+}
+STDMETHODIMP CPigMissionParams::get_TeamKills(short* nGoalTeamKills)
+{
+  return TCComPropertyGet(this, nGoalTeamKills, m_mp.nGoalTeamKills);
+}
+
+STDMETHODIMP CPigMissionParams::put_GameName(BSTR bstrGameName)
+{
+	XLock lock(this);
+	USES_CONVERSION;
+	Strcpy(m_mp.strGameName,OLE2A(bstrGameName));
+	return S_OK;
+}
+STDMETHODIMP CPigMissionParams::get_GameName(BSTR* bstrGameName)
+{
+  
+  XLock lock(this);
+  USES_CONVERSION;
+  CLEAROUT(bstrGameName, A2OLE(m_mp.strGameName));
+  return S_OK;
+}
+
+STDMETHODIMP CPigMissionParams::put_CoreName(BSTR bstrCoreName)
+{
+	XLock lock(this);
+	USES_CONVERSION;
+	Strcpy(m_mp.szIGCStaticFile,OLE2A(bstrCoreName));
+	return S_OK;
+}
+STDMETHODIMP CPigMissionParams::get_CoreName(BSTR* bstrCoreName)
+{
+  XLock lock(this);
+  USES_CONVERSION;
+  CLEAROUT(bstrCoreName, A2OLE(m_mp.szIGCStaticFile));
+  return S_OK;
+}
+
+STDMETHODIMP CPigMissionParams::put_KillBonus(short KBlevel)
+{
+  return TCComPropertyPut(this, m_mp.KBlevel, KBlevel, dispid_KillBonus);
+}
+STDMETHODIMP CPigMissionParams::get_KillBonus(short* KBlevel)
+{
+  return TCComPropertyGet(this, KBlevel, m_mp.KBlevel);
+}
+
+STDMETHODIMP CPigMissionParams::put_Defections(VARIANT_BOOL Defections)
+{
+	XLock lock(this);
+	USES_CONVERSION;
+	m_mp.bAllowDefections = Defections;
+	return S_OK;
+}
+STDMETHODIMP CPigMissionParams::get_Defections(VARIANT_BOOL* Defections)
+{
+  XLock lock(this);
+  USES_CONVERSION;
+  CLEAROUT(Defections, VARBOOL(m_mp.bAllowDefections));
+  return S_OK;
+}
+
+STDMETHODIMP CPigMissionParams::put_Miners(short Miners)
+{
+  return TCComPropertyPut(this, m_mp.nInitialMinersPerTeam, Miners, dispid_Miners);
+}
+STDMETHODIMP CPigMissionParams::get_Miners(short* Miners)
+{
+  return TCComPropertyGet(this, Miners, m_mp.nInitialMinersPerTeam);
+}
+
+STDMETHODIMP CPigMissionParams::put_Developments(VARIANT_BOOL Developments)
+{
+	XLock lock(this);
+	USES_CONVERSION;
+	m_mp.bAllowDevelopments = Developments;
+	return S_OK;
+}
+STDMETHODIMP CPigMissionParams::get_Developments(VARIANT_BOOL* Developments)
+{
+  XLock lock(this);
+  USES_CONVERSION;
+  CLEAROUT(Developments, VARBOOL(m_mp.bAllowDevelopments));
+  return S_OK;
+}
+
+STDMETHODIMP CPigMissionParams::put_Conquest(short Conquest)
+{
+  return TCComPropertyPut(this, m_mp.iGoalConquestPercentage, Conquest, dispid_Conquest);
+}
+STDMETHODIMP CPigMissionParams::get_Conquest(short* Conquest)
+{
+  return TCComPropertyGet(this, Conquest, m_mp.iGoalConquestPercentage);
+}
+
+STDMETHODIMP CPigMissionParams::put_Flags(short Flags)
+{
+  return TCComPropertyPut(this, m_mp.nGoalFlagsCount, Flags, dispid_Flags);
+}
+STDMETHODIMP CPigMissionParams::get_Flags(short* Flags)
+{
+  return TCComPropertyGet(this, Flags, m_mp.nGoalFlagsCount);
+}
+
+STDMETHODIMP CPigMissionParams::put_Artifacts(short Artifacts)
+{
+  return TCComPropertyPut(this, m_mp.nGoalArtifactsCount, Artifacts, dispid_Artifacts);
+}
+STDMETHODIMP CPigMissionParams::get_Artifacts(short* Artifacts)
+{
+  return TCComPropertyGet(this, Artifacts, m_mp.nGoalArtifactsCount);
+}
+
+STDMETHODIMP CPigMissionParams::put_Pods(VARIANT_BOOL Pods)
+{
+	XLock lock(this);
+	USES_CONVERSION;
+	m_mp.bEjectPods = Pods;
+	return S_OK;
+}
+STDMETHODIMP CPigMissionParams::get_Pods(VARIANT_BOOL* Pods)
+{
+  XLock lock(this);
+  USES_CONVERSION;
+  CLEAROUT(Pods, (VARIANT_BOOL)m_mp.bEjectPods);
+  return S_OK;
+}
+
+STDMETHODIMP CPigMissionParams::put_Experimental(VARIANT_BOOL Experimental)
+{
+	XLock lock(this);
+	USES_CONVERSION;
+	m_mp.bExperimental = Experimental;
+	return S_OK;
+}
+STDMETHODIMP CPigMissionParams::get_Experimental(VARIANT_BOOL* Experimental)
+{
+  XLock lock(this);
+  USES_CONVERSION;
+  CLEAROUT(Experimental, VARBOOL(m_mp.bExperimental));
+  return S_OK;
+}
 /////////////////////////////////////////////////////////////////////////////
 // IPigMissionParamsPrivate Interface Methods
 
@@ -161,9 +306,8 @@ STDMETHODIMP CPigMissionParams::InitNew()
 
   // Initialize the Game name
   strcpy(m_mp.strGameName, "Pig Mission");
+  strcpy(m_mp.szIGCStaticFile, "PCore014"); //Imago 10/14
 
   // Perform default processing
   return TCPersistStreamInitImplBase::InitNew();
 }
-
-

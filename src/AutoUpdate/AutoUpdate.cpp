@@ -353,7 +353,7 @@ int CAutoUpdate::Init(int argc, char* argv[])
     //
     // Let's do it!
     //
-    m_pAutoDownload->BeginUpdate(&g_AutoDownloadSink, false, true);
+    m_pAutoDownload->BeginUpdate(&g_AutoDownloadSink, false);
 
     return 0;
 }

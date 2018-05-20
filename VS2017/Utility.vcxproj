@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZDebug'">Debug</VcpkgConfiguration>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZRetail'">Release</VcpkgConfiguration>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
@@ -60,7 +64,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Inc;..\src\_Utility;..\src\WinTrek;..\src\ZLib;..\src\Guids;..\src\Zone;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src\Lib\AllegianceSecurity;..\src\lib\Steam;..\src\Lib\nlohmann\json\include;..\src\Inc;..\src\_Utility;..\src\WinTrek;..\src\ZLib;..\src\Guids;..\src\Zone;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NOMINMAX;_AFXDLL;WIN32;_WINDOWS;STRICT;_DEBUG;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -78,7 +82,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">
     <ClCompile>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>..\src\lib\Steam;..\src\Inc;..\src\_Utility;..\src\WinTrek;..\src\ZLib;..\src\Guids;..\src\Zone;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src\Lib\AllegianceSecurity;..\src\lib\Steam;..\src\Lib\nlohmann\json\include;..\src\Inc;..\src\_Utility;..\src\WinTrek;..\src\ZLib;..\src\Guids;..\src\Zone;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NOMINMAX;DEBUG;SRVLOG;_AFXDLL;WIN32;_WINDOWS;STRICT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -104,8 +108,10 @@
     <ClCompile Include="..\src\_Utility\allegdb.cpp" />
     <ClCompile Include="..\src\_Utility\CollisionEntry.cpp" />
     <ClCompile Include="..\src\_Utility\CollisionQueue.cpp" />
+    <ClCompile Include="..\src\_Utility\ConfigurationStore.cpp" />
     <ClCompile Include="..\src\_Utility\CRC.cpp" />
     <ClCompile Include="..\src\_Utility\Endpoint.cpp" />
+    <ClCompile Include="..\src\_Utility\FileLoader.cpp" />
     <ClCompile Include="..\src\_Utility\HitTest.cpp" />
     <ClCompile Include="..\src\_Utility\KDnode.cpp" />
     <ClCompile Include="..\src\_Utility\KDroot.cpp" />
@@ -118,7 +124,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\Inc\MessageVersion.h" />
+    <ClInclude Include="..\src\_Utility\ConfigurationStore.h" />
     <ClInclude Include="..\src\_Utility\CRC.h" />
+    <ClInclude Include="..\src\_Utility\FileLoader.h" />
     <ClInclude Include="..\src\_Utility\listwrappers.h" />
     <ClInclude Include="..\src\_Utility\pch.h" />
     <ClInclude Include="..\src\_Utility\Utility.h" />

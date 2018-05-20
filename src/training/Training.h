@@ -43,6 +43,7 @@ namespace Training
     bool            CommandViewEnabled(void);
     int             GetTrainingMissionID (void);
     SectorID        GetStartSectorID (void);
+    int             GetKillCount(void);
     void            SetupShipAndCamera (void);
 
     //------------------------------------------------------------------------------
@@ -53,6 +54,9 @@ namespace Training
     bool            ShipLanded (void);
     void            ShipDied (ImodelIGC* pLauncher);
     bool            RestoreShip (void);
+    void            ShipKilled(IshipIGC* pShip, ImodelIGC* pLauncher);
+    bool            HandlePickDefaultOrder(IshipIGC* pShip);
+    void            KillStationEvent(IstationIGC* pStation, ImodelIGC* pLauncher);
 
     //------------------------------------------------------------------------------
     // control constraint functions - note that these could be inlined

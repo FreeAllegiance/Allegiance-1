@@ -515,6 +515,7 @@ public:
 
     MDLEditWindow(
         EffectApp* papp, 
+        UpdatingConfiguration* pConfiguration,
         const ZString& strCommandLine, 
         bool bImageTest,
         bool bTest, 
@@ -523,6 +524,7 @@ public:
     ) :
         EffectWindow(
             papp,
+            pConfiguration,
             strCommandLine,
             "MDLEdit",
             false,
@@ -562,7 +564,6 @@ public:
 
         //SetFullscreen(true);
         //GetEngine()->SetDebugFullscreen(true);
-        GetEngine()->Set3DAccelerationImportant(true);
         SetShowFPS(true);
 
         //
@@ -753,7 +754,7 @@ public:
     {
         //TRef<Surface> psurface = GetModeler()->LoadSurface("fxminebmp", true);
 
-		TRef<ZFile> zf = m_pmodeler->GetFile("fxmine.png","",true, m_pmodeler->GetUseHighResTextures());
+		TRef<ZFile> zf = m_pmodeler->GetFile("fxmine.png","",true);
 
 	ZFile * pFile = (ZFile*) zf;
 		
@@ -1135,11 +1136,13 @@ public:
 
     void AddDebris()
     {
+		TRef<ModifiableNumber> m_mdlDebrisDensity = new ModifiableNumber(1.0f);
         m_pgroupGeo->AddGeo(
             CreateDebrisGeo(
                 GetModeler(),
                 GetTime(),
-                m_pviewport
+                m_pviewport,
+				m_mdlDebrisDensity
             )
         );
     }
@@ -1655,8 +1658,16 @@ public:
             }
             pathStr = szValue;
 		}
+
+        TRef<UpdatingConfiguration> pConfiguration = new UpdatingConfiguration(
+            std::make_shared<FallbackConfigurationStore>(
+                CreateJsonConfigurationStore(GetExecutablePath() + "\\config_mdledit.json"),
+                std::make_shared<RegistryConfigurationStore>(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT "\\MDLEdit3DSettings")
+            )
+        );
+
 		// Ask the user for video settings.
-		if( PromptUserForVideoSettings(false, true, 0, GetModuleHandle(NULL), pathStr, ALLEGIANCE_REGISTRY_KEY_ROOT "\\MDLEdit3DSettings") == false )
+		if( PromptUserForVideoSettings(false, 0, GetModuleHandle(NULL), pathStr, pConfiguration) == false )
 		{
 			return E_FAIL;
 		}
@@ -1699,7 +1710,7 @@ public:
         // Create the window
         //
 
-        m_pwindow = new MDLEditWindow(this, strCommandLine, bImageTest, bTest, initialTest, pathStr);
+        m_pwindow = new MDLEditWindow(this, pConfiguration, strCommandLine, bImageTest, bTest, initialTest, pathStr);
 
         //
         // Parse the command line

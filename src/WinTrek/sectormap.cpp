@@ -61,23 +61,15 @@ static int GetClusterPopulation(IclusterIGC*   pcluster, IsideIGC*  pside)
         if (pship->GetSide() == pside)
         {
             PlayerInfo* ppi = (PlayerInfo*)(pship->GetPrivateData());
-            if (trekClient.m_fm.IsConnected())
+            if (ppi && (ppi->LastSeenSector() == sectorID) && (ppi->StatusIsCurrent()))
             {
-                if (ppi && (ppi->LastSeenSector() == sectorID) && (ppi->StatusIsCurrent()))
+                if (ppi->LastSeenState() != c_ssObserver && ppi->LastSeenState() != c_ssTurret)
                 {
-                    if (ppi->LastSeenState() != c_ssObserver && ppi->LastSeenState() != c_ssTurret)
-                    {
-                        IhullTypeIGC* pht = trekClient.GetCore()->GetHullType(ppi->LastSeenShipType());
+                    IhullTypeIGC* pht = trekClient.GetCore()->GetHullType(ppi->LastSeenShipType());
 
-                        if (pht != NULL && !(pht->GetCapabilities() & c_habmLifepod))
-                            n++;
-                    }
+                    if (pht != NULL && !(pht->GetCapabilities() & c_habmLifepod))
+                        n++;
                 }
-            }
-            else
-            {
-                if (pship->GetCluster() == pcluster)
-                    n++;
             }
         }
     }

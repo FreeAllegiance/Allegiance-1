@@ -252,37 +252,6 @@ int UTL::SearchAndReplace(char * szDest, const char * szSource, const char * szN
     }
 }
 
-/*-------------------------------------------------------------------------
- * GetPathFromReg
- *-------------------------------------------------------------------------
-  Purpose:
-      Get a path out of the registry
-
-  Parameters:
-      Obvious. Notice that szPath must be of size MAX_PATH
-
-  Returns:
-      Return value from RegOpenKeyEx or RegQueryValueEx
- */
-LONG UTL::GetPathFromReg(IN  HKEY hkey,
-                         IN  const char * szSubKey, 
-                         OUT char * szPath)
-{
-    HKEY hKey;
-    DWORD cb = MAX_PATH;
-    DWORD dw = REG_SZ;
-    assert(hkey && szSubKey);
-    szPath[0] = 0;
-    LONG ret = RegOpenKeyEx(hkey, szSubKey, 0, KEY_READ, &hKey);
-    
-    if (ERROR_SUCCESS == ret)
-    {
-        ret = RegQueryValueEx(hKey, "ArtPath", NULL, &dw, (unsigned char*)szPath, &cb);
-        RegCloseKey(hKey);
-    }
-    return ret;
-}
-
 
 // converts char * of hex to int.  Assumes uppercase for 'A' to 'F'.
 int UTL::hextoi(const char * pHex)

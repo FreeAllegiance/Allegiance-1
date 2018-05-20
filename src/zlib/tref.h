@@ -11,9 +11,18 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
+// SUPPORT COM AND LINUX
+// todo: Should this define go into a project configuration?
+#define _WIN32_DCOM
+#ifdef _WIN32_DCOM
+	#define DWORD_OR_UINT32T DWORD
+#else
+	#define DWORD_OR_UINT32T uint32_t
+#endif
+
 class IObjectSingle {
 private:
-	uint32_t m_count;
+	DWORD_OR_UINT32T m_count;
 
 protected:
 	typedef IObjectSingle QIType;
@@ -35,7 +44,7 @@ public:
 	}
 
 
-	uint32_t GetCount() const
+	DWORD_OR_UINT32T GetCount() const
 	{
 		return m_count;
 	}
@@ -49,7 +58,7 @@ public:
 #ifdef _DEBUG
 	virtual
 #endif
-		uint32_t __stdcall AddRef()
+		DWORD_OR_UINT32T __stdcall AddRef()
 	{
 		return ++m_count;
 	}
@@ -57,7 +66,7 @@ public:
 #ifdef _DEBUG
 	virtual
 #endif
-		uint32_t __stdcall Release()
+		DWORD_OR_UINT32T __stdcall Release()
 	{
 #ifndef __GNUC__
 		// BT - 9/17 - Hunting down mystery fedsrv crashes.

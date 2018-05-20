@@ -10,8 +10,8 @@
 **
 **  History:
 */
-#ifndef _MISSION_FIVE_H_
-#define _MISSION_FIVE_H_
+#ifndef _MISSION_PRACTICE_ARENA_H_
+#define _MISSION_PRACTICE_ARENA_H_
 
 #ifndef _TRAINING_MISSION_H_
 #include "TrainingMission.h"
@@ -29,17 +29,22 @@ namespace Training
     class Mission6 : public TrainingMission
     {
         public:
+                                            Mission6(void);
             virtual /* void */              ~Mission6 (void);
             virtual int                     GetMissionID (void);
             virtual SectorID                GetStartSectorID (void);
             virtual bool                    RestoreShip (void);
+            virtual bool                    ShipLanded(void);
+            virtual bool                    HandlePickDefaultOrder(IshipIGC* pShip);
 
         protected:
             virtual void                    CreateUniverse (void);
             virtual Condition*              CreateMission (void);
+
+        bool    bUndockHintShown;
     };
 
     //------------------------------------------------------------------------------
 }
 
-#endif  //_MISSION_FIVE_H_
+#endif  //_MISSION_PRACTICE_ARENA_H_

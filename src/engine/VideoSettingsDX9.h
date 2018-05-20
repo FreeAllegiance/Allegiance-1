@@ -4,7 +4,10 @@
 #include <windows.h>
 #include <zstring.h>
 
+#include "Configuration.h"
+
 //Imago added bool bStartFullscreen, bool bRaise 6/29/09, only prompts when "Safe Mode" and restored the -windowed command line switch
-bool PromptUserForVideoSettings(bool bStartFullscreen, bool bRaise, int iAdapter, HINSTANCE hInstance, PathString & szArtPath, ZString lpSubKey );
+//Rock: Removed bRaise, maybe reintroduce when it would be used again. Config instead of registry path.
+bool PromptUserForVideoSettings(bool bStartFullscreen, int iAdapter, HINSTANCE hInstance, PathString & szArtPath, TRef<UpdatingConfiguration> config );
 
 #endif // _VIDEOSETTINGS_H_

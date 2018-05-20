@@ -183,6 +183,7 @@ HRESULT     CshipIGC::Initialize(ImissionIGC* pMission, Time now, const void* da
     ReInitialize(dataShip, now);
     pMission->AddShip(this);
 
+    m_dtCheckRunaway = 31.0f;
     m_timeLastComplaint = now;
     m_timeLastMineExplosion = now;
     m_timeRanAway = now;
@@ -191,8 +192,12 @@ HRESULT     CshipIGC::Initialize(ImissionIGC* pMission, Time now, const void* da
 
     m_bRunningAway = false;
 	m_stayDocked = false;  //Xynth #48 8/2010
+    m_bGettingAmmo = false;
+    m_dodgeCooldown = 0;
+    m_wingmanBehaviour = c_wbbmUseMissiles | c_wbbmRunAt60Hull;
 	m_repair = 0; //Xynth amount of nanning performed by ship
 	m_achievementMask = 0;
+	m_timePreviouslySpotted = 0;
     
 	return S_OK;
 }
@@ -729,7 +734,7 @@ void    CshipIGC::HandleCollision(Time                   timeCollision,
 
                 if ((pside1 == pside2) || pside1->AlliedSides(pside1,pside2)) //Imago 7/9/09 ALLY
                 {
-					//Imago 7/13/09 don't allow pods to rescue in allied ahipyard ;-p
+					//Imago 7/13/09 don't allow pods to rescue in allied shipyard
 					// don't allow AI carriers to dock in allied stations
  					if ((pside1 != pside2 && pst->HasCapability(c_sabmCapLand) && m_myHullType.HasCapability(c_habmLifepod))
 						|| (pside1 != pside2 && m_myHullType.HasCapability(c_habmCarrier) && m_pilotType != c_ptPlayer))
@@ -1038,14 +1043,14 @@ void    CshipIGC::HandleCollision(Time                   timeCollision,
 				// mmf 3/08 drones (like fighter drones) docking at carrier crash the server
 				// if pModel is a drone skip this part (i.e. don't let them dock)
 				//
-                else if ( (habmHim & c_habmCarrier) && (this->GetPilotType() == c_ptPlayer) )// mmf added && ... tweaked 4/08
+                else if (habmHim & c_habmCarrier) //&& (this->GetPilotType() == c_ptPlayer) )// mmf added && ... tweaked 4/08
                 {
                     if ((habmMe & c_habmLandOnCarrier) &&
                         ((IshipIGC*)pModel)->InGarage(this, tCollision) &&
                         igcsite->LandOnCarrierEvent((IshipIGC*)pModel, this, tCollision))
                         break;
                 }
-                else if ( (habmMe & c_habmCarrier) && (((IshipIGC*)pModel)->GetPilotType() == c_ptPlayer) )// mmf added && ...
+                else if (habmMe & c_habmCarrier) //&& (((IshipIGC*)pModel)->GetPilotType() == c_ptPlayer) )// mmf added && ...
                 {
                     if ((habmHim & c_habmLandOnCarrier) &&
                         InGarage((IshipIGC*)pModel, tCollision) &&
@@ -1225,7 +1230,6 @@ DamageResult CshipIGC::ReceiveDamage(DamageTypeID            type,
 
     float   maxHP = m_myHullType.GetHitPoints();
     float   dtmArmor = GetMyMission()->GetDamageConstant(type, m_myHullType.GetDefenseType());
-	float   repairFraction;
     assert (dtmArmor >= 0.0f);
 
     float leakage;
@@ -1239,17 +1243,15 @@ DamageResult CshipIGC::ReceiveDamage(DamageTypeID            type,
 			m_fraction = 1.0f;
 		}            
         GetThingSite ()->RemoveDamage (m_fraction);
-		if (GetMyMission()->GetMissionParams()->bAllowFriendlyFire || //no points when FF is on
-			!((pside == launcher->GetSide()) || IsideIGC::AlliedSides(pside, launcher->GetSide()))) //no points for healing the enemy
-			repairFraction = 0;
-		else
-			repairFraction = fabs(amount * dtmArmor / maxHP);
         leakage = 0.0f;
         dr = c_drNoDamage;
-		if (launcher->GetObjectType() == OT_ship && (pside == launcher->GetSide()) || IsideIGC::AlliedSides(pside, launcher->GetSide()))
-		{
 
+		if (launcher->GetObjectType() == OT_ship && (pside == launcher->GetSide() || IsideIGC::AlliedSides(pside, launcher->GetSide())))
+		{
 			IshipIGC * pIship = ((IshipIGC*)launcher);
+            float   repairFraction = -amount * dtmArmor / maxHP;
+            if (GetBaseHullType() && (GetBaseHullType()->GetCapabilities() & c_habmThreatToStation))
+                repairFraction *= 2.0f; //double points for nanning a bomber/htt
 			pIship->AddRepair(repairFraction);
 			pIship->SetAchievementMask(c_achmNewRepair);
 		}
@@ -1698,10 +1700,20 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
     {
         // debugf("%-20s %x %f %f %f\n", GetName(), timeStop.clock(), GetPosition().x, GetPosition().y, GetPosition().z);
 
-        //First ... do we need to run away?
-        if (m_pilotType < c_ptCarrier && !fRipcordActive())      //Carriers never run //TurkeyXIII added ripcord 7/10 - Imago
+        // Do we still need ammo?
+        if (m_bGettingAmmo)
+            if (GetAmmo() > 0) {
+                debugf("%s: Got ammo. Accepted cmd: %d, target: %s\n", GetName(), GetCommandID(c_cmdAccepted), GetCommandTarget(c_cmdAccepted) ? GetCommandTarget(c_cmdAccepted)->GetName() : "NULL");
+                
+                m_bGettingAmmo = false;
+                SetCommand(c_cmdPlan, NULL, c_cidNone);
+                // Last command will be continued in the check for running
+            }
+
+        // Do we need to run away?
+        if (m_pilotType < c_ptPlayer && m_pilotType != c_ptCarrier && (!fRipcordActive() || m_bRunningAway))      //Carriers never run //TurkeyXIII added ripcord 7/10 - Imago
         {
-            if (m_timeRanAway + c_dtCheckRunaway <= timeStop)
+            if (m_timeRanAway + m_dtCheckRunaway <= timeStop)
             {
                 bool    bDamage = true;
                 bool    bRunAway = true;
@@ -1712,10 +1724,18 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
 					{
 						bRunAway = false;
 					}
-					else
-					{
-						bRunAway = m_fraction < m_fractionLastOrder; //previously just this line was here
-					}
+                    else
+                    {
+                        bRunAway = false;
+                        if (m_fraction < m_fractionLastOrder || m_bRunningAway) {
+                            if (m_wingmanBehaviour & c_wbbmRunAt60Hull) {
+                                bRunAway = (m_fraction < 0.6f);
+                            }
+                            else if (m_wingmanBehaviour & c_wbbmRunAt30Hull) {
+                                bRunAway = (m_fraction < 0.3f);
+                            }
+                        }
+                    }
                 }
                 else if ((m_pilotType == c_ptBuilder) || (m_pilotType == c_ptLayer))
                 {
@@ -1763,21 +1783,24 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
 					              m_pilotType);
 						}
 					}
-                    if (m_fraction >= 0.95f)  // mmf added Your_Persona's change, allow Miners to be slightly damaged  (was == 100.0f)
+                    if (m_fraction >= 0.95f || (!m_bRunningAway && m_fraction >= m_fractionLastOrder && m_fraction > 0.5f)) // barely damaged or not more damaged than previously
                     {
                         IshieldIGC* pshield = (IshieldIGC*)(m_mountedOthers[ET_Shield]);
                         if ((pshield == NULL) || (pshield->GetFraction() >= 0.75f))
                         {
                             bDamage = false;
 
-                            //full hull & shield
-                            //Does anyone see us?
+                            bRunAway = false; //Never run away if not damaged sufficiently
+
+                            // 95% hull & 75% shield
+                            /*//Does anyone see us? Run due to enemy threat.
                             IsideIGC*       psideMe = GetSide();
 
                             int     cEnemy = 0;
                             int     cFriend = 0;
                             float   d2Enemy = FLT_MAX;
                             float   d2Friend = FLT_MAX;
+                            bool    enemyBasicScout = false;
 
                             for (ShipLinkIGC*   psl = pcluster->GetShips()->first(); (psl != NULL); psl = psl->next())
                             {
@@ -1788,9 +1811,8 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
                                 {
                                     IsideIGC*   pside = pship->GetSide();
 
-                                    if (((pside == psideMe) || pside->AlliedSides(pside,psideMe)) ||
-										(CanSee(pship) && SeenBySide(pside)) //#ALLY - friendly nearby (seen or can see us) IMAGO FIXED 7/10/09
-										)
+                                    if ((pside == psideMe) || 
+                                        (pside->AlliedSides(pside,psideMe) && CanSee(pship) && SeenBySide(pside)))
                                     {
                                         cFriend++;
                                         float d2 = (positionMe - pship->GetPosition()).LengthSquared();
@@ -1799,22 +1821,38 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
                                     }
                                     else if (CanSee(pship) && SeenBySide(pside))
                                     {
-                                        cEnemy++;
                                         float d2 = (positionMe - pship->GetPosition()).LengthSquared();
-                                        if (d2 < d2Enemy)
-                                            d2Enemy = d2;
+                                        bool threat = (d2 < 4000000.0f); //closer than 2000m
+                                        if (!threat && pship->GetVelocity().Length() > pship->GetHullType()->GetMaxSpeed()*0.65) {
+                                            Orientation oToMiner = Orientation(GetPosition() - pship->GetPosition());
+                                            float shipDirSpeed = oToMiner.CosForward(pship->GetVelocity())*pship->GetVelocity().Length();
+                                            if (shipDirSpeed > 0.7*pship->GetVelocity().Length()) // flying 70% to the miner
+                                                threat = true;
+                                        }
+                                        if (threat) {
+                                            cEnemy++;
+                                            if (d2 < d2Enemy)
+                                                d2Enemy = d2;
+
+                                            // Check if it's a basic scout
+                                            const IhullTypeIGC* pht = pship->GetHullType();
+                                            enemyBasicScout = (pht->GetDefenseType() == 1 && // light armor
+                                                pht->GetScannerRange() > 2200.0f && pht->GetScannerRange() < 2950.0f);
+                                        }
                                     }
                                 }
                             }
 
-                            if (cFriend >= cEnemy)
+                            //debugf("%s, friends: %d, foes: %d\n", (enemyBasicScout ? "basicScout" : "-"), cFriend, cEnemy);
+
+                            if ((cFriend >= cEnemy) || (enemyBasicScout && cEnemy == cFriend + 1))
                                 bRunAway = false;
                             else
                             {
                                 static const float  c_d2AlwaysRun = 1000.0f;
                                 if (d2Enemy > c_d2AlwaysRun * c_d2AlwaysRun)
                                     bRunAway = (d2Enemy < d2Friend);
-                            }
+                            }*/
                         }
                     }
                 }
@@ -1825,9 +1863,11 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
                     if (!m_bRunningAway)
                     {
                         //Not running ... we should be
-                        ImodelIGC*  pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster,
+                        int ttMask = c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster;
+                        if (GetHullType()->GetCapabilities() & c_habmLandOnCarrier)
+                            ttMask |= c_ttShip;
+                        ImodelIGC*  pmodel = FindTarget(this, ttMask,
                                                         NULL, NULL, NULL, NULL, c_sabmRepair);
-
                         //but only if we can find some place to run to
 						//mmf debuging code
 						// training mission 6 triggers this for GetName = Enemy Support
@@ -1846,7 +1886,7 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
                                                                        constructorRunningSound, "Constructor heading for cover.");
                             else if (bDamage)
                                 GetMyMission()->GetIgcSite()->SendChat(this, CHAT_TEAM, GetSide()->GetObjectID(),
-                                                                       droneTooMuchDamageSound, "Forget this. I have to go get repaired");
+                                                                       droneTooMuchDamageSound, "Forget this. I have to go get repaired.");
                             else
                                 GetMyMission()->GetIgcSite()->SendChat(this, CHAT_TEAM, GetSide()->GetObjectID(),
                                                                        droneEnemyOnScopeSound, "Enemy spotted; returning to base.");
@@ -1854,6 +1894,9 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
                             //Set m_bRunningAway after the SetCommand (which clears it)
                             m_bRunningAway = true;
                             m_timeRanAway = timeStop;
+
+                            // Check if we should still run away in 10 seconds
+                            m_dtCheckRunaway = 10.0f;
 
 						    //mmf debuging code
 						    //debugf("mmf Miner/con found place to run to.\n");
@@ -1866,7 +1909,12 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
                 else if (m_bRunningAway)
                 {
                     //We want to stop running
-                    SetCommand(c_cmdPlan, NULL, c_cidNone);
+                    if (m_pilotType == c_ptMiner && m_commandTargets[c_cmdAccepted] && m_commandTargets[c_cmdAccepted]->GetCluster() != GetCluster()) {
+                        // If we ran too far (especially IC miner after ripping), check for the best thing to do, instead of continuing the previous
+                        SetCommand(c_cmdAccepted, NULL, c_cidNone); //Also sets c_cmdPlan
+                    }
+                    else
+                        SetCommand(c_cmdPlan, NULL, c_cidNone);
 					// debugf("mmf %-20s stoped running\n", GetName());
                     assert (m_bRunningAway == false);   //Set by SetCommand
                     m_timeRanAway = timeStop;
@@ -1915,7 +1963,7 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
                         IstationIGC*    pstation = (IstationIGC*)((ImodelIGC*)m_commandTargets[c_cmdPlan]);
                         if (pstation->GetBaseStationType()->HasCapability(c_sabmTeleportUnload))
                         {
-                            //Are we close enough to mine our target asteroid? // mmf incorrect comment
+                            //Are we close enough to teleport offload (at refinery)?
                             Vector  dp = pstation->GetPosition() - positionMe;
                             float   distance2 = dp.LengthSquared();
                             float   radius = pstation->GetRadius() + GetRadius() + 100.0f;
@@ -1940,6 +1988,62 @@ void    CshipIGC::PreplotShipMove(Time          timeStop)
             }
         }
     }
+}
+
+static bool ModelHasTargetPriority(ImodelIGC* pmodel, IshipIGC* pship) {
+    ZAssert(pmodel);
+    if (pmodel->GetSide() != pship->GetSide() && !IsideIGC::AlliedSides(pmodel->GetSide(), pship->GetSide()) && pship->CanSee(pmodel)) {
+        // Sector wide aggro
+        if (pship->GetWingmanBehaviour() & c_wbbmTempSectorAggressive) {
+            return true;
+        }
+
+        // See if it came too close
+        float dist = (pship->GetPosition() - pmodel->GetPosition()).Length();
+        if (dist < 800.0f) {
+            Orientation toShip = Orientation(pmodel->GetPosition() - pship->GetPosition());
+            float ownDirSpeed = toShip.CosForward(pship->GetVelocity())*pship->GetVelocity().Length();
+            float targetDirSpeed = toShip.CosForward(pmodel->GetVelocity())*pmodel->GetVelocity().Length();
+            float relSpeed = ownDirSpeed - targetDirSpeed;
+
+            if ((relSpeed > 0.0f && relSpeed < 100.0f) ||
+                (relSpeed > -20.0f && relSpeed < 150.0f && dist < 550.0f) ||
+                (relSpeed > -100.0f && relSpeed < 200.0f && dist < 400.0f))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static IshipIGC* FindTargetShip(IshipIGC* pOwnShip, const Vector* pposition, float &distance, int ttMask, char pilotType) {
+    ZAssert(pOwnShip);
+    ZAssert(pilotType >= -2);
+    if (!pposition)
+        pposition = &(pOwnShip->GetPosition());
+    IshipIGC* pMinDistShip = NULL;
+    for (ShipLinkIGC* l = pOwnShip->GetCluster()->GetShips()->first(); l != NULL; l = l->next()) {
+        IshipIGC* s = l->data();
+        ZAssert(s);
+        if ((pilotType == NA ||
+            (pilotType == -2 && (s->GetPilotType() == c_ptWingman || s->GetPilotType() >= c_ptPlayer)) ||
+            (s->GetPilotType() == pilotType)) &&
+            (((ttMask & c_ttFriendly) && s->GetSide() == pOwnShip->GetSide()) ||
+            ((ttMask & c_ttEnemy) && s->GetSide() != pOwnShip->GetSide() && pOwnShip->CanSee(s))))
+        {
+            if (!(ttMask & c_ttNearest))
+                return s;
+            else {
+                float dist = (s->GetPosition() - *pposition).Length();
+                if (dist < distance) {
+                    pMinDistShip = s;
+                    distance = dist;
+                }
+            }
+        }
+    }
+    return pMinDistShip;
 }
 
 void    CshipIGC::PlotShipMove(Time          timeStop)
@@ -1967,6 +2071,7 @@ void    CshipIGC::PlotShipMove(Time          timeStop)
         }
 
         bool    bControlsSet = false;
+        bool    bWingmanUseAfterburner = false;
         float   dT = timeStop - timeStart;
 
         //Special case up front: miners mine
@@ -2101,12 +2206,21 @@ void    CshipIGC::PlotShipMove(Time          timeStop)
                 {
                     minedOre = capacity - m_fOre;
                     {
-                        ImodelIGC*  pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster,
+                        ImodelIGC*  pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster | c_ttCowardly,
                                                         NULL, NULL, NULL, NULL, c_sabmUnload);
+                        if (!pmodel) //no safe station available
+                            pmodel = FindTarget(this, c_ttFriendly | c_ttStation | c_ttNearest | c_ttAnyCluster,
+                                NULL, NULL, NULL, NULL, c_sabmUnload);
 
+                        if (pmodel) {
+                            if (pasteroid->GetOre() < capacity * 0.5f) {        //Don't reserve the rock and go back, if it's almost mined out
+                                SetCommand(c_cmdAccepted, pmodel, c_cidGoto);   // Also sets c_cmdCurrent and c_cmdPlan
+                            }
+                            else
+                                SetCommand(c_cmdPlan, pmodel, c_cidGoto);       // c_cmdAccepted unchanged - will come back
+                        }
                         //If we can't find a place to unload ... stick around here for lack of a better place to go
-                        if (pmodel)
-                            SetCommand(c_cmdPlan, pmodel, c_cidGoto);
+
 						// mmf added else and debugf
 						// else debugf("mmf %-20s no place to unload staying here, I am at %f %f %f\n",
 						// 						GetName(), GetPosition().x, GetPosition().y, GetPosition().z);
@@ -2183,12 +2297,12 @@ void    CshipIGC::PlotShipMove(Time          timeStop)
 
         if (m_commandTargets[c_cmdPlan] == NULL)
         {
-            if ((m_pilotType < c_ptCarrier) && (m_commandIDs[c_cmdPlan] != c_cidDoNothing))
+            if (m_pilotType < c_ptCarrier) //&& (m_commandIDs[c_cmdPlan] != c_cidDoNothing))
             {
                 switch (m_pilotType)
                 {
                     case c_ptMiner:
-                        Complain(droneWhereToSound, "Miner requesting He3 asteriod.");
+                        Complain(droneWhereToSound, "Miner requesting He3 asteroid.");
                         break;
 
                     case c_ptBuilder:
@@ -2226,114 +2340,445 @@ void    CshipIGC::PlotShipMove(Time          timeStop)
         {
             m_dtTimeBetweenComplaints = c_dtTimeBetweenComplaints;
 
-            if (((m_pilotType == c_ptWingman) || (m_pilotType == c_ptCheatPlayer)) &&
-                (m_commandTargets[c_cmdPlan]->GetCluster() == GetCluster()))
-            {
-                if ( m_commandIDs[c_cmdPlan] == c_cidAttack )
+            if ((m_pilotType == c_ptWingman || m_pilotType == c_ptCheatPlayer) && m_mountedWeapons[0] != NULL)  { // || (m_pilotType == c_ptCheatPlayer && m_commandIDs[c_cmdPlan] != c_cidGoto)) {
+                if (m_commandTargets[c_cmdPlan]->GetCluster() == GetCluster())
                 {
-                    //In the same cluster as the target ... we dodge, turn to face the aim point and fire if close enough
-                    float   fShootSkill = 0.75f;
-                    float   fTurnSkill = 0.75f;
-                    int     state = 0;
-                    bool    bDodge = Dodge(this, NULL, &state);
-
-                    Vector  direction;
-                    float   t = solveForLead(this,
-                                             m_commandTargets[c_cmdPlan],
-                                             m_mountedWeapons[0],
-                                             &direction,
-                                             fShootSkill);
-
-                    float   da = turnToFace(direction, dT, this, &m_controls, fTurnSkill);
-
-                    // make the drone always fly hard - throttle range 0.5 to 1.0, depending on how they are
-                    // angled to their target
-                    m_controls.jsValues[c_axisThrottle] = 0.5f + ((pi - da) / (2.0f * pi));
-
-                    const float c_fMaxOffAngle = 0.10f;
-                    float lifespan = m_mountedWeapons[0]->GetLifespan();
-
-                    // commenting this to get strafe behavior from the drones BSW 10/28/1999
-                    /*
-                    if ((!bDodge) && (t <= lifespan * 0.25f))
+                    if (m_commandIDs[c_cmdPlan] == c_cidAttack && m_mountedWeapons[0])
                     {
-                        //We are close and not dodging anything so ...
-                        //strafe
-                        state = leftButtonIGC;
-                        if (da < pi * 0.5f)
-                        {
-                            if (da > c_fMaxOffAngle)
-                            {
-                                //too close ... back off
-                                state |= backwardButtonIGC;
+                        //In the same cluster as the target ... we dodge, turn to face the aim point and fire if close enough
+                        float fShootSkill = 0.75f;
+                        float fTurnSkill = 0.75f;
+                        const float openFireDistPercentage = 0.95f;
+                        int     state = 0;
+                        bool    bDodge = Dodge(this, m_commandTargets[c_cmdPlan], &state);
+                        bool    criticalMovement = false;
 
+						if (m_pilotType == c_ptCheatPlayer) {
+							fShootSkill = m_fShootSkill;
+							fTurnSkill = m_fTurnSkill;
+						}
+
+                        if (m_checkCooldown)
+                            m_checkCooldown--;
+                        else if (m_commandIDs[c_cmdAccepted] == c_cidDefend) {
+                            // Check if we should rather return to the c_cidDefend target
+                            bool shouldReturn = false;
+                            if (GetCluster() != m_commandTargets[c_cmdAccepted]->GetCluster())
+                                shouldReturn = true;
+                            else {
+                                float distToProtectee = (m_commandTargets[c_cmdAccepted]->GetPosition() - m_commandTargets[c_cmdPlan]->GetPosition()).Length();
+                                if (distToProtectee > 3500.0f) 
+                                    shouldReturn = true;
+                                else if (distToProtectee > 2200.0f) {
+                                    float dist = 2500.0f;
+                                    IshipIGC* pTarget = FindTargetShip(this, &(m_commandTargets[c_cmdAccepted]->GetPosition()), dist, c_ttEnemy | c_ttNearest, -2);
+                                    if (pTarget && dist < (distToProtectee - 1000.0f)) {
+                                        GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
+                                            droneInTransitSound,
+                                            "Attacking %s (%fm) to defend %s", GetModelName(pTarget), dist, GetModelName(m_commandTargets[c_cmdAccepted]));
+                                        SetCommand(c_cmdPlan, pTarget, c_cidAttack);
+                                    }
+                                    else {
+                                        // don't follow if he is just running away
+                                        Orientation oToDefendee = Orientation(m_commandTargets[c_cmdAccepted]->GetPosition() - m_commandTargets[c_cmdCurrent]->GetPosition());
+                                        float targetDirSpeed = oToDefendee.CosForward(m_commandTargets[c_cmdPlan]->GetVelocity())*m_commandTargets[c_cmdPlan]->GetVelocity().Length();
+                                        if (targetDirSpeed < -30.0f)
+                                            shouldReturn = true;
+                                    }
+                                }
                             }
-                            else
+                            if (shouldReturn) {
+                                GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
+                                    droneInTransitSound,
+                                    "Returning to defend %s", GetModelName(m_commandTargets[c_cmdAccepted]));
+                                SetCommand(c_cmdPlan, m_commandTargets[c_cmdAccepted], c_cidDefend);
+                            }
+                            m_checkCooldown = 200;
+                        }
+
+                        if (!CanSee(m_commandTargets[c_cmdPlan])) {
+                            if (!bDodge)
                                 state |= forwardButtonIGC;
+                            if (m_targetFirstNotSeen == Time(0)) {
+                                m_targetFirstNotSeen = GetMyLastUpdate();
+                            }
+                            else if (GetMyLastUpdate() > m_targetFirstNotSeen + 5.0f) {
+                                //find something else to do
+                                if (m_commandTargets[c_cmdAccepted] == m_commandTargets[c_cmdPlan]) {
+                                    // see if we should investigate
+                                    bool investigate = true;
+                                    for (ShipLinkIGC* l = GetCluster()->GetShips()->first(); l != NULL; l = l->next()) {
+                                        IshipIGC* s = l->data();
+                                        if (s->GetSide() != GetSide() && !GetSide()->AlliedSides(GetSide(), s->GetSide()) && CanSee(s)) {
+                                            if ((s->GetPosition() - GetPosition()).Length() < (m_commandTargets[c_cmdPlan]->GetPosition() - GetPosition()).Length()*1.5) {
+                                                investigate = false;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (investigate) {
+                                        debugf("%s: Going to investigate %s\n", GetName(), m_commandTargets[c_cmdPlan]->GetName());
+                                        DataBuoyIGC lastKnownPosBuoy;
+                                        lastKnownPosBuoy.clusterID = GetCluster()->GetObjectID();
+                                        lastKnownPosBuoy.position = m_commandTargets[c_cmdPlan]->GetPosition();
+                                        lastKnownPosBuoy.type = c_buoyWaypoint;
+                                        lastKnownPosBuoy.visible = false;
+                                        ImodelIGC* buoyLastKnown = (ImodelIGC*)GetMission()->CreateObject(GetLastUpdate(), OT_buoy, &lastKnownPosBuoy, sizeof(lastKnownPosBuoy));
+
+                                        SetCommand(c_cmdAccepted, buoyLastKnown, c_cidGoto);
+                                        SetWingmanBehaviour(GetWingmanBehaviour() | c_wbbmTempSectorAggressive);
+                                    }
+                                    else {
+                                        debugf("%s: notSeen - Set c_cmdAccepted null", GetName());
+                                        SetCommand(c_cmdAccepted, NULL, c_cidNone);
+                                    }
+                                }
+                                else {
+                                    debugf("%s: notSeen - Set c_cmdPlan null", GetName());
+                                    SetCommand(c_cmdPlan, NULL, c_cidNone);
+                                }
+                                return;
+                            }
+                            else if (GetMyLastUpdate() > m_targetFirstNotSeen + 3.0f) {
+                                //move in last known direction for 2 more seconds
+                                SetStateBits(~selectedWeaponMaskIGC, state);
+                                return;
+                            }
+                            else {
+                                //can still guess where the target is
+                                fShootSkill = 0.5f;
+                            }
+                        }
+
+                        Vector  direction;
+                        float   t = solveForLead(this,
+                            m_commandTargets[c_cmdPlan],
+                            m_mountedWeapons[0],
+                            &direction,
+                            fShootSkill);
+
+                        float   angleToLead = turnToFace(direction, dT, this, &m_controls, fTurnSkill);
+
+                        // make the drone always fly hard - throttle range 0.5 to 1.0, depending on how they are
+                        // angled to their target
+                        m_controls.jsValues[c_axisThrottle] = 0.5f + ((pi - angleToLead) / (2.0f * pi));
+
+                        const float c_fMaxOffAngle = 0.10f;
+                        float lifespan = m_mountedWeapons[0]->GetLifespan();
+
+                        float ownDirSpeed = GetOrientation().CosForward(GetVelocity())*GetVelocity().Length();
+                        float targetDirSpeed = GetOrientation().CosForward(m_commandTargets[c_cmdPlan]->GetVelocity())*m_commandTargets[c_cmdPlan]->GetVelocity().Length();
+                        float relativeSpeed = ownDirSpeed - targetDirSpeed;
+
+                        //float targetDistance = (this->GetPosition() - m_commandTargets[c_cmdPlan]->GetPosition()).Length();
+                        //float weaponRange = t*m_mountedWeapons[0]->GetProjectileType()->GetSpeed();
+                        if (bDodge)
+                            m_dodgeCooldown = 100;
+                        else if (m_dodgeCooldown) {
+                            m_dodgeCooldown--;
+                            state = GetStateM() & ~allWeaponsIGC;
+                        }
+                        else {
+                            if (angleToLead < pi * 0.5f) {
+                                if (t < lifespan * 0.45f) {
+                                    if (relativeSpeed < -20.0f) {
+                                        state |= forwardButtonIGC;
+                                        if (relativeSpeed < -50.0f)
+                                            criticalMovement = true;
+                                    }
+                                    else if (relativeSpeed > 20.0f) {
+                                        state |= backwardButtonIGC;
+                                        if (relativeSpeed > 50.0f)
+                                            criticalMovement = true;
+                                    }
+                                    else {
+                                        // match speed
+                                        float myMaxSpeed = GetHullType()->GetMaxSpeed();
+                                        float throttle = (targetDirSpeed >= myMaxSpeed)
+                                            ? 1.0f
+                                            : (targetDirSpeed <= 0.0f ? -1.0f : 2.0f * targetDirSpeed / myMaxSpeed - 1.0f);
+                                        ZAssert(throttle >= -1.0f && throttle <= 1.0f);
+                                        m_controls.jsValues[c_axisThrottle] = throttle;
+                                    }
+
+                                }
+                                else if (t < lifespan * (openFireDistPercentage - 0.05)) {
+                                    if (relativeSpeed > 50.0f)
+                                        state |= backwardButtonIGC;
+                                    else if (relativeSpeed < 10.0f) {
+                                        state |= forwardButtonIGC;
+                                        if (relativeSpeed < -10.0f) {
+                                            criticalMovement = true;
+                                            if (relativeSpeed < -15 && (GetStateM() & afterburnerButtonIGC))
+                                                state |= afterburnerButtonIGC;
+                                            else if (relativeSpeed < -30)
+                                                state |= afterburnerButtonIGC;
+                                        }
+                                        else if (t > lifespan * (openFireDistPercentage - 0.1))
+                                            criticalMovement = true;
+                                    }
+                                }
+                                else if (t < lifespan * 1.5f) {
+                                    if (relativeSpeed > 120)
+                                        state |= backwardButtonIGC;
+                                    else if (relativeSpeed < 80) {
+                                        state |= forwardButtonIGC;
+                                        if (relativeSpeed < 40) {
+                                            criticalMovement = true;
+                                            if (relativeSpeed < 20)
+                                                state |= afterburnerButtonIGC;
+                                        }
+                                    }
+
+                                }
+                                else {
+                                    if ((m_wingmanBehaviour & c_wbbmInRangeAggressive) && (m_timeRanAway + 10.0f <= timeStop)) { //m_timeRanAway gets set on SetCommand c_cmdPlan
+                                        ImodelIGC* newTarget = NULL;
+                                        for (ShipLinkIGC* l = GetCluster()->GetShips()->first(); (l != NULL); l = l->next()) {
+                                            if (ModelHasTargetPriority(l->data(), this)) {
+                                                newTarget = l->data();
+                                                break;
+                                            }
+                                        }
+                                        if (!newTarget)
+                                            for (ProbeLinkIGC* l = GetCluster()->GetProbes()->first(); (l != NULL); l = l->next()) {
+                                                if (ModelHasTargetPriority(l->data(), this)) {
+                                                    newTarget = l->data();
+                                                    break;
+                                                }
+                                            }
+                                        if (newTarget) {
+                                            GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
+                                                droneInTransitSound,
+                                                "Switching target to %s", GetModelName(newTarget));
+                                            SetCommand(c_cmdPlan, newTarget, c_cidAttack);
+                                        }
+                                        else
+                                            state |= afterburnerButtonIGC;
+                                    }
+                                    else
+                                        state |= afterburnerButtonIGC;
+                                }
+
+                                if (GetMountedPart(ET_Magazine, 0) && (m_wingmanBehaviour & c_wbbmUseMissiles)) {
+                                    ImagazineIGC* pmissile = (ImagazineIGC*)GetMountedPart(ET_Magazine, 0);
+                                    if (pmissile->GetLock() >= 1.0f) {
+                                        float targetOrthRight2 = GetOrientation().CosRight2(m_commandTargets[c_cmdPlan]->GetVelocity());
+                                        float targetOrthUp2 = GetOrientation().CosUp2(m_commandTargets[c_cmdPlan]->GetVelocity());
+                                        float evasionSpeed = sqrt(abs(targetOrthRight2) + abs(targetOrthUp2))*m_commandTargets[c_cmdPlan]->GetVelocity().Length();
+                                        float maxEvasionSpeed = 20.0f + pmissile->GetMissileType()->GetMaxLock() * 30.0f;
+
+                                        if (evasionSpeed < maxEvasionSpeed) {
+                                            //debugf("Missile fire for %s's %s (turn rate: %f) - targetOrthRight2: %f, targetOrthUp2: %f, evasionSpeed: %f; targetOrthSpeedRight: %f, targetOrthSpeedUp: %f\n", GetName(), pmissile->GetMissileType()->GetName(), pmissile->GetMissileType()->GetTurnRate(), targetOrthRight2, targetOrthUp2, evasionSpeed);
+                                            state |= missileFireIGC;
+                                        }
+                                    }
+                                }
+                            }
+
+                            else if (!criticalMovement && t <= lifespan * openFireDistPercentage) {
+                                if (m_wingmanBehaviour & c_wbbmStrafe)
+                                    state |= leftButtonIGC; // strafe - possibly use a pattern instead
+                                if (angleToLead < pi * 0.5f) {
+                                    if (angleToLead > c_fMaxOffAngle) //too close to aim ... back off
+                                        state |= backwardButtonIGC;
+                                }
+                            }
+                        }
+
+                        SetStateBits(~selectedWeaponMaskIGC,
+                            ((angleToLead <= c_fMaxOffAngle) && (t <= lifespan * openFireDistPercentage))
+                            ? (state | allWeaponsIGC)
+                            : state);
+
+                        return;
+                    }
+
+                    //AEM 7.9.07 allow wingman to repair if they are equipped with a nan
+                    else if (m_commandIDs[c_cmdPlan] == c_cidRepair && m_mountedWeapons[0] && m_mountedWeapons[0]->GetProjectileType()->GetPower() < 0.0)
+                    {
+                        //In the same cluster as the target ... we dodge, turn to face the aim point and fire if close enough
+                        float   fShootSkill = 1.00f;
+                        float   fTurnSkill = 1.00f;
+                        int     state = 0;
+                        bool    bDodge = Dodge(this, NULL, &state);
+
+                        Vector  direction;
+                        float   t = solveForLead(this,
+                            m_commandTargets[c_cmdPlan],
+                            m_mountedWeapons[0],
+                            &direction,
+                            fShootSkill);
+
+                        float   da = turnToFace(direction, dT, this, &m_controls, fTurnSkill);
+
+                        // make the drone always fly hard - throttle range 0.5 to 1.0, depending on how they are
+                        // angled to their target
+                        m_controls.jsValues[c_axisThrottle] = 0.5f + ((pi - da) / (2.0f * pi));
+
+                        const float c_fMaxOffAngle = 0.10f;
+                        float lifespan = m_mountedWeapons[0]->GetLifespan();
+
+                        if ((!bDodge) && (t <= lifespan * 0.25f))
+                        {
+                            //We are close and not dodging anything so ...
+                            //strafe
+                            if (m_wingmanBehaviour & c_wbbmStrafe)
+                                state = leftButtonIGC;
+                            if (da < pi * 0.5f)
+                            {
+                                if (da > c_fMaxOffAngle)
+                                {
+                                    //too close ... back off
+                                    state |= backwardButtonIGC;
+
+                                }
+                                else
+                                    state |= forwardButtonIGC;
+                            }
+                        }
+
+                        // Check for mine usage
+                        if ((m_wingmanBehaviour & c_wbbmUseMines) && m_mountedOthers[ET_Dispenser]) {
+                            IdispenserIGC* d = (IdispenserIGC*)m_mountedOthers[ET_Dispenser];
+                            if (d->GetExpendableType()->GetObjectType() == OT_mineType) {
+                                for (ShipLinkIGC* l = GetCluster()->GetShips()->first(); l != NULL; l = l->next()) {
+                                    if (l->data()->GetSide() != GetSide()) {
+                                        float distance = (l->data()->GetPosition() - GetPosition()).Length();
+                                        PilotType pt = l->data()->GetPilotType();
+                                        if (distance < 2500.0f && (pt == c_ptWingman || pt >= c_ptPlayer)) {
+                                            state |= mineFireIGC;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        bool needsNan = true;
+                        if (m_commandTargets[c_cmdPlan]->GetObjectType() == OT_ship)
+                            if (((IshipIGC*)m_commandTargets[c_cmdPlan])->GetFraction() == 1.0f)
+                                needsNan = false;
+
+                        SetStateBits(~selectedWeaponMaskIGC,
+                            ((da <= c_fMaxOffAngle) && (t <= lifespan * 0.95f) && (needsNan))
+                            ? (state | allWeaponsIGC)
+                            : state);
+
+                        return;
+                    }
+                    else if (m_commandIDs[c_cmdPlan] == c_cidDefend && m_mountedWeapons[0] && m_mountedWeapons[0]->GetProjectileType()->GetPower() > 0.0)
+                    {
+                        if (m_checkCooldown) {
+                            m_checkCooldown--;
+                            if (GetStateM() & afterburnerButtonIGC)
+                                bWingmanUseAfterburner = true;
+                        }
+                        else {
+                            m_checkCooldown = 200;
+                            float dist = 1500.0f; //max distance and returned actual distance
+                            IshipIGC* pTarget = FindTargetShip(this, &(m_commandTargets[c_cmdAccepted]->GetPosition()), dist, c_ttEnemy | c_ttNearest, -2);
+                            if (pTarget) {
+                                GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
+                                    droneInTransitSound,
+                                    "Attacking %s (%f) to defend %s*", GetModelName(pTarget), dist, GetModelName(m_commandTargets[c_cmdPlan]));
+                                SetCommand(c_cmdPlan, pTarget, c_cidAttack);
+                            }
+                            else if ((GetPosition()-m_commandTargets[c_cmdPlan]->GetPosition()).Length() > 1000.0f) {
+                                float dist = 1000.0f;
+                                IshipIGC* pAttacker = FindTargetShip(this, NULL, dist, c_ttEnemy | c_ttNearest, -2);
+                                if (pAttacker) {
+                                    bWingmanUseAfterburner = true;
+                                }
+                            }
                         }
                     }
-                    */
-
-                    SetStateBits(~selectedWeaponMaskIGC,
-                                 ((da <= c_fMaxOffAngle) && (t <= lifespan * 0.9f))
-                                 ? (state | allWeaponsIGC)
-                                 : state);
-
-                    return;
                 }
-				//AEM 7.9.07 allow wingman to repair if they are equipped with a nan
-                else if ( m_commandIDs[c_cmdPlan] == c_cidRepair && m_mountedWeapons[0]->GetProjectileType()->GetPower()<0.0 )
-                {
-                    //In the same cluster as the target ... we dodge, turn to face the aim point and fire if close enough
-                    float   fShootSkill = 1.00f;
-                    float   fTurnSkill = 1.00f;
-                    int     state = 0;
-                    bool    bDodge = Dodge(this, NULL, &state);
+                else if (m_commandIDs[c_cmdPlan] == c_cidAttack && !CanSee(m_commandTargets[c_cmdPlan])) {
 
-                    Vector  direction;
-                    float   t = solveForLead(this,
-                                             m_commandTargets[c_cmdPlan],
-                                             m_mountedWeapons[0],
-                                             &direction,
-                                             fShootSkill);
+                    //Handle trying to attack unseen enemy in another cluster
+                    bool handled = false;
+                    if (m_commandTargets[c_cmdAccepted] == m_commandTargets[c_cmdPlan] && m_commandTargets[c_cmdPlan]->GetObjectType() == OT_ship) {
+                        IshipIGC* psTarget = (IshipIGC*)m_commandTargets[c_cmdPlan];
+                        ZAssert(psTarget);
+                        if (psTarget->GetCluster()) {
+                            //Check if the enemy just changed cluster
+                            ImodelIGC*  pmNearestAleph = FindTarget(psTarget,
+                                c_ttNeutral | c_ttWarp | c_ttNearest);
+                            if (pmNearestAleph) {
+                                IwarpIGC* pNearestAleph = (IwarpIGC*)pmNearestAleph;
+                                if (pNearestAleph->GetDestination()->GetCluster() == GetCluster() &&
+                                    (pmNearestAleph->GetPosition() - psTarget->GetPosition()).Length() < 800.0f &&
+                                    GetHullType()->GetScannerRange() > 100.0f)  // Phoenix ...
+                                {
+                                    // The enemy must have just went through an aleph, follow him!
+                                    //  Create buoy
+                                    DataBuoyIGC buoyData;
+                                    buoyData.clusterID = psTarget->GetCluster()->GetObjectID();
+                                    buoyData.type = c_buoyCluster;
+                                    buoyData.position = Vector(0.0f, 0.0f, 0.0f);
+                                    buoyData.visible = false;
+                                    ImodelIGC* buoyTargetCluster = (ImodelIGC*)GetMission()->CreateObject(GetLastUpdate(), OT_buoy, &buoyData, sizeof(buoyData));
 
-                    float   da = turnToFace(direction, dT, this, &m_controls, fTurnSkill);
-
-                    // make the drone always fly hard - throttle range 0.5 to 1.0, depending on how they are
-                    // angled to their target
-                    m_controls.jsValues[c_axisThrottle] = 0.5f + ((pi - da) / (2.0f * pi));
-
-                    const float c_fMaxOffAngle = 0.10f;
-                    float lifespan = m_mountedWeapons[0]->GetLifespan();
-
-                    if ((!bDodge) && (t <= lifespan * 0.25f))
-                    {
-                        //We are close and not dodging anything so ...
-                        //strafe
-                        state = leftButtonIGC;
-                        if (da < pi * 0.5f)
-                        {
-                            if (da > c_fMaxOffAngle)
-                            {
-                                //too close ... back off
-                                state |= backwardButtonIGC;
-
+                                    //  Send to it
+                                    debugf("%s: other cluster target near warp, goto.", GetName());
+                                    SetCommand(c_cmdPlan, buoyTargetCluster, c_cidGoto);
+                                    handled = true;
+                                }
                             }
-                            else
-                                state |= forwardButtonIGC;
                         }
                     }
+                    if (!handled) {
+                        Command c = c_cmdPlan;
+                        if (m_commandTargets[c_cmdAccepted] == m_commandTargets[c_cmdPlan])
+                            c = c_cmdAccepted;
+                        debugf("%s: Can't see other cluster target, unset.", GetName());
+                        SetCommand(c, NULL, c_cidNone);
+                    }
 
-                    SetStateBits(~selectedWeaponMaskIGC,
-                                 ((da <= c_fMaxOffAngle) && (t <= lifespan * 0.9f))
-                                 ? (state | allWeaponsIGC)
-                                 : state);
-
-                    return;
                 }
-                else if (m_commandIDs[c_cmdPlan] == c_cidDefend)
+                if (m_commandIDs[c_cmdPlan] == c_cidGoto)
                 {
-                    //NYI
+                    if (m_bRunningAway || m_bGettingAmmo) {
+                        bWingmanUseAfterburner = true;
+                        // handle after movement
+                    }
+                    else if (m_checkCooldown)
+                        m_checkCooldown--;
+                    else {
+                        if (m_commandIDs[c_cmdAccepted] == c_cidAttack && CanSee(m_commandTargets[c_cmdAccepted])) {
+                            // assume we just got a goto plan to find our actual target. Attack it.
+                            SetCommand(c_cmdPlan, m_commandTargets[c_cmdAccepted], c_cidAttack);
+                        }
+                        if ((m_wingmanBehaviour & (c_wbbmInRangeAggressive | c_wbbmTempSectorAggressive)) && (m_timeRanAway + 10.0f <= timeStop)) {
+                            ImodelIGC* newTarget = NULL;
+                            for (ShipLinkIGC* l = GetCluster()->GetShips()->first(); (l != NULL); l = l->next()) {
+                                if (ModelHasTargetPriority(l->data(), this)) {
+                                    newTarget = l->data();
+                                    break;
+                                }
+                            }
+                            if (!newTarget)
+                                for (ProbeLinkIGC* l = GetCluster()->GetProbes()->first(); (l != NULL); l = l->next()) {
+                                    if (ModelHasTargetPriority(l->data(), this)) {
+                                        newTarget = l->data();
+                                        break;
+                                    }
+                                }
+                            if (newTarget) {
+                                GetMyMission()->GetIgcSite()->SendChatf(this, CHAT_TEAM, GetSide()->GetObjectID(),
+                                    droneInTransitSound,
+                                    "Attacking %s", GetModelName(newTarget));
+                                Command c = c_cmdPlan;
+                                if (GetWingmanBehaviour() & c_wbbmTempSectorAggressive) {
+                                    c = c_cmdAccepted;
+                                    SetWingmanBehaviour(GetWingmanBehaviour() & ~c_wbbmTempSectorAggressive);
+                                }
+                                SetCommand(c, newTarget, c_cidAttack);
+                            }
+                        }
+                        m_checkCooldown = 100;
+                    }
                 }
             }
 
@@ -2374,6 +2819,10 @@ void    CshipIGC::PlotShipMove(Time          timeStop)
                         GetMyMission()->GetIgcSite()->LayExpendable(timeStart, (IexpendableTypeIGC*)(IbaseIGC*)m_pbaseData, this);
                     }
                 }
+            }
+            else if (bWingmanUseAfterburner && GetControls().jsValues[c_axisThrottle] == 1.0f) {
+                ZAssert(m_pilotType == c_ptWingman);
+                SetStateBits(afterburnerButtonIGC, afterburnerButtonIGC);
             }
         }
     }
@@ -3534,7 +3983,16 @@ void    CshipIGC::ResetWaypoint(void)
             {
                 case OT_ship:
                 {
-                    o = (m_commandIDs[c_cmdPlan] == c_cidPickup)
+                    IshipIGC* ptargetShip = (IshipIGC*)m_commandTargets[c_cmdPlan];
+                    if (ptargetShip->GetFraction() < 0.001) //Exploding ship
+                        o = Waypoint::c_oGoto;
+                    else if (GetHullType()->HasCapability(c_habmLandOnCarrier) &&
+                        ptargetShip->GetHullType()->HasCapability(c_habmCarrier))
+                    {
+                        o = (m_commandIDs[c_cmdPlan] == c_cidGoto) ? Waypoint::c_oEnter : Waypoint::c_oGoto;
+                    }
+                    else 
+                        o = (m_commandIDs[c_cmdPlan] == c_cidPickup)
                         ? Waypoint::c_oEnter
                         : Waypoint::c_oGoto;
                 }
@@ -3608,14 +4066,25 @@ void    CshipIGC::ResetWaypoint(void)
                             float   rMajor;
                             IprojectileTypeIGC* pprojectile = ppt->GetProjectileType();
                             if (pprojectile) // KG -bug fix, was: ppt
-                                rMajor = pprojectile->GetLifespan() * pprojectile->GetSpeed() * 0.5f;
+                                rMajor = pprojectile->GetLifespan() * pprojectile->GetSpeed() * 0.8f;
                             else
-                                rMajor = ppt->GetScannerRange() * 0.4f;
+                                rMajor = ppt->GetScannerRange() * 0.7f;
+                            rMajor += random(0.0f, 0.1f);
 
-                            db.position = p -
-                                          (orientation.GetBackward() *
-                                           rMajor) +
-                                           Vector::RandomPosition(rMajor / 3.0f);
+                            float pitchAngle, yawAngle;
+                            do {
+                                pitchAngle = random(0, pi / 2);
+                                yawAngle = random(0, pi / 2);
+                            } while (pitchAngle < pi / 4 && yawAngle < pi / 4);
+                            if (rand() % 2 == 0)
+                                pitchAngle = -pitchAngle;
+                            if (rand() % 2 == 0)
+                                yawAngle = -yawAngle;
+                            Orientation omod = orientation;
+                            omod.Pitch(pitchAngle);
+                            omod.Yaw(yawAngle);
+
+                            db.position = p + (omod.GetForward() * rMajor);
                         }
 
                         db.clusterID = m_commandTargets[c_cmdPlan]->GetCluster()->GetObjectID();
@@ -4131,11 +4600,15 @@ const char*          MyHullType::GetIconName(void) const
 
 HullAbilityBitMask   MyHullType::GetCapabilities(void) const
 {
-    return m_pHullData->habmCapabilities;
+	if (m_pHullData != nullptr)
+		return m_pHullData->habmCapabilities;
+	else
+		return 0;
 }
 bool                 MyHullType::HasCapability(HullAbilityBitMask habm) const
 {
-    return (m_pHullData->habmCapabilities & habm) != 0;
+    ZAssert(m_pHullData);
+    return (m_pHullData && (m_pHullData->habmCapabilities & habm));
 }
 const Vector&        MyHullType::GetCockpit(void) const
 {

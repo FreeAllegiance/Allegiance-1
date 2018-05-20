@@ -963,7 +963,7 @@ bool CD3DDeviceModeData::GetModeParams(	CD3DDevice9::SD3DDeviceSetupParams * pPa
 	// Prepare the full screen mode first.
 
     //try finding our preferred default resolution
-    pMode = FindMatchingWindowedMode(pParams, WinPoint(1366, 768), iDeviceIndex);
+    pMode = FindMatchingWindowedMode(pParams, WinPoint(pParams->sFullScreenMode.mode.Width, pParams->sFullScreenMode.mode.Height), iDeviceIndex);
     if (!pMode) {
         //not found, select the first one (800x600)
         pMode = &m_pAdapterArray[iDeviceIndex].ppAvailableModes[i][iModeCounter];

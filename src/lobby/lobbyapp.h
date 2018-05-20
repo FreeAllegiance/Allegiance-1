@@ -150,6 +150,12 @@ public:
 	  return m_szAuthenticationLocation;
   }
 
+  char* RetrieveAuthBypassCDKey()
+  {
+	  return m_szAuthBypassCDKey;
+  }
+
+
 
   // -KGJV: added
   bool IsFreeLobby()
@@ -292,6 +298,7 @@ private:
   char              m_szToken[24]; // sizeof(_ZONETICKET_TOKEN.szToken)
   DWORD             m_dwAuthentication;
   char				m_szAuthenticationLocation[261];
+  char              m_szAuthBypassCDKey[MAX_PATH];
 
   // Player list stuff
   typedef std::multimap<ZString, PlayerLocInfo, StringCmpLess> PlayerByCDKey;

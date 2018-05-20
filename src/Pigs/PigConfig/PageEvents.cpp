@@ -380,9 +380,9 @@ HRESULT CPageEvents::AddXMLNodeToTree(IXMLDOMNode* pNode, HTREEITEM hParent)
 
             // Keep track of maximum widths
             int cx = m_listEvents.GetStringWidth(strType + "  ");
-            m_cxMaxType = max(m_cxMaxType, cx);
+            m_cxMaxType = std::max(m_cxMaxType, cx);
             cx = m_listEvents.GetStringWidth(strID + "    ");
-            m_cxMaxID = max(m_cxMaxID, cx);
+            m_cxMaxID = std::max(m_cxMaxID, cx);
 
             // Set the subitems
             m_listEvents.SetItem(iItem, 1, LVIF_TEXT, strID, 0, 0, 0, 0);

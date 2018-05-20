@@ -1,4 +1,3 @@
-
 //
 // sound IDs
 //
@@ -116,19 +115,21 @@ DEFSOUND(ripcord3)
 DEFSOUND(ripcord2)
 DEFSOUND(ripcord1)
 
-DEFSOUND(flightMusic1A)
-DEFSOUND(flightMusic1B)
-DEFSOUND(flightMusic1C)
-DEFSOUND(flightMusic2A)
-DEFSOUND(flightMusic2B)
-DEFSOUND(flightMusic2C)
-DEFSOUND(flightMusic3A)
-DEFSOUND(flightMusic3B)
-DEFSOUND(flightMusic3C)
-DEFSOUND(gameScreenMusic)
-DEFSOUND(deathMusic)
-DEFSOUND(gameOverWonMusic)
-DEFSOUND(gameOverLostMusic)
+//UNUSED music. These cannot be removed without a simultaneous server deploy
+DEFEMPTYSOUND(flightMusic1A)
+DEFEMPTYSOUND(flightMusic1B)
+DEFEMPTYSOUND(flightMusic1C)
+DEFEMPTYSOUND(flightMusic2A)
+DEFEMPTYSOUND(flightMusic2B)
+DEFEMPTYSOUND(flightMusic2C)
+DEFEMPTYSOUND(flightMusic3A)
+DEFEMPTYSOUND(flightMusic3B)
+DEFEMPTYSOUND(flightMusic3C)
+DEFEMPTYSOUND(gameScreenMusic)
+DEFEMPTYSOUND(deathMusic)
+DEFEMPTYSOUND(gameOverWonMusic)
+DEFEMPTYSOUND(gameOverLostMusic)
+//end unused music
 
 DEFSOUND(missileLock)
 DEFSOUND(missileTone)
@@ -505,6 +506,13 @@ DEFSOUND(salBooted)
 DEFSOUND(salChangeSides)
 DEFSOUND(salEnemyJoiners)
 DEFSOUND(salEnemyLeaves)
+
+
+//Sidethrusters
+DEFSOUND(SidethrustInterior)
+DEFSOUND(SidethrustExterior)
+DEFSOUND(CapSidethrustInterior)
+DEFSOUND(CapSidethrustExterior)
 
 // pigs
 DEFSOUND(oink1) // Pig response

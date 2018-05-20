@@ -10,6 +10,8 @@
 #include "enginep.h"
 #include "D3DDevice9.h"
 
+#include "regkey.h"
+
 bool g_bLuaDebug = false;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -125,12 +127,14 @@ public:
 //////////////////////////////////////////////////////////////////////////////
 
 EngineWindow::EngineWindow(	EngineApp *			papp,
+                            UpdatingConfiguration* pConfiguration,
 							const ZString&		strCommandLine,
 							const ZString&		strTitle,
 							bool				bStartFullscreen,
 							const WinRect&		rect,
 							const WinPoint&		sizeMin,
-							HMENU				hmenu ) :
+							HMENU				hmenu
+) :
 				Window(NULL, rect, strTitle, ZString(), 0, hmenu),
 				m_pengine(papp->GetEngine()),
 				m_pmodeler(papp->GetModeler()),
@@ -151,8 +155,18 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 				m_bWindowStateMinimised(false),
 				m_bWindowStateRestored(false),
 				m_bClickBreak(true), //Imago 7/10 #37
-				m_pEngineApp(papp)
+				m_pEngineApp(papp),
+                m_pConfiguration(pConfiguration)
 {
+    GlobalConfigureLoggers(
+        m_pConfiguration->GetBool("Debug.LogToOutput", m_pConfiguration->GetBoolValue("OutputDebugString", true))->GetValue(),
+        m_pConfiguration->GetBool("Debug.LogToFile", m_pConfiguration->GetBoolValue("LogToFile", false))->GetValue()
+    );
+
+    g_bMDLLog = m_pConfiguration->GetBool("Debug.Mdl", false)->GetValue();
+    g_bWindowLog = m_pConfiguration->GetBool("Debug.Window", false)->GetValue();
+    g_bLuaDebug = m_pConfiguration->GetBool("Debug.Lua", false)->GetValue();
+
     //
     // Button Event Sink
     //
@@ -174,19 +188,21 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
     //
     // Should we start fullscreen?
 	CD3DDevice9 * pDev = CD3DDevice9::Get();
-	bool startFullscreen = pDev->GetDeviceSetupParams()->bRunWindowed ? false : true;
-	
-    ParseCommandLine( strCommandLine, startFullscreen);
 
-	
-	// BT - 10/17 - Force the client to start windowed first, then we can take it full screen later.
-	bool bStartFullScreen = false;
+    m_pPreferredFullscreen = m_pConfiguration->GetBool("Graphics.Fullscreen", pDev->GetDeviceSetupParams()->bRunWindowed ? false : true);
+
+    bool bStartFullScreen = m_pPreferredFullscreen->GetValue();
+    ParseCommandLine(strCommandLine, bStartFullScreen);
+
+    if (bStartFullScreen != m_pPreferredFullscreen->GetValue()) {
+        m_pPreferredFullscreen->SetValue(bStartFullScreen);
+    }
 
     // Get the mouse
     //
 
     m_pmouse = m_pinputEngine->GetMouse();
-    m_pmouse->SetEnabled(startFullscreen);
+    m_pmouse->SetEnabled(bStartFullscreen);
     papp->SetMouse(m_pmouse);
 
     m_pmouse->GetEventSource()->AddSink(m_peventSink = new ButtonEvent::Delegate(this));
@@ -247,8 +263,7 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 
 	devLog.OutputString("CVertexGenerator::Get()->Initialise( );\n");
 
-	m_bStartFullScreen = startFullscreen;
-	pDev->ResetDevice(startFullscreen == false);
+	pDev->ResetDevice(bStartFullscreen == false);
 }
 
 EngineWindow::~EngineWindow()
@@ -258,7 +273,7 @@ EngineWindow::~EngineWindow()
 void EngineWindow::PostWindowCreationInit()
 {
     // Tell the engine we are the window
-    GetEngine()->SetFocusWindow(this, m_bStartFullScreen);
+    GetEngine()->SetFocusWindow(this, m_pPreferredFullscreen->GetValue());
 
     //
     // These rects track the size of the window
@@ -338,17 +353,11 @@ void EngineWindow::ParseCommandLine(const ZString& strCommandLine, bool& bStartF
         ZString str;
 
         if (token.IsMinus(str)) {
-            if (str == "mdllog") {
-                g_bMDLLog = true;
-            } else if (str == "windowlog") {
-                g_bWindowLog = true;
-            } else if (str == "windowed") {
+            if (str == "windowed") {
                 bStartFullscreen = false;
             } else if (str == "fullscreen") {
                 bStartFullscreen = true;
-			} else if (str == "lua-debug") {
-                g_bLuaDebug = true;
-            }
+			}
         } else {
             token.IsString(str);
         }
@@ -415,71 +424,6 @@ void EngineWindow::UpdateSurfacePointer()
 	}
 }
 
-/* OLD ROUTINES FOR ABOVE FUNCTION COMBINED
-
-	CD3DDevice9 * pDev = CD3DDevice9::Get();
-	if( !m_pengine->IsFullscreen() )
-	{
-		m_psurface = m_pengine->CreateDummySurface( GetClientRect().Size(), NULL );
-		
-		if( pDev->IsDeviceValid() == true )
-		{
-			pDev->ResetDevice(	pDev->IsWindowed(), 
-								GetClientRect().Size().x,
-								GetClientRect().Size().y );
-		}
-	}
-	else
-	{
-		m_psurface = m_pengine->CreateDummySurface( m_pengine->GetFullscreenSize(), NULL );
-
-		if( pDev->IsDeviceValid() == true )
-		{
-			pDev->ResetDevice(	pDev->IsWindowed(), 
-								m_pengine->GetFullscreenSize().x,
-								m_pengine->GetFullscreenSize().y );
-		}
-	}
-	*/
-
-
-/*	if( (!m_pengine->IsFullscreen())
-        || (!m_pengine->GetUsing3DAcceleration())
-    ) {
-        WinPoint size = GetClientRect().Size();
-
-        if (size.X() == 0) {
-            size.SetX(1);
-        }
-
-        if (size.Y() == 0) {
-            size.SetY(1);
-        }
-
-        if (
-               m_pengine->PrimaryHas3DAcceleration()
-            && m_pengine->GetAllow3DAcceleration()
-        ) {
-            m_psurface =
-                m_pengine->CreateSurface(
-                    size,
-                    SurfaceType2D() | SurfaceType3D() | SurfaceTypeZBuffer() | SurfaceTypeVideo(),
-                    NULL
-                );
-
-            if (m_psurface != NULL && m_psurface->IsValid()) {
-                return;
-            }
-        }
-
-        m_psurface =
-            m_pengine->CreateSurface(
-                size,
-                SurfaceType2D() | SurfaceType3D() | SurfaceTypeZBuffer(),
-                NULL
-            );
-    }*/
-
 void EngineWindow::UpdateWindowStyle()
 {
     if (m_pengine->IsFullscreen()) {
@@ -515,7 +459,8 @@ void EngineWindow::UpdateWindowStyle()
         if (screenWidth <= size.X() && screenHeight <= size.Y()) {
             //windowed, but we do not fit with the selected resolution, switch to borderless
             //set to monitor resolution
-            m_pengine->SetFullscreenSize(WinPoint(screenWidth, screenHeight));
+            
+            SetFullscreenSize(Vector(screenWidth, screenHeight, g_DX9Settings.m_refreshrate));
             size = m_pengine->GetFullscreenSize();
             SetClientRect(WinRect(WinPoint(0, 0), size));
 
@@ -673,6 +618,10 @@ RectValue* EngineWindow::GetRenderRectValue()
 
 void EngineWindow::SetFullscreen(bool bFullscreen)
 {
+    if (m_pPreferredFullscreen->GetValue() != bFullscreen) {
+        m_pPreferredFullscreen->SetValue(bFullscreen);
+    }
+
     if (m_pengine->IsFullscreen() != bFullscreen) {
         //
         // Make sure we don't recurse
@@ -807,14 +756,11 @@ WinPoint EngineWindow::GetFullscreenSize()
     return m_pengine->GetFullscreenSize();
 }
 
-void EngineWindow::Set3DAccelerationImportant(bool b3DAccelerationImportant)
-{
-    m_pengine->Set3DAccelerationImportant(b3DAccelerationImportant);
-}
-
 void EngineWindow::SetFullscreenSize(const Vector& size)
 {
     m_pengine->SetFullscreenSize(size);
+
+    RenderSizeChanged(true);
 }
 
 void EngineWindow::ChangeFullscreenSize(bool bLarger)
@@ -925,8 +871,7 @@ ZString EngineWindow::GetRendererString()
 {
     return 
           (
-               GetEngine()->GetUsing3DAcceleration() 
-            && (
+              (
                    m_psurface == NULL 
                 || m_psurface->GetSurfaceType().Test(SurfaceTypeVideo())
                )
@@ -939,23 +884,6 @@ ZString EngineWindow::GetDeviceString()
 {
     return "Device: " + GetEngine()->GetDeviceName();
 }
-
-ZString EngineWindow::GetAllow3DAccelerationString()
-{
-    return 
-          GetEngine()->GetAllow3DAcceleration()
-        ? "Use 3D acceleration when needed"
-        : "Never use 3D acceleration";
-}
-
-ZString EngineWindow::GetAllowSecondaryString()
-{
-    return 
-          GetEngine()->GetAllowSecondary()
-        ? "Use secondary device for 3D acceleration when needed"
-        : "Never use secondary device";
-}
-
 
 void EngineWindow::UpdateMenuStrings()
 {
@@ -972,19 +900,6 @@ void EngineWindow::OnEngineWindowMenuCommand(IMenuItem* pitem)
 {
     switch (pitem->GetID()) 
 	{
-
-/*       case idmAllowSecondary:
-            GetEngine()->SetAllowSecondary(
-                !GetEngine()->GetAllowSecondary()
-            );
-            break;
-
-        case idmAllow3DAcceleration:
-            GetEngine()->SetAllow3DAcceleration(
-                !GetEngine()->GetAllow3DAcceleration()
-            );
-            break;
-*/
 		// DISABLE THE higher/lower resolution option - to be reinstated at some point.
 		//Imago reinstated 6/26/09
 		case idmHigherResolution:
@@ -1131,6 +1046,8 @@ void EngineWindow::SetHideCursorTimer(bool bHideCursor)
 
 void EngineWindow::UpdateFrame()
 {
+    m_pConfiguration->Update();
+
     m_timeCurrent = Time::Now();
     m_pnumberTime->SetValue(m_timeCurrent - m_timeStart);
     EvaluateFrame(m_timeCurrent);

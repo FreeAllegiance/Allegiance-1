@@ -39,7 +39,7 @@ TCLookupTable_BEGIN(CPigBehaviorScriptMethods, Methods)
   SCRIPT_METHOD(OnMissionStarted        , 0)
   SCRIPT_METHOD(OnReceiveChat           , 2)  // We don't count the [retval]
   SCRIPT_METHOD(OnShipDamaged           , 6)
-  SCRIPT_METHOD(OnShipKilled            , 4)
+  SCRIPT_METHOD(OnShipKilled            , 5)
   SCRIPT_METHOD(OnSectorChange          , 2)
   SCRIPT_METHOD(OnAlephHit              , 1)
 TCLookupTable_END()

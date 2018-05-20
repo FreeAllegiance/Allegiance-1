@@ -1167,7 +1167,7 @@ public:
     virtual void RequestViewCluster(IclusterIGC* pcluster, ImodelIGC* pmodelTarget = NULL) { SetViewCluster(pcluster); }
 
     virtual void            ResetShip(void);
-    virtual void            ResetClusterScanners(IsideIGC*  pside);
+    //virtual void            ResetClusterScanners(IsideIGC*  pside);
 
     virtual void            BuyLoadout(IshipIGC* pshipLoadout, bool bLaunch);
     virtual IshipIGC*       CreateEmptyShip(ShipID sid = -2);
@@ -1267,9 +1267,9 @@ public:
     virtual void KillProbeEvent(IprobeIGC* pprobe);
     virtual void KillMineEvent(ImineIGC*    pmine);
     virtual void KillMissileEvent(ImissileIGC*    pmissile, const Vector& position);
+    virtual void KillTreasureEvent(ItreasureIGC* ptreasure);
     virtual void KillShipEvent(Time now, IshipIGC* ship, ImodelIGC* launcher, float amount, const Vector& p1, const Vector& p2);
-    virtual void DamageStationEvent(IstationIGC* station, ImodelIGC* launcher, DamageTypeID type, float amount, float leakage);
-    virtual void KillStationEvent(IstationIGC* station, ImodelIGC* launcher, float amount, float leakage);
+    virtual void DamageStationEvent(IstationIGC* station, ImodelIGC* launcher, DamageTypeID type, float amount);
     virtual void FireMissile(IshipIGC* pship, ImagazineIGC* pmagazine,
                     Time timeFired, ImodelIGC* pTarget, float lock);
     virtual void FireExpendable(IshipIGC* pShip,
@@ -1345,8 +1345,8 @@ public:
                 //We can buy this part ... try mounting it somewhere
                 EquipmentType   et = ppt->GetEquipmentType();
                 Mount           iMountMax = (et == ET_Weapon)
-                                            ? pht->GetMaxWeapons()
-                                            : 1;
+                    ? pht->GetMaxWeapons()
+                    : 1;
 
                 for (Mount i = 0; (i < iMountMax); i++)
                 {
@@ -1616,6 +1616,158 @@ public:
             budget = ReplaceLoadout(pshipSink, pstation, (CachedLoadout*)NULL, budget, m_loadouts); //AaronMoore 1/10
 
         return budget;
+    }
+
+    void RestoreLoadoutOnCarrier(IshipIGC* pship) {
+        assert(!m_fm.IsConnected());
+        assert(pship);
+        debugf("RestoreLoadoutOnCarrier for %s", pship->GetName());
+
+        // check all loadouts for an applicable one -- problematic for different tech levels!
+        CachedLoadoutLink*  pcll = m_loadouts.first();
+        while (pcll && pcll->data().pht != pship->GetBaseHullType())
+            pcll = pcll->next();
+
+        if (pcll) {
+            debugf(" Saved loadout (%d) for \"%s\"\n", m_loadouts.n(), pship->GetBaseHullType()->GetName());
+
+            {
+                //Mark all the parts in the cached loadout as not duplicated
+                for (CachedPartLink* l = pcll->data().cpl.first(); (l != NULL); l = l->next())
+                    l->data().bDuplicated = false;
+            }
+
+            //Mark parts that are mounted as duplicated and replenish them
+            {
+                const PartListIGC*  pparts = pship->GetParts();
+                for (PartLinkIGC* l = pparts->first(); (l != NULL); l = l->next())
+                {
+                    IpartIGC*       ppart = l->data();
+                    Mount           mount = ppart->GetMountID();
+
+                    IpartTypeIGC*   ppt = ppart->GetPartType();
+                    ppart->SetAmount(SHRT_MAX); //Things that don't care about amounts wont care if I try and set it.
+
+                    //Mark the corresponding part in the cached loadout as having been duplicated
+                    {
+                        bool found = false;
+                        CachedPartLink* lWrongMountMatch = NULL;
+                        for (CachedPartLink* l = pcll->data().cpl.last(); (l != NULL); l = l->txen()) // mount 2,1,0,0,..,-1,-2,.. with previously sorted list
+                        {
+                            if ((l->data().ppt == ppt) &&
+                                !l->data().bDuplicated)
+                            {
+                                if (l->data().mount == mount) //otherwise first slots get set as duplicated regardless of which are empty
+                                {
+                                    l->data().bDuplicated = true;
+                                    found = true;
+                                    break;
+                                }
+                                else
+                                    lWrongMountMatch = l;
+                            }
+                        }
+                        if (!found && lWrongMountMatch)
+                            lWrongMountMatch->data().bDuplicated = true;
+                    }
+                }
+            }
+
+            //Fill all of the cargo slots with what was there before. Also fill module slots which were empty.
+            Mount   cargo = -c_maxCargo;
+            while (pship->GetMountedPart(NA, cargo) != NULL)
+                cargo++;
+            for (CachedPartLink* l = pcll->data().cpl.first(); (l != NULL); l = l->next())
+            {
+                CachedPart& cpl = l->data();
+
+                if (!cpl.bDuplicated)
+                {
+                    IpartTypeIGC*   ppt = cpl.ppt;
+                    if (ppt)
+                    {
+                        EquipmentType   et = ppt->GetEquipmentType();
+
+                        if ((cpl.mount >= 0) && //anything not cargo
+                            (pship->GetMountedPart(et, cpl.mount) == NULL) &&
+                            (pship->GetHullType()->CanMount(ppt, cpl.mount)))
+                        {
+                            debugf(" RestoreLoadout: Restoring empty module slot %d, type %d with %d \n", cpl.mount, et, ppt->GetObjectID());
+                            pship->CreateAndAddPart(ppt, cpl.mount, ppt->GetAmount(pship));
+                        }
+                        else if (cargo < 0)
+                        {
+                            pship->CreateAndAddPart(ppt, cargo++, SHRT_MAX);
+                            while (pship->GetMountedPart(NA, cargo) != NULL)
+                                cargo++;
+                        }
+
+                    }
+                }
+            }
+        }
+        else {
+            debugf(" %s: no saved loadout (%d) matches hull type \"%s\", restore some other way\n", pship->GetName(), m_loadouts.n(), pship->GetBaseHullType()->GetName());
+            IstationIGC* pstation = NULL;
+            for (StationLinkIGC* l = pship->GetSide()->GetStations()->first(); l != NULL; l = l->next())
+                if (l->data()->GetStationType()->GetCapabilities() & c_sabmLand) {
+                    pstation = l->data();
+                    break;
+                }
+            if (pstation) {
+                //Money for the cargo
+                Money   money = Money(0);
+                Mount cargo = -c_maxCargo;
+                while (cargo < 0) {
+                    IpartIGC* pp = pship->GetMountedPart(NA, cargo++);
+                    if (pp)
+                        money += pp->GetPrice();
+                }
+
+                BuyDefaultLoadout(pship, pstation, NULL, &money);
+            }
+            else {
+                debugf(" Just add fuel and ammo\n");
+
+                IpartTypeIGC*   pptFuel = NULL;;
+                if (pship->GetMountedPart(ET_Afterburner, 0) != NULL)
+                    pptFuel = m_pCoreIGC->GetFuelPack();
+
+                IpartTypeIGC*   pptAmmo = NULL;
+                {
+                    IweaponIGC* pweapon = (IweaponIGC*)(pship->GetMountedPart(ET_Weapon, 0));
+                    if (pweapon && (pweapon->GetAmmoPerShot() > 0))
+                        pptAmmo = m_pCoreIGC->GetAmmoPack();
+                }
+
+                int fuelCount = 0;
+                Mount cargo = -c_maxCargo;
+                while (cargo < 0) {
+                    if (pship->GetMountedPart(NA, cargo) && pship->GetMountedPart(NA, cargo)->GetPartType() == pptFuel)
+                        fuelCount++;
+                    cargo++;
+                }
+                
+                cargo = -c_maxCargo;
+                while (cargo < 0) {
+                    while (pship->GetMountedPart(NA, cargo) != NULL)
+                        cargo++;
+                    if (pptFuel && fuelCount < 3)
+                        pship->CreateAndAddPart(pptFuel, cargo, 0x7fff);
+                    else if (pptAmmo)
+                        pship->CreateAndAddPart(pptAmmo, cargo, 0x7fff);
+                    cargo++;
+                }
+            }
+
+            const PartListIGC*  pparts = pship->GetParts();
+            for (PartLinkIGC* l = pparts->first(); (l != NULL); l = l->next())
+            {
+                IpartIGC*       ppart = l->data();
+
+                ppart->SetAmount(SHRT_MAX); //Things that don't care about amounts wont care if I try and set it.
+            }
+        }
     }
 
     Money    ReplaceLoadout(IshipIGC*       pship,
@@ -1943,16 +2095,29 @@ public:
         assert (pship);
         assert (pship->GetChildShips()->n() == 0);
 
+        if (pht)
         {
             const PartListIGC*  pparts = pship->GetParts();
             PartLinkIGC*    ppl;
             while (ppl = pparts->first())       //Intentional =
                 ppl->data()->Terminate();
-        }
-        assert (pship->GetParts()->n() == 0);
 
-        assert (pht);
-        pship->SetBaseHullType(pht);
+            assert(pship->GetParts()->n() == 0);
+
+            assert(pht);
+            pship->SetBaseHullType(pht);
+        }
+        else {
+            // clear just the cargo -- for ship w/o loadout docking at a carrier
+            pht = pship->GetBaseHullType();
+
+            Mount   cargo = -c_maxCargo;
+            while (cargo < 0) {
+                IpartIGC* pp = pship->GetMountedPart(NA, cargo++);
+                if (pp)
+                    pp->Terminate();
+            }
+        }
 
         assert (pstation);
 
@@ -2034,9 +2199,8 @@ public:
             nan = (IpartTypeIGC*)(pstation->GetSuccessor(nan));
 
         // Check if it's a combat ship or a scout-like one
-        bool combatShip = (pht->GetMaxWeapons() > 1 &&                      // more than one weapon mount
-            pship->GetMountedPart(ET_Weapon, 1) &&                          // second mount not empty
-            pship->GetMountedPart(ET_Weapon, 1)->GetPartType() != nan);     // non-nan weapon - this means TF scouts are considered combat ships
+        bool combatShip = !(pht->GetDefenseType() == 1 && // light armor
+            pht->GetScannerRange() >= 2200.0f);
 
         //Start actually filling the cargo
         Mount   cargo = -c_maxCargo;
@@ -2047,8 +2211,8 @@ public:
         if (pship->GetHullType()->CanMount(nan, 0) && pstation->CanBuy(nan)) // GT scouts can mount a nan only in the second slot
             if (nan && cargo < 0)
                 BuyPartOnBudget(pship, nan, cargo++, pbudget);
-        // Buy ammo for combat ships
-        if (combatShip && pptAmmo && cargo < 0) {
+        // Buy ammo
+        if (pptAmmo && cargo < 0) {
             BuyPartOnBudget(pship, pptAmmo, cargo++, pbudget);
             if (pht->GetMaxWeapons() > 2 && cargo < 0)
                 BuyPartOnBudget(pship, pptAmmo, cargo++, pbudget);
@@ -2056,35 +2220,37 @@ public:
         // Buy 2 fuel
         if (pptFuel && cargo < 0)
             BuyPartOnBudget(pship, pptFuel, cargo++, pbudget);
-        if (pptFuel && cargo < 0)
+        if (pptFuel && cargo < 0 && combatShip)
             BuyPartOnBudget(pship, pptFuel, cargo++, pbudget);
-        // Buy one dispenser item
-        if (pptDispenser && cargo < 0)
+        // Buy one dispenser item for combat ships
+        if (combatShip && pptDispenser && cargo < 0)
             BuyPartOnBudget(pship, pptDispenser, cargo++, pbudget);
         // Buy items for non-combat ships
         if (!combatShip) {
-            // Buy an additional dispenser item
-            if (pptDispenser && cargo < 0)
-                BuyPartOnBudget(pship, pptDispenser, cargo++, pbudget);
-            // One ammo for missile-less scouts
+            // One extra ammo for missile-less scouts
             if (!pptMissile && pptAmmo && cargo < 0)
                 BuyPartOnBudget(pship, pptAmmo, cargo++, pbudget);
-            // Buy two prox
+            // Buy prox
             IpartTypeIGC* prox = GetCore()->GetPartType(59);
             if (prox && pstation->CanBuy(prox) && pship->GetHullType()->CanMount(prox, 0)) {
                 prox = (IpartTypeIGC*)(pstation->GetSuccessor(prox)); //won't return NULL
                 if (cargo < 0)
                     BuyPartOnBudget(pship, prox, cargo++, pbudget);
-                if (cargo < 0)
+                if (cargo < -2) //GT scout
                     BuyPartOnBudget(pship, prox, cargo++, pbudget);
             }
+            else {
+                //Buy Technoflux Plas Gen
+                IpartTypeIGC* plasGen = GetCore()->GetPartType(65);
+                if (plasGen && pstation->CanBuy(plasGen) && pship->GetHullType()->CanMount(plasGen, 0)) {
+                    plasGen = (IpartTypeIGC*)(pstation->GetSuccessor(plasGen)); //won't return NULL
+                    if (cargo < 0)
+                        BuyPartOnBudget(pship, plasGen, cargo++, pbudget);
+                    if (cargo < 0)
+                        BuyPartOnBudget(pship, plasGen, cargo++, pbudget);
+                }
+            }
         }
-        // Buy one missile
-        if (pptMissile && cargo < 0)
-            BuyPartOnBudget(pship, pptMissile, cargo++, pbudget);
-        // Buy one ammo for non-combat ships (falsely classified destroyers)
-        if (!combatShip && pptAmmo && cargo < 0)
-            BuyPartOnBudget(pship, pptAmmo, cargo++, pbudget);
 
         //Fill up any remaining slots
         bool    bBuyFuel = true;

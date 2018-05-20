@@ -7,7 +7,6 @@ SET(SoundEngine_SRC
     ds3dutil.cpp
     ds3dvirtualbuffer.cpp
     dummysound.cpp
-    redbooksound.cpp
     soundbase.cpp
     soundtemplates.cpp
     soundutil.cpp

@@ -166,13 +166,7 @@ public:
     bool OnButtonTrain()
     {
         // here we mark the fact that a training mission has been launched
-        HKEY    hKey;
-        DWORD   dwHasRunTraining = 1;
-        if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_WRITE, &hKey))
-        {
-            RegSetValueEx (hKey, "HasTrained", NULL, REG_DWORD, (const BYTE*) &dwHasRunTraining, sizeof (dwHasRunTraining));
-            RegCloseKey (hKey);
-        }
+        GetConfiguration()->SetBoolValue("Ui.ShowStartupTrainingSuggestion", false);
 
         // check to see which mission this is, and advance to the next mission
         int iMission = static_cast<int> (g_pnumberMissionNumber->GetValue ());

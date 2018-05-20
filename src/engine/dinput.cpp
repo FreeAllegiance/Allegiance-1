@@ -312,41 +312,6 @@ public:
         m_threshold1   = pvalue[0];
         m_threshold2   = pvalue[1];
         m_acceleration = pvalue[2];
-        
-		//Imago #215 8/10
-        HKEY hKey;
-        DWORD dwType;
-		char  szValue[20] = {'\0'};
-        DWORD cbValue = sizeof(szValue);
-		DWORD dwValue = -1;
-		DWORD cwValue = sizeof(dwValue);
-
-		if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-        {
-            ::RegQueryValueEx(hKey, "MouseSensitivity", NULL, &dwType, (unsigned char*)&szValue, &cbValue);
-
-            m_sensitivity = (float)(strlen(szValue) >= 1 && strcmp(szValue,"0") == -1) ?  atof(szValue) : 1.0f;
-
-            ::RegQueryValueEx(hKey, "MouseAcceleration", NULL, &dwType, (unsigned char*)&dwValue, &cwValue);
-            ::RegCloseKey(hKey);
-
-            m_acceleration = (dwValue != -1) ?  dwValue : m_acceleration;
-        }
-		//
-		
-        ///* !!! this only works on NT50
-		/*
-        int speed;
-        ZVerify(SystemParametersInfo(SPI_GETMOUSESPEED, 0, &speed, 0));
-
-        if (speed <= 2) {
-           m_sensitivity = float(speed) / 32.0f;
-        } else if(speed >= 3 && speed <= 10 ) {
-           m_sensitivity = float(speed-2) / 8.0f; 
-        } else {
-           m_sensitivity = float(speed-6) / 4.0f;
-        }
-        */
     }
 
     void SetupDevice() 
@@ -998,29 +963,12 @@ public:
 
                 DDCall(m_pdid->GetProperty(DIPROP_BUFFERSIZE, &dipdw.diph));
 
-				//Imago 7/10
-				HKEY hKey;
-				DWORD dwType;
-				DWORD dwAC = 0;
-				DWORD dwGain = 10000;
-				DWORD cbValue;
-				if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-				{
-					 cbValue = sizeof(dwAC);
-					::RegQueryValueEx(hKey, "FFAutoCenter", NULL, &dwType, (unsigned char*)&dwAC, &cbValue);
-
-					 cbValue = sizeof(dwAC);
-					::RegQueryValueEx(hKey, "FFGain", NULL, &dwType, (unsigned char*)&dwGain, &cbValue);
-
-					LoadRegString(hKey, "ArtPAth", m_zArt);
-					RegCloseKey(hKey);
-				}
 				DIPROPDWORD dipdw5;
 				dipdw5.diph.dwSize       = sizeof(DIPROPDWORD);
 				dipdw5.diph.dwHeaderSize = sizeof(DIPROPHEADER);
 				dipdw5.diph.dwObj        = 0;
 				dipdw5.diph.dwHow        = DIPH_DEVICE;
-				dipdw5.dwData            = dwAC;
+				dipdw5.dwData            = 0;
 				m_pdid->SetProperty( DIPROP_AUTOCENTER, &dipdw5.diph );
 
 				//lazy
@@ -1029,7 +977,7 @@ public:
 				dipdw6.diph.dwHeaderSize = sizeof(DIPROPHEADER);
 				dipdw6.diph.dwObj        = 0;
 				dipdw6.diph.dwHow        = DIPH_DEVICE;
-				dipdw6.dwData            = dwGain;
+				dipdw6.dwData            = 10000;
 				m_pdid->SetProperty( DIPROP_FFGAIN, &dipdw6.diph );
 				// end Imago
             }

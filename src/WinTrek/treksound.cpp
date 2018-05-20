@@ -36,13 +36,17 @@ public:
 		// mdvalley: Look for files in this order: Soundpack WAV, Soundpack OGG, Artwork WAV, Artwork OGG
         // pkk: Removed SoundPack support, Allegiance no longer looking for files in a not existing folder
 		// Load wave from artwork directory
-        ZString strFilename = m_pmodeler->GetArtPath() + "\\..\\" + pstring->GetValue() + ".wav";
-		
-		if (!FileExists(strFilename))
-		{
-		    // Load ogg file, if wave file doesn't exisits
-			strFilename = m_pmodeler->GetArtPath() + "\\" + pstring->GetValue() + ".ogg";
-		}
+
+        auto loader = m_pmodeler->GetFileLoader();
+        ZString strFilename = "";
+
+        if (loader->HasFile(pstring->GetValue() + ".wav")) {
+            strFilename = loader->GetFilePath(pstring->GetValue() + ".wav");
+        }
+        else if (loader->HasFile(pstring->GetValue() + ".ogg")) {
+            // Load ogg file, if wave file doesn't exists
+            strFilename = loader->GetFilePath(pstring->GetValue() + ".ogg");
+        }
 		
         if (FAILED(CreateWaveFileSoundTemplate(pTemplate, strFilename)))
         {
@@ -424,31 +428,6 @@ public:
     }
 };
 
-
-class RedbookSoundTemplateFactory : public IFunction
-{
-    TRef<Modeler> m_pmodeler;
-
-public:
-    RedbookSoundTemplateFactory(Modeler* pmodeler) :
-        m_pmodeler(pmodeler)
-    {
-    }
-
-public:
-
-    TRef<IObject> Apply(ObjectStack& stack)
-    {
-        TRef<IDiskPlayer>    pdiskPlayer; CastTo(pdiskPlayer, (IObject*)stack.Pop());
-        TRef<Number>         pnumTrack;   CastTo(pnumTrack, (IObject*)stack.Pop());
-        TRef<ISoundTemplate> pTemplate;
-
-        ZSucceeded(CreateRedbookSoundTemplate(pTemplate, pdiskPlayer, (int)pnumTrack->GetValue()));
-
-        return pTemplate;
-    }
-};
-
 class SerializedSoundTemplateFactory : public IFunction
 {
     TRef<Modeler> m_pmodeler;
@@ -500,7 +479,6 @@ TRef<INameSpace> CreateSoundNameSpace(
     pns->AddMember("RepeatingFireSound", new RepeatingFireSoundTemplateFactory(pmodeler));
     pns->AddMember("RandomSound",        new RandomSoundTemplateFactory(pmodeler));
     pns->AddMember("IntermittentSound",  new IntermittentSoundTemplateFactory(pmodeler));
-    pns->AddMember("RedbookSound",       new RedbookSoundTemplateFactory(pmodeler));
     pns->AddMember("SerializedSound",    new SerializedSoundTemplateFactory(pmodeler));
 
     return pns;

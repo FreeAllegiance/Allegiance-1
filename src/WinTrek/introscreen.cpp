@@ -2,9 +2,11 @@
 #include "regkey.h"
 #include "training.h"
 #include "valuetransform.h"
-#include <boost/any.hpp>
 
 #include "CreateGameDialog.h"
+
+#include "ui.h"
+#include "downloader.h"
 
 extern bool CheckNetworkDevices(ZString& strDriverURL);
 
@@ -24,7 +26,7 @@ class YesErrorState : public ErrorState {
 public:
     YesErrorState(std::string message) :
         ErrorState("Yes", {
-            { "Message", (TRef<StringValue>)new StringValue(message.c_str()) }
+            { "Message", TypeExposer<TRef<StringValue>>::Create(new ModifiableString(message.c_str())) }
         })
     {}
 };
@@ -37,8 +39,8 @@ public:
     LoggedOutState(UiStateValue* stateError, IEventSink* sinkLogin) :
         m_stateError(stateError),
         UiState("Logged out", {
-            { "Has error", (TRef<UiStateValue>)stateError },
-            { "Login", (TRef<IEventSink>)sinkLogin }
+            { "Has error", TypeExposer<TRef<UiStateValue>>::Create(stateError) },
+            { "Login", TypeExposer<TRef<IEventSink>>::Create(sinkLogin) }
         })
     {
     }
@@ -52,13 +54,17 @@ class LoggingInState : public UiState {
 public:
     LoggingInState() :
         UiState("Logging in", {
-            { "Step number", (TRef<Number>)new ModifiableNumber(0.0f) },
-            { "Step message", (TRef<StringValue>)new ModifiableString("") }
+            { "Step number", TypeExposer<TRef<Number>>::Create(new ModifiableNumber(0.0f)) },
+            { "Step message", TypeExposer<TRef<StringValue>>::Create(new ModifiableString("")) },
+            //{ "Step number", (TRef<Number>)new ModifiableNumber(0.0f) },
+            //{ "Step message", (TRef<StringValue>)new ModifiableString("") }
         })
     {
     }
 
     void SetStep(int step, std::string message) {
+        debugf(("Introscreen login step: " + message).c_str());
+
         ((ModifiableNumber*)(Number*)Get<TRef<Number>>("Step number"))->SetValue((float)step);
         ((ModifiableString*)(StringValue*)Get<TRef<StringValue>>("Step message"))->SetValue(message.c_str());
     }
@@ -71,17 +77,18 @@ private:
 public:
     LoggedInState(IEventSink* sinkLogout, IEventSink* sinkCreateGame) :
         UiState("Logged in", {
-            { "Mission list", (TRef<ContainerList>)new ContainerList({}) },
-            { "Server list", (TRef<ContainerList>)new ContainerList({}) },
-            { "Core list", (TRef<ContainerList>)new ContainerList({}) },
-            { "Logout", (TRef<IEventSink>)sinkLogout },
-            { "Create mission dialog", (TRef<IEventSink>)sinkCreateGame },
-            { "Create mission", (TRef<TEvent<ZString, ZString, ZString>::Sink>)new CallbackValueSink<ZString, ZString, ZString>([this](ZString serverName, ZString coreName, ZString missionName) {
-                auto server = this->FindServer(serverName);
-                auto core = this->FindCore(coreName);
+            { "Callsign", TypeExposer<std::string>::Create(std::string(trekClient.GetNameLogonZoneServer())) },
+            { "Mission list", TypeExposer<TRef<ContainerList>>::Create(new ContainerList({})) },
+            { "Server list", TypeExposer<TRef<ContainerList>>::Create(new ContainerList({})) },
+            { "Core list", TypeExposer<TRef<ContainerList>>::Create(new ContainerList({})) },
+            { "Logout", TypeExposer<TRef<IEventSink>>::Create(sinkLogout) },
+            { "Create mission dialog", TypeExposer<TRef<IEventSink>>::Create(sinkCreateGame) },
+            { "Create mission", TypeExposer<TRef<TEvent<ZString, ZString, ZString>::Sink>>::Create(new CallbackValueSink<ZString, ZString, ZString>([this](ZString serverName, ZString coreName, ZString missionName) {
+                auto server = this->GetServer(serverName);
+                auto core = this->GetCore(coreName);
 
                 ServerCoreInfo serverinfo = server->Get<ServerCoreInfo>("ServerCoreInfo");
-                StaticCoreInfo coreinfo = server->Get<StaticCoreInfo>("StaticCoreInfo");
+                StaticCoreInfo coreinfo = core->Get<StaticCoreInfo>("StaticCoreInfo");
 
                 trekClient.CreateMissionReq(
                     serverinfo.szName,
@@ -90,6 +97,22 @@ public:
                     missionName
                 );
                 return true;
+            })) },
+            { "Server has core", TypeExposer<std::function<TRef<Boolean>(const TRef<StringValue>&, const TRef<StringValue>&)>>::Create([this](const TRef<StringValue>& server_name, const TRef<StringValue>& core_name) {
+
+                return new TransformedValue2<bool, ZString, ZString>([this](ZString server_name, ZString core_name) {
+                    auto server = this->FindServer(server_name);
+                    auto core = this->FindCore(core_name);
+
+                    if (!server || !core) {
+                        return false;
+                    }
+
+                    uint32 server_bitmask = (uint32)server->Get<ServerCoreInfo>("ServerCoreInfo").dwCoreMask;
+                    uint32 core_bitmask = core->Get<uint32>("Bitmask");
+
+                    return (bool)(server_bitmask & core_bitmask);
+                }, server_name, core_name);
             }) }
         })
     {}
@@ -109,7 +132,15 @@ public:
             ++current_iterator;
         }
 
-        throw std::runtime_error("Core not found");
+        return nullptr;
+    }
+
+    TRef<UiObjectContainer> GetCore(ZString coreName) {
+        auto core = FindCore(coreName);
+        if (!core) {
+            throw std::runtime_error("Core not found");
+        }
+        return core;
     }
 
     TRef<UiObjectContainer> FindServer(ZString name) {
@@ -127,7 +158,15 @@ public:
             ++current_iterator;
         }
 
-        throw std::runtime_error("Server not found");
+        return nullptr;
+    }
+
+    TRef<UiObjectContainer> GetServer(ZString name) {
+        auto server = FindServer(name);
+        if (!server) {
+            throw std::runtime_error("Server not found");
+        }
+        return server;
     }
 
     void SetMissionList(List* plist) {
@@ -179,26 +218,26 @@ public:
             }
 
             current_modifiablelist->Insert(i, new UiObjectContainer({
-                { "Join", (TRef<IEventSink>)new CallbackSink([game]() {
+                { "Join", TypeExposer<TRef<IEventSink>>::Create(new CallbackSink([game]() {
                     trekClient.JoinMission(game, "");
                     return false;
-                }) },
-                { "Name", (TRef<StringValue>)new StringValue(game->Name()) },
-                { "Player count", (TRef<Number>)new Number((float)game->NumPlayers()) },
-                { "Player noat count", (TRef<Number>)new Number((float)game->NumNoatPlayers()) },
-                { "Max player count", (TRef<Number>)new Number((float)game->MaxPlayers()) },
-                { "Is in progress", (TRef<Boolean>)new Boolean(game->InProgress()) },
-                { "Time in progress", (TRef<Number>)pTimeMisisonInProgress },
-                { "Server name", (TRef<StringValue>)new StringValue(game->GetMissionDef().szServerName) },
-                { "Core name", (TRef<StringValue>)new StringValue(trekClient.CfgGetCoreName(game->GetIGCStaticFile())) },
+                })) },
+                { "Name", StringExposer::CreateStatic(game->Name()) },
+                { "Player count", NumberExposer::CreateStatic((float)game->NumPlayers()) },
+                { "Player noat count", NumberExposer::CreateStatic((float)game->NumNoatPlayers()) },
+                { "Max player count", NumberExposer::CreateStatic((float)game->MaxPlayers()) },
+                { "Is in progress", BooleanExposer::CreateStatic(game->InProgress()) },
+                { "Time in progress", NumberExposer::Create(pTimeMisisonInProgress) },
+                { "Server name", StringExposer::CreateStatic(game->GetMissionDef().szServerName) },
+                { "Core name", StringExposer::CreateStatic(trekClient.CfgGetCoreName(game->GetIGCStaticFile())) },
 
-                { "Has goal conquest", (TRef<Boolean>)new Boolean(game->GoalConquest()) },
-                { "Has goal territory", (TRef<Boolean>)new Boolean(game->GoalTerritory()) },
-                { "Has goal prosperity", (TRef<Boolean>)new Boolean(game->GoalProsperity()) },
-                { "Has goal artifacts", (TRef<Boolean>)new Boolean(game->GoalArtifacts()) },
-                { "Has goal flags", (TRef<Boolean>)new Boolean(game->GoalFlags()) },
-                { "Has goal deathmatch", (TRef<Boolean>)new Boolean(game->GoalDeathMatch()) },
-                { "Has goal countdown", (TRef<Boolean>)new Boolean(game->GoalCountdown()) },
+                { "Has goal conquest", BooleanExposer::CreateStatic(game->GoalConquest()) },
+                { "Has goal territory", BooleanExposer::CreateStatic(game->GoalTerritory()) },
+                { "Has goal prosperity", BooleanExposer::CreateStatic(game->GoalProsperity()) },
+                { "Has goal artifacts", BooleanExposer::CreateStatic(game->GoalArtifacts()) },
+                { "Has goal flags", BooleanExposer::CreateStatic(game->GoalFlags()) },
+                { "Has goal deathmatch", BooleanExposer::CreateStatic(game->GoalDeathMatch()) },
+                { "Has goal countdown", BooleanExposer::CreateStatic(game->GoalCountdown()) },
             }));
             pitem = plist->GetNext(pitem);
             ++i;
@@ -224,9 +263,9 @@ public:
             StaticCoreInfo pitem = plist[i];
 
             current_modifiablelist->Insert(i, new UiObjectContainer({
-                { "Name", (TRef<StringValue>)new StringValue(trekClient.CfgGetCoreName(pitem.cbIGCFile)) },
-                { "Bitmask", (uint32)(1 << i) },
-                { "StaticCoreInfo", (StaticCoreInfo)pitem }
+                { "Name", StringExposer::CreateStatic(trekClient.CfgGetCoreName(pitem.cbIGCFile)) },
+                { "Bitmask", TypeExposer<uint32>::Create(1 << i) },
+                { "StaticCoreInfo", TypeExposer<StaticCoreInfo>::Create(pitem) }
             }));
         }
     }
@@ -252,27 +291,8 @@ public:
             uint32 bitmaskServer = (uint32)pitem.dwCoreMask;
 
             current_modifiablelist->Insert(i, new UiObjectContainer({
-                { "Name", (TRef<StringValue>)new StringValue(pitem.szName) },
-                { "ServerCoreInfo", (ServerCoreInfo)pitem },
-                { "Has core", [bitmaskServer, this](std::string core_name) {
-                    auto listCores = Get<TRef<UiList<TRef<UiObjectContainer>>>>("Core list")->GetList();
-
-                    auto current_iterator = listCores.begin();
-
-                    while (current_iterator != listCores.end()) {
-                        std::string current_core_name = (*current_iterator)->Get<TRef<StringValue>>("Name")->GetValue();
-
-                        if (core_name == current_core_name) {
-                            uint32 core_bitmask = (*current_iterator)->Get<uint32>("Bitmask");
-
-                            return (bool)(bitmaskServer & core_bitmask);
-                        }
-
-                        ++current_iterator;
-                    }
-
-                    throw std::runtime_error("Core was not found in core list");
-                } }
+                { "Name", StringExposer::CreateStatic(pitem.szName) },
+                { "ServerCoreInfo", TypeExposer<ServerCoreInfo>::Create(pitem) }
             }));
         }
     }
@@ -286,9 +306,16 @@ private:
 
     TRef<CreateGameDialogPopup> m_pcreateDialog;
 
+    std::shared_ptr<DownloadHandle> m_pConfigDownload;
+
+    static const int STEP_CONFIG_DOWNLOAD = 1;
+    static const int STEP_CONFIG_READ = 2;
+    static const int STEP_LOBBY_LOGIN = 3;
+    static const int STEP_LOBBY_MISSIONLIST = 4;
+
 public:
     LoginHelper() :
-        m_state(new UiStateModifiableValue(LoggedOutState(new UiStateValue(NoErrorState()), GetLoginSink())))
+        m_state(new UiStateModifiableValue(std::make_shared<LoggedOutState>(new UiStateValue(std::make_shared<NoErrorState>()), GetLoginSink())))
     {
 
     }
@@ -322,9 +349,10 @@ public:
     }
 
     void SetLoginError(std::string message) {
+        debugf(("Introscreen login error: " + message).c_str());
         trekClient.GetClientEventSource()->RemoveSink(m_pClientEventSink);
         m_pClientEventSink = nullptr;
-        m_state->SetValue(LoggedOutState(new UiStateValue(YesErrorState(message)), this->GetLoginSink()));
+        m_state->SetValue(std::make_shared<LoggedOutState>(new UiStateValue(std::make_shared<YesErrorState>(message)), this->GetLoginSink()));
     }
 
     void Async(std::function<void()> callback) {
@@ -343,7 +371,7 @@ public:
     }
 
     void Logout() {
-        if (m_state->GetValue().GetName() != "Logged in") {
+        if (m_state->GetValue()->GetName() != "Logged in") {
             ZAssert(false);
             return;
         }
@@ -360,11 +388,11 @@ public:
             m_pServerlistChangedSink = nullptr;
         }
 
-        m_state->SetValue(LoggedOutState(new UiStateValue(NoErrorState()), this->GetLoginSink()));
+        m_state->SetValue(std::make_shared<LoggedOutState>(new UiStateValue(std::make_shared<NoErrorState>()), this->GetLoginSink()));
     }
 
     void Login() {
-        if (m_state->GetValue().GetName() != "Logged out") {
+        if (m_state->GetValue()->GetName() != "Logged out") {
             ZAssert(false);
             return;
         }
@@ -372,8 +400,8 @@ public:
         m_pClientEventSink = IClientEventSink::CreateDelegate(this);
         trekClient.GetClientEventSource()->AddSink(m_pClientEventSink);
 
-        m_state->SetValue(LoggingInState());
-        m_state->GetValue().as<LoggingInState>()->SetStep(1, "Connecting to the lobby");
+        m_state->SetValue(std::make_shared<LoggingInState>());
+        m_state->GetValue()->as<LoggingInState>()->SetStep(STEP_CONFIG_DOWNLOAD, "Downloading configuration file");
 
         ZString name = trekClient.GetSavedCharacterName();
 
@@ -392,9 +420,33 @@ public:
         CallsignTagInfo callSignTagInfo;
         ZString characterName = callSignTagInfo.Render(name);
 
-        Async([this, characterName]() {
-            PathString pathConfig(PathString::GetCurrentDirectory() + "allegiance.txt");
-            trekClient.GetCfgInfo().Load(pathConfig);
+        std::string configPath = GetConfiguration()->GetStringValue(
+            "Online.ConfigFile", 
+            GetConfiguration()->GetStringValue("CfgFile", "http://allegiance.zaphop.com/allegiance.txt")
+        );
+
+        if (ZString(configPath.c_str()).Find("http://") == -1)
+        {
+            StartConfigRead(characterName, configPath.c_str(), "Using local lobby configuration. Reading lobby configuration");
+        }
+        else {
+            m_pConfigDownload = Downloader().Download(configPath);
+            m_pConfigDownload->AddCallback([this, characterName]() {
+                try {
+                    PathString pathLocalConfig(m_pConfigDownload->GetResultFilePath().c_str());
+                    StartConfigRead(characterName, pathLocalConfig, "Downloaded lobby configuration. Reading lobby configuration");
+                }
+                catch (const DownloadException& e) {
+                    SetLoginError(std::string("Configuration: ") + e.what());
+                }
+            });
+        }
+    }
+
+    void StartConfigRead(ZString characterName, PathString pathLocalConfig, std::string strStepMessage) {
+        m_state->GetValue()->as<LoggingInState>()->SetStep(STEP_CONFIG_READ, strStepMessage);
+        Async([this, characterName, pathLocalConfig]() {
+            trekClient.GetCfgInfo().Load(pathLocalConfig);
 
             BaseClient::ConnectInfo ci;
             DWORD cbZoneTicket = 0;
@@ -405,22 +457,23 @@ public:
 
             ZeroMemory(&ci.ftLastArtUpdate, sizeof(ci.ftLastArtUpdate));
 
-            ((BaseClient*)&trekClient)->ConnectToLobby(&ci);
+            m_state->GetValue()->as<LoggingInState>()->SetStep(STEP_LOBBY_LOGIN, "Connecting to the lobby");
+            HRESULT success = ((BaseClient*)&trekClient)->ConnectToLobby(&ci);
             if (!trekClient.m_fmLobby.IsConnected()) {
                 SetLoginError("Failed to connect to the lobby.");
                 return;
             }
-            m_state->GetValue().as<LoggingInState>()->SetStep(2, "Connected to the lobby. Waiting for the server list.");
+            m_state->GetValue()->as<LoggingInState>()->SetStep(STEP_LOBBY_MISSIONLIST, "Connected to the lobby. Waiting for the server list.");
         });
     }
 
     void OnLostConnection(const char * szReason) override {};
     void OnLogonLobby() override {
-        if (m_state->GetValue().GetName() != "Logging in") {
+        if (m_state->GetValue()->GetName() != "Logging in") {
             ZAssert(false);
             return;
         }
-        m_state->GetValue().as<LoggingInState>()->SetStep(3, "Logged in to the lobby. Waiting for server/core list");
+        m_state->GetValue()->as<LoggingInState>()->SetStep(3, "Logged in to the lobby. Waiting for server/core list");
 
         Async([this]() {
             trekClient.ServerListReq();
@@ -465,21 +518,21 @@ public:
             ZAssert(false);
         }
         m_pServerlistChangedSink = new CallbackSink([this]() {
-            if (m_state->GetValue().GetName() != "Logged in") {
+            if (m_state->GetValue()->GetName() != "Logged in") {
                 ZAssert(false);
                 return false;
             }
-            m_state->GetValue().as<LoggedInState>()->SetMissionList(trekClient.GetMissionList());
+            m_state->GetValue()->as<LoggedInState>()->SetMissionList(trekClient.GetMissionList());
             return true;
         });
 
         List* plist = trekClient.GetMissionList();
         plist->GetChangedEvent()->AddSink(m_pServerlistChangedSink);
 
-        m_state->SetValue(LoggedInState(this->GetLogoutSink(), this->GetShowNewGamePopupSink()));
-        m_state->GetValue().as<LoggedInState>()->SetMissionList(plist);
-        m_state->GetValue().as<LoggedInState>()->SetCoreList(cCores, pcores);
-        m_state->GetValue().as<LoggedInState>()->SetServerList(cServers, pservers);
+        m_state->SetValue(std::make_shared<LoggedInState>(this->GetLogoutSink(), this->GetShowNewGamePopupSink()));
+        m_state->GetValue()->as<LoggedInState>()->SetMissionList(plist);
+        m_state->GetValue()->as<LoggedInState>()->SetCoreList(cCores, pcores);
+        m_state->GetValue()->as<LoggedInState>()->SetServerList(cServers, pservers);
     };
 
     TRef<IEventSink> GetShowNewGamePopupSink() {
@@ -997,13 +1050,7 @@ private:
             
             if (m_pDontAskMeAgain->GetChecked()) {
                 // here we mark things as if a training mission has been launched
-                HKEY    hKey;
-                DWORD   dwHasRunTraining = 1;
-                if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_WRITE, &hKey))
-                {
-                    RegSetValueEx (hKey, "HasTrained", NULL, REG_DWORD, (const BYTE*) &dwHasRunTraining, sizeof (dwHasRunTraining));
-                    RegCloseKey (hKey);
-                }
+                GetConfiguration()->SetBoolValue("Ui.ShowStartupTrainingSuggestion", false);
             }
             return false;
         }
@@ -1109,10 +1156,10 @@ public:
                 return true;
             };
 
-            std::map<std::string, boost::any> map;
+            std::map<std::string, std::shared_ptr<Exposer>> map;
 
-            map["time"] = (TRef<Number>)GetWindow()->GetTime();
-            map["callsign"] = (TRef<StringValue>)new StringValue(trekClient.GetSavedCharacterName());
+            map["time"] = NumberExposer::Create(GetWindow()->GetTime());
+            map["callsign"] = StringExposer::CreateStatic(trekClient.GetSavedCharacterName());
 
             /*TRef<UiStateModifiableValue> login_state = new UiStateModifiableValue(UiState("Logged out", UiObjectContainer({
                 {"event.login", (TRef<IEventSink>)new CallbackSink([]() {
@@ -1120,7 +1167,7 @@ public:
                 })}
             })));*/
             m_pLoginHelper = new LoginHelper();
-            map["Login state"] = m_pLoginHelper->GetState();
+            map["Login state"] = TypeExposer<TRef<UiStateValue>>::Create(m_pLoginHelper->GetState());
 
             m_pimage = m_uiEngine.LoadImageFromLua(UiScreenConfiguration::Create("menuintroscreen/introscreen.lua", listeners, map));
         }
@@ -1243,19 +1290,9 @@ public:
         static  bool    bHaveVisited = false;
         if (Training::IsInstalled () && !bHaveVisited)
         {
-            // check to see if training has been run before
-            HKEY    hKey;
-            DWORD   dwHasRunTraining = 0;
-            DWORD   dwDataSize = sizeof (dwHasRunTraining);
-            if (ERROR_SUCCESS == RegOpenKeyEx (HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-            {
-                RegQueryValueEx (hKey, "HasTrained", NULL, NULL, (LPBYTE) &dwHasRunTraining, &dwDataSize);
-                RegCloseKey(hKey);
-            }
-
             // first time through, show a dialog explaining that users
             // really should do the training first
-            if (!dwHasRunTraining)
+            if (GetConfiguration()->GetBoolValue("Ui.ShowStartupTrainingSuggestion", false == GetConfiguration()->GetBoolValue("HasTrained", false)))
             {
                 TRef<IMessageBox>   pMsgBox = 
                     CreateMessageBox(
@@ -1451,8 +1488,9 @@ public:
 
 		bool OnEvent(IIntegerEventSource* pevent, int value)
 		{
-			if (value == IDOK)
-				m_pwindow->ShowWebPage("http://www.freeallegiance.org/FAW/index.php/Quick_Crash_Course");
+            if (value == IDOK)
+                m_pwindow->screen(ScreenIDTrainScreen);
+				//m_pwindow->ShowWebPage("http://www.freeallegiance.org/FAW/index.php/Quick_Crash_Course"); - not anymore - LANS
 			
 			m_pwindow->screen(ScreenIDTrainScreen);
 
@@ -1488,7 +1526,7 @@ public:
             trekClient.SetIsLobbied(false);
             trekClient.SetIsZoneClub(false);
             
-			m_pmessageBox = CreateMessageBox("Welcome to Allegiance training! We recommend that you start with our Crash Course wiki page first.\n\nMinimize Allegiance and go to the Wiki page now?", NULL, true, true);
+			m_pmessageBox = CreateMessageBox("Welcome to Allegiance training! In addition to these training missions, you can push F1 at any time to see a quick - reference keymap. We also have a wiki and discord, which are linked from the F1 screen", NULL, true, false);
 			m_pmessageBox->GetEventSource()->AddSink(new OpenWikiSink(GetWindow()));
 			GetWindow()->GetPopupContainer()->OpenPopup(m_pmessageBox, false);
 		
@@ -1515,7 +1553,6 @@ public:
             m_pMsgBox->GetPane ()->InsertAtBottom (pOKButton);
             m_pMsgBox->GetPane ()->InsertAtBottom (pAbortButton);
             AddEventTarget(&IntroScreen::OnButtonBailTraining, pAbortButton->GetEventSource());
-            AddEventTarget(&IntroScreen::OnButtonDownloadTraining, pOKButton->GetEventSource());
             GetWindow()->GetPopupContainer()->OpenPopup (m_pMsgBox, false);
         }
         return true;
@@ -1524,59 +1561,6 @@ public:
     bool    OnButtonBailTraining ()
     {
         GetWindow ()->GetPopupContainer ()->ClosePopup (m_pMsgBox);
-        return true;
-    }
-
-    bool    OnButtonDownloadTraining ()
-    {
-        // close the dialog window
-        GetWindow ()->GetPopupContainer ()->ClosePopup (m_pMsgBox);
-
-        // start to find the config file
-        char    config_file_name[MAX_PATH];
-
-        // get the app build number
-        ZVersionInfo vi;
-        ZString strBuild(vi.GetFileBuildNumber());
-
-        // start with a default name
-        lstrcpy(config_file_name, "Allegiance");
-        lstrcat(config_file_name, PCC(strBuild));
-        lstrcat(config_file_name, ".cfg");
-
-        // then look to see if there is one in the registry we should use instead
-        HKEY hKey;
-        if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-        {
-            DWORD   cbValue = MAX_PATH;
-            char    reg_config_file_name[MAX_PATH] = {0};
-            ::RegQueryValueEx (hKey, "CfgFile", NULL, NULL, (LPBYTE)&reg_config_file_name, &cbValue);
-            // if it didn't succeed, we'll just use the default above
-            if (lstrlen (reg_config_file_name) > 0)
-              lstrcpy (config_file_name, reg_config_file_name);
-        }
-
-        // then construct the full path name of the config file
-        PathString  pathEXE(PathString::GetCurrentDirectory());
-        PathString  pathConfig(pathEXE + PathString(PathString(config_file_name).GetFilename()));
-
-        // load the config data
-        CfgInfo     cfgInfo;
-        cfgInfo.Load (pathConfig);
-        if (cfgInfo.strTrainingURL)
-        {
-            // if everything is OK, launch the web page
-            GetWindow ()->ShowWebPage (cfgInfo.strTrainingURL);
-
-            // ... and close our application
-            GetWindow()->PostMessage(WM_CLOSE);
-        }
-        else
-        {
-            // if not, we alert the user...
-            TRef<IMessageBox>   pMsgBox = CreateMessageBox ("CAN'T DOWNLOAD TRAINING FILES.\n\nCan't find the download address.", NULL, true);
-            GetWindow()->GetPopupContainer()->OpenPopup (pMsgBox, false);
-        }
         return true;
     }
 

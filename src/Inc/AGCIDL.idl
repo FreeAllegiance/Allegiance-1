@@ -344,7 +344,7 @@ typedef [v1_enum] enum AGCObjectType      // IGC's ObjectType
     AGC_Civilization   = 27,              // IGC's   OT_civilization
     AGC_TreasureSet    = 28,              // IGC's   OT_treasureSet
 
-    AGC_BucketStart    = 29,              // IGC;s   OT_bucketStart
+    AGC_BucketStart    = 29,              // IGC's   OT_bucketStart
       AGC_HullType     = 29,              // IGC's     OT_hullType
       AGC_PartType     = 30,              // IGC's     OT_partType
       AGC_StationType  = 31,              // IGC's     OT_stationType
@@ -1723,7 +1723,7 @@ interface ITCSessionInfo : IDispatch
   //   E_UNEXPECTED - Something unexpected occurred, such as an empty string
   // was specified.
   [propput, id(dispid_ApplicationName), helpstring("Gets/sets the application name of this session.")]
-  HRESULT ApplicationName([in]BSTR bstrAppName);
+  HRESULT ApplicationName([in] BSTR bstrAppName);
   [propget]
   HRESULT ApplicationName([out, retval] BSTR* pbstrAppName);
 

@@ -41,14 +41,14 @@ void CPigAccount::FinalRelease()
 }
 
 HRESULT CPigAccount::Init(CPigAccountDispenser* pDispenser, _bstr_t bstrName,
-  _bstr_t bstrPassword)
+  _bstr_t bstrPassword, _bstr_t bstrCdKey)
 {
   // Save the specified parameters
   XLock lock(this);
   m_pDispenser   = pDispenser;
   m_bstrName     = bstrName;
   m_bstrPassword = bstrPassword;
-
+  m_bstrCdKey    = bstrCdKey;
   // AddRef the parent object
   m_pDispenser->AddRef();
 
@@ -103,5 +103,18 @@ STDMETHODIMP CPigAccount::get_Password(BSTR* pbstrPassword)
 
   // Indicate success
   return S_OK;
+}
+
+STDMETHODIMP CPigAccount::get_CdKey(BSTR* pbstrCdKey)
+{
+	// Initialize the [out] parameter
+	CLEAROUT(pbstrCdKey, (BSTR)NULL);
+
+	// Copy the string to the [out] parameter
+	XLock lock(this);
+	*pbstrCdKey = m_bstrCdKey.copy();
+
+	// Indicate success
+	return S_OK;
 }
 

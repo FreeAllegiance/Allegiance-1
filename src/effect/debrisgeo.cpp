@@ -12,7 +12,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 const float maxDistance = 100;
-const float distancePerParticle = 1.0f;
+
 
 class DebrisGeo : public Geo {
 private:
@@ -27,9 +27,13 @@ private:
 
     DebrisDataList m_listData;
     TRef<Surface>  m_psurface;
+	float		   m_timeLast; //time last updated
     float          m_time;
     Vector         m_positionLast;
     float          m_distanceTravelledSinceLastParticle;
+	float		   m_speed;
+	TRef<ModifiableNumber> m_userDistancePerParticle; //user's chosen particle density modifier
+	float		   distancePerParticle;
 
     Number*    GetTime()     { return Number::Cast(GetChild(0));    }
     Viewport*  GetViewport() { return Viewport::Cast(GetChild(1));  }
@@ -38,12 +42,14 @@ private:
 
 
 public:
-    DebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport) :
+    DebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport, TRef<ModifiableNumber> userDistancePerParticle) :
         Geo(ptime, pviewport),
         m_distanceTravelledSinceLastParticle(0.0f)
     {   
+		m_timeLast = GetTime()->GetValue();
         m_positionLast = GetCamera()->GetPosition();
         m_psurface = pmodeler->LoadSurface("debris1bmp", true);
+		m_userDistancePerParticle = userDistancePerParticle;
     }
 
     void Evaluate()
@@ -70,11 +76,32 @@ public:
 
         float length = (m_positionLast - position).Length();
 
-        if (length > 100) {
+		//
+		// how fast are we going?
+		//
+		if (length != 0.0) { //avoid divide-by-zero if ship is not moving
+			m_speed = (m_time - m_timeLast) / length;
+		} else {
+			m_speed = 0;
+		}
+		m_timeLast = m_time;
+
+		//
+		// more stars at lower speed - 0.3 more at 0, ramping down to 0 more at 75mps
+		//
+		if (m_speed < 75) {
+			distancePerParticle = m_userDistancePerParticle->GetValue() - (0.3 - 0.004*m_speed);
+		} else {
+			distancePerParticle = m_userDistancePerParticle->GetValue();
+		}
+
+        if (length > 100 || distancePerParticle == 0) {
             //
             // we jumped clear everything
             //
-            
+			// or debris is turned off - LANS
+            //
+
             m_listData.SetEmpty();
             length = 0;
         } else {
@@ -172,7 +199,7 @@ public:
     ZString GetFunctionName() { return "DebrisGeo"; }
 };
 
-TRef<Geo> CreateDebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport)
+TRef<Geo> CreateDebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport, TRef<ModifiableNumber> distancePerParticle)
 {
-    return new DebrisGeo(pmodeler, ptime, pviewport);
+    return new DebrisGeo(pmodeler, ptime, pviewport, distancePerParticle);
 }

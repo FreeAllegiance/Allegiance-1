@@ -18,11 +18,13 @@ namespace Training
     //------------------------------------------------------------------------------
     // class methods
     //------------------------------------------------------------------------------
-    /* void */  CreateWaypointAction::CreateWaypointAction (BuoyID buoyID, const Vector& position, SectorID sectorID) : 
+    /* void */  CreateWaypointAction::CreateWaypointAction (BuoyID buoyID, const Vector& position, SectorID sectorID, BuoyType type, bool visible) : 
     CreateObjectAction (OT_buoy, &m_buoyData, sizeof (m_buoyData)),
     m_buoyID (buoyID),
     m_position (position),
-    m_sectorID (sectorID)
+    m_sectorID (sectorID),
+    m_type(type),
+    m_visible(visible)
     {
     }
 
@@ -38,9 +40,10 @@ namespace Training
 
         // create the waypoint object
         m_buoyData.position = m_position;
-        m_buoyData.type = c_buoyWaypoint;
+        m_buoyData.type = m_type; // c_buoyWaypoint;
         m_buoyData.clusterID = m_sectorID;
         m_buoyData.buoyID = m_buoyID;
+        m_buoyData.visible = m_visible;
         CreateObjectAction::Execute ();
     }
 

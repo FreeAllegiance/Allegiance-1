@@ -3229,10 +3229,15 @@ void CFSMission::ProcessGameOver()
 
   // award points for commanding
   {
-      for (SideLinkIGC* psl = m_pMission->GetSides()->first(); (psl != NULL); psl = psl->next())
+	  int winnerELO = -1;
+	  int loserELO = -1;
+	  CFSPlayer* theWinner;
+	  CFSPlayer* theLoser;
+	  for (SideLinkIGC* psl = m_pMission->GetSides()->first(); (psl != NULL); psl = psl->next())
       {
           IsideIGC* pside = psl->data();
           SideID    sideID = pside->GetObjectID();
+		  CFSPlayer* theLeader = GetLeader(sideID);
 
           PlayerScoreObject*  ppso = commander[sideID];
           if (ppso)
@@ -3250,8 +3255,35 @@ void CFSMission::ProcessGameOver()
             }
 
             ppso->SetCommanderScore(commandScore * ppso->GetTimePlayed());
+			if (ppso->GetWinner())
+			{
+				if (theLeader)
+				{
+					CSteamAchievements * pSteamAchievements = theLeader->GetSteamAchievements();
+					winnerELO = pSteamAchievements->GetCommELO();
+					theWinner = theLeader;
+
+				}
+			}
+			else
+			{
+				if (theLeader)
+				{
+					CSteamAchievements * pSteamAchievements = theLeader->GetSteamAchievements();
+					loserELO = pSteamAchievements->GetCommELO();
+					theLoser = theLeader;
+				}
+			}
+
           }
-      }
+	  }
+	  if (winnerELO != -1 && loserELO != -1) //steam comm worked
+	  {
+		  CSteamAchievements * pWinAchievements = theWinner->GetSteamAchievements();
+		  pWinAchievements->UpdateCommanderStats(loserELO, true);
+		  CSteamAchievements * pLoseAchievements = theLoser->GetSteamAchievements();
+		  pLoseAchievements->UpdateCommanderStats(winnerELO, false);
+	  }
   }
 
   //Save player scores
@@ -4448,11 +4480,16 @@ DelPositionReqReason CFSMission::CheckPositionRequest(CFSPlayer * pfsPlayer, Isi
     }
 	
 	if (GetCountOfPlayers(pside, false) >= pmp->nMaxPlayersPerTeam)
+	{
 		return DPR_TeamFull;
-    else if ((nNumPlayers >= maxPlayers) &&//Xynth #166 7/2010 Add condition to let low rank players join stack
-			 !((pfsPlayer->GetPersistPlayerScore(NA)->GetRank() <= g.MaxNewbRank) && (nNumPlayers < (maxPlayers + 2))))
-			//If the player is low rank (<4) and there aren't more than 2 extra players, let him join (Imago made this configurable #174)
+	}
+	else if ((nNumPlayers >= maxPlayers) &&//Xynth #166 7/2010 Add condition to let low rank players join stack
+		!((pfsPlayer->GetPersistPlayerScore(NA)->GetRank() <= g.MaxNewbRank) && (nNumPlayers < (maxPlayers + 2))) //If the player is low rank (<4) and there aren't more than 2 extra players, let him join (Imago made this configurable #174)
+		&& (strcmp(pfsPlayer->GetCDKey(), g.szBotAuthenticationGuid) != 0) // If it's a bot, then let them join.	
+		)
+	{
 		return DPR_TeamBalance;
+	}
 
 	// TE: Can they join chosen side based on rank? mmf changed to MaxImbalance
 	if ((STAGE_NOTSTARTED != GetStage()) && (pmp->iMaxImbalance == 0x7ffe))

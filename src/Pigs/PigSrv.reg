@@ -1,0 +1,11 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\AppID\{F132B4E3-C6EF-11D2-85C9-00C04F68DEB0}]
+@="Pig Server"
+"ArtPath"="C:\\Program Files (x86)\\Steam\\steamapps\\common\\Allegiance\\Artwork"
+"MissionServer"="127.0.0.1"
+"MaxPigs"=dword:00000032
+"AccountServer"="."
+"ZoneAuthServer"=""
+"ZoneAuthTimeout"=dword:0330edb0
+

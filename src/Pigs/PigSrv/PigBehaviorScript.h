@@ -136,7 +136,7 @@ public:
   CPigBehaviorScript_MethodImpl_6(OnShipDamaged, VT_DISPATCH, IAGCShip*,
     VT_DISPATCH, IAGCModel*, VT_R4, float, VT_R4, float,
     VT_DISPATCH, IAGCVector*, VT_DISPATCH, IAGCVector*)
-  CPigBehaviorScript_MethodImpl_4(OnShipKilled, VT_DISPATCH, IAGCModel*,
+  CPigBehaviorScript_MethodImpl_5(OnShipKilled, VT_DISPATCH, IAGCShip*, VT_DISPATCH, IAGCModel*,
     VT_R4, float, VT_DISPATCH, IAGCVector*, VT_DISPATCH, IAGCVector*)
   CPigBehaviorScript_MethodImpl_2(OnSectorChange, VT_DISPATCH, IAGCSector*,
     VT_DISPATCH, IAGCSector*)

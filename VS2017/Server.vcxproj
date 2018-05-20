@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZDebug'">Debug</VcpkgConfiguration>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZRetail'">Release</VcpkgConfiguration>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
@@ -92,7 +96,7 @@
       <PreprocessorDefinitions>FLAVOR=\"$(ConfigurationName)\";FEDMSG=\"FedMsg.rc\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>..\src\Lib\AllegianceSecurity\AllegianceSecurityd.lib;..\src\Lib\Steam\steam_api.lib;dbghelp.lib;$(OutDir)..\_utility\Utility.lib;$(OutDir)..\zlib\zlib.lib;$(OutDir)..\igc\igc.lib;$(OutDir)..\sharemem\sharemem.lib;$(OutDir)..\test\TCLib\TCLib.lib;$(OutDir)..\Guids\AGCGuid.lib;$(OutDir)..\Guids\guids.lib;winmm.lib;version.lib;urlmon.lib;..\src\Lib\DirectPlay\dxguid.lib;..\src\Lib\appweb\appweb.lib;comctl32.lib;ws2_32.lib;delayimp.lib;wininet.lib;lz32.lib;netapi32.lib;comsupp.lib;oledb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\src\Lib\AllegianceSecurity\AllegianceSecurityd.lib;..\src\Lib\Steam\steam_api.lib;Rpcrt4.lib;dbghelp.lib;$(OutDir)..\_utility\Utility.lib;$(OutDir)..\zlib\zlib.lib;$(OutDir)..\igc\igc.lib;$(OutDir)..\sharemem\sharemem.lib;$(OutDir)..\test\TCLib\TCLib.lib;$(OutDir)..\Guids\AGCGuid.lib;$(OutDir)..\Guids\guids.lib;winmm.lib;version.lib;urlmon.lib;..\src\Lib\DirectPlay\dxguid.lib;..\src\Lib\appweb\appweb.lib;comctl32.lib;ws2_32.lib;delayimp.lib;wininet.lib;lz32.lib;netapi32.lib;comsupp.lib;oledb.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>false</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\src\Inc\appWeb;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>netapi32.dll;advapi32.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
@@ -145,7 +149,7 @@ xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
       <PreprocessorDefinitions>FLAVOR=\"$(ConfigurationName)\";FEDMSG=\"FedMsg.rc\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>..\src\Lib\AllegianceSecurity\AllegianceSecurity.lib;..\src\Lib\Steam\steam_api.lib;dbghelp.lib;$(OutDir)..\_utility\Utility.lib;$(OutDir)..\zlib\zlib.lib;$(OutDir)..\igc\igc.lib;$(OutDir)..\sharemem\sharemem.lib;$(OutDir)..\test\TCLib\TCLib.lib;$(OutDir)..\Guids\AGCGuid.lib;$(OutDir)..\Guids\guids.lib;winmm.lib;version.lib;urlmon.lib;..\src\Lib\DirectPlay\dxguid.lib;..\src\Lib\appweb\appweb.lib;comctl32.lib;ws2_32.lib;delayimp.lib;wininet.lib;lz32.lib;netapi32.lib;comsupp.lib;oledb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\src\Lib\AllegianceSecurity\AllegianceSecurity.lib;..\src\Lib\Steam\steam_api.lib;Rpcrt4.lib;dbghelp.lib;$(OutDir)..\_utility\Utility.lib;$(OutDir)..\zlib\zlib.lib;$(OutDir)..\igc\igc.lib;$(OutDir)..\sharemem\sharemem.lib;$(OutDir)..\test\TCLib\TCLib.lib;$(OutDir)..\Guids\AGCGuid.lib;$(OutDir)..\Guids\guids.lib;winmm.lib;version.lib;urlmon.lib;..\src\Lib\DirectPlay\dxguid.lib;..\src\Lib\appweb\appweb.lib;comctl32.lib;ws2_32.lib;delayimp.lib;wininet.lib;lz32.lib;netapi32.lib;comsupp.lib;oledb.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\src\Inc\appWeb;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>msvcrtd;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>

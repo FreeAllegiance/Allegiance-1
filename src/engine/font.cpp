@@ -68,28 +68,46 @@ private:
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	void GenerateFontTextureFromFontData( )
 	{
-		// Calculate the size of texture required.
-		DWORD i;
-		DWORD dwTexWidth = 256, dwTexHeight = 256;		// Initial size, construct a function to find smallest required size,
-		int iNumCharsWide = dwTexWidth /  m_width;		// using the font data.
-		int iNumCharsHigh = dwTexHeight / m_height;
 
-		if( iNumCharsHigh * iNumCharsWide <= 256 )
-		{
-			dwTexWidth		= dwTexWidth << 1;
-			iNumCharsWide	= dwTexWidth / m_width;
-			if( iNumCharsHigh * iNumCharsWide <= 256 )
-			{
-				dwTexHeight		= dwTexHeight << 1;
-				iNumCharsHigh	= dwTexHeight / m_height;
+        DWORD dwInitialWidth = 256, dwInitialHeight = 256;
+        // Calculate the size of texture required.
+        DWORD dwTexWidth, dwTexHeight;		// Initial size
 
-				if( iNumCharsHigh * iNumCharsWide <= 256 )
-				{
-					// Texture required is ridiculously large, or UNICODE.
-                    ZAssert( false );
-				}
-			}
-		}
+        //we try different sizes for the texture. Increase width by 2x, then increase height by 2x, then width again.
+        //for a max texture size of 2048x2048, we need to increase width 8x and height 8x from the starting 256x256, so three rounds each
+        for (int round = 0; round < 6; ++round) {
+            int exponential_width, exponential_height;
+            if (round % 2 == 0) {
+                exponential_width = round / 2;
+                exponential_height = round / 2;
+            }
+            else {
+                //only increase width on odd rounds
+                exponential_width = (round + 1) / 2;
+                exponential_height = (round - 1) / 2;
+            }
+
+            dwTexWidth = dwInitialWidth << exponential_width;
+            dwTexHeight = dwInitialHeight << exponential_height;
+
+            int iNumCharsWide = dwTexWidth / m_width;		// using the font data.
+            int iNumCharsHigh = dwTexHeight / m_height;
+
+            if (iNumCharsHigh * iNumCharsWide >= 256) {
+                //we are able to place 256 characters, it fits.
+                break;
+            }
+        }
+
+        {
+            int iNumCharsWide = dwTexWidth / m_width;
+            int iNumCharsHigh = dwTexHeight / m_height;
+            if (iNumCharsHigh * iNumCharsWide < 256)
+            {
+                // Texture required is ridiculously large, or UNICODE.
+                ZAssert(false);
+            }
+        }
 
 		D3DLOCKED_RECT lockRect;
 		TEXHANDLE hTex;
@@ -113,7 +131,7 @@ private:
 		fTexWidth = (float) ( dwTexWidth - 1 );
 		fTexHeight = (float) ( dwTexHeight - 1 );
 
-		for( i=0; i<256; i++ )
+		for(int i=0; i<256; i++ )
 		{
 			// Calculate the uv coords for this character.
 			m_pCharTexData[i].fU1 = (float) dwXVal / fTexWidth;

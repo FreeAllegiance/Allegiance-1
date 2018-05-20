@@ -225,29 +225,6 @@ private:
     float                       m_fTimeUntilRipcord;
     float                       m_fTimeUntilAleph;
 
-private:
-    /* Imago removed, now uses Performance 8/16/09
-    DWORD LoadPreference(const ZString& szName, DWORD dwDefault)
-    {
-        HKEY hKey;
-        DWORD dwResult = dwDefault;
-
-        if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_CURRENT_USER, ALLEGIANCE_REGISTRY_KEY_ROOT, 0, KEY_READ, &hKey))
-        {
-            DWORD dwSize = sizeof(dwResult);
-            DWORD dwType = REG_DWORD;
-
-            ::RegQueryValueEx(hKey, szName, nullptr, &dwType, (BYTE*)&dwResult, &dwSize);
-            ::RegCloseKey(hKey);
-
-            if (dwType != REG_DWORD)
-                dwResult = dwDefault;
-        }
-
-        return dwResult;
-    }
-    */
-
 public:
     ThingGeoImpl(Modeler* pmodeler, Number* ptime) :
         m_ptime(ptime),

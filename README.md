@@ -1,3 +1,6 @@
+# BUILD STATUS
+[![Build status](https://ci.appveyor.com/api/projects/status/mllnn7jx72ge8u6s/branch/master?svg=true)](https://ci.appveyor.com/project/BackTrak/allegiance)
+
 # Installation
 
 Download and install the lastest "Visual Studio Community Edition" : https://www.visualstudio.com/downloads/
@@ -28,7 +31,6 @@ Launch Visual Studio and open the main solution `src\VS2017\Allegiance.sln`
 * AutoUpdate
 * cvh
 * mdlc
-* pigs
 * reloader
 
 # Links

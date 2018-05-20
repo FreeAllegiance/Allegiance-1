@@ -354,7 +354,7 @@ bool  FindableModel(ImodelIGC*          m,
 
 static bool IsFriendlyCluster(IclusterIGC*  pcluster, IsideIGC* pside)
 {
-    StationLinkIGC* psl = pcluster->GetStations()->first();
+    /*StationLinkIGC* psl = pcluster->GetStations()->first();
     if (psl == NULL)
         return false;                   //No stations == unfriendly
 
@@ -383,31 +383,45 @@ static bool IsFriendlyCluster(IclusterIGC*  pcluster, IsideIGC* pside)
 	if (!(pmp->bExperimental)) {
 	  return rc; // mmf 10/07 orig code
 	}
-    // mmf else if Experimental game type fall through to yp's code
+    // mmf else if Experimental game type fall through to yp's code*/
+
+    bool rc = pside->IsTerritory(pcluster);
+
 	// yp: Improving AI: no reason to check further if we already know its a hostile sector
 	if(rc == false)
 		return rc;
+
 	// we should also check to see if there is a lot of enemy in the sector.
 	// we wouldnt want to go somewhere hostile even if we do have a base there.
 	if(pcluster->GetShips() != NULL)
 	{
 		int friendlyShipCount = 0;
 
-		for (ShipLinkIGC*   psl = pcluster->GetShips()->first(); (psl != NULL); psl = psl->next()) // mmf changed this to pcluste->GetShips from pside
+		for (ShipLinkIGC*   psl = pcluster->GetShips()->first(); (psl != NULL); psl = psl->next())
         {
             IshipIGC*   pship = psl->data();
-			// If our team knows that ship is there or its one of our ships, then we can count it.
-            if (pship->SeenBySide(pside) || pship->GetSide() == pside)
+			// If our team knows that ship is there, then we can count it.
+            if (pship->SeenBySide(pside))
 			{
-				//if (pside != pship->GetSide()) // if its not our side then we subtract 1 from our count
-				if ((pside != pship->GetSide()) && !IsideIGC::AlliedSides(pside,pship->GetSide())) //#ALLY -was: line above IMAGO FIXED LIKE THIS ALL OVER 7/8/09
+                PilotType pt = pship->GetPilotType();
+				if ((pside != pship->GetSide()) && !IsideIGC::AlliedSides(pside,pship->GetSide()))
 				{// count hostiles in the system.
-					// TODO: Make smarter: Assign differnt ship hulls a differnt amount of points, could also handle drones differntly
-					friendlyShipCount--;
+                    //Different weights for pilot types
+                    if (pt == c_ptCarrier)
+                        friendlyShipCount -= 6;
+                    else if (pt >= c_ptPlayer || pt == c_ptWingman)
+                        friendlyShipCount -= 2;
+                    else
+					    friendlyShipCount--;
 				}
 				else//, otherwise we increment it.
 				{// count friendlys in the system.
-					friendlyShipCount++;
+                    if (pt == c_ptCarrier)
+                        friendlyShipCount += 2;
+                    else if (pt >= c_ptPlayer || pt == c_ptWingman)
+                        friendlyShipCount += 2;
+                    else
+                        friendlyShipCount++;
 				}
 			}
         }
@@ -532,8 +546,24 @@ ImodelIGC*  FindTarget(IshipIGC*           pship,
         {
             ImodelIGC*  m = l->data();
 
+            AbilityBitMask abmInterpretedAbilities = abmAbilities;
+            if (abmAbilities && (ttMask & (c_ttShip | c_ttStation)) == (c_ttShip | c_ttStation) && m->GetObjectType() == OT_ship) {
+                switch (abmAbilities) {
+                case c_sabmRepair:
+                case c_sabmReload:
+                    abmInterpretedAbilities = c_habmCarrier;
+                    break;
+                case c_sabmRipcord:
+                    abmInterpretedAbilities = c_habmIsLtRipcordTarget;
+                    break;
+                default:
+                    debugf("Failed to interpret station ability bit mask: %x\n", abmAbilities);
+                    ZAssert(false);
+                }
+            }
+
 			//You never target yourself or something marked as hidden
-            if ((m != pship) && ((!pship) || pship->CanSee(m)) && FindableModel(m, pside, ttMask, abmAbilities,iAllies))
+            if ((m != pship) && ((!pship) || pship->CanSee(m)) && FindableModel(m, pside, ttMask, abmInterpretedAbilities,iAllies))
             {
                 if (ttBest)
                 {
@@ -636,7 +666,7 @@ ImodelIGC*  FindTarget(IshipIGC*           pship,
         clustersVisited.first(pcluster);    //We've already visited this cluster
 
         //None of these bits make any sense when searching a remote cluster
-        ttMask &= ~(c_ttAnyCluster | c_ttFront | c_ttShip | c_ttBuoy | c_ttMissile);
+        ttMask &= ~(c_ttAnyCluster | c_ttFront | c_ttBuoy | c_ttMissile);
 
         bool    firstMatchF = false;
         do
@@ -1331,7 +1361,7 @@ GotoPositionMask Waypoint::GetGotoPosition(IshipIGC*           pship,
             //No danger of a collision
             *ppmodelSkip = m_pmodelTarget;
 
-            float   offset = radius + c_fOffsetFudge;
+            float   offset = radius + c_fOffsetFudge; // Sum of radi + 10.0f
             if (dRest2 < offset * offset)
             {
                 if (distanceRest < 0.5f)
@@ -1401,19 +1431,66 @@ GotoPositionMask Waypoint::GetGotoPosition(IshipIGC*           pship,
 
             case OT_ship:
             {
-				// mmf pod pickup
-                //Trying to pick up a ship ... where will he be when we get there?
-                Vector  direction;
-                Vector  dp = itsPosition - myPosition;
-                Vector  dv = m_pmodelTarget->GetVelocity();
+                if ((pship->GetHullType()->GetCapabilities() & c_habmLifepod) ||
+                    ((IshipIGC*)m_pmodelTarget)->GetHullType()->GetCapabilities() & c_habmLifepod)
+                {
+                    // mmf pod pickup
+                    //Trying to pick up a ship ... where will he be when we get there?
+                    Vector  direction;
+                    Vector  dp = itsPosition - myPosition;
+                    Vector  dv = m_pmodelTarget->GetVelocity();
 
-                float   t = solveForImpact(dp, dv,
-                                           pship->GetHullType()->GetMaxSpeed(), 0.0f, &direction);
+                    float   t = solveForImpact(dp, dv,
+                        pship->GetHullType()->GetMaxSpeed(), 0.0f, &direction);
 
 
-                gpm = c_gpmFast;
-                *pvectorGoto = itsPosition + t * dv;
-                *ppmodelSkip = m_pmodelTarget;
+                    gpm = c_gpmFast;
+                    *pvectorGoto = itsPosition + t * dv;
+                    *ppmodelSkip = m_pmodelTarget;
+                }
+                else {
+                    //Trying to dock on another ship (carrier)
+                    ZAssert(((IshipIGC*)m_pmodelTarget)->GetHullType()->GetCapabilities() & c_habmCarrier);
+                    ZAssert(pship->GetHullType()->GetCapabilities() & c_habmLandOnCarrier);
+
+                    IhullTypeIGC*   phtCarrier = ((IshipIGC*)m_pmodelTarget)->GetBaseHullType();
+                    int nLand = phtCarrier->GetLandSlots();
+
+                    if (nLand == 0)
+                    {
+                        //No landing bays ... power glide in
+                        gpm = c_gpmFast;
+                        *pvectorGoto = itsPosition;
+                        *ppmodelSkip = m_pmodelTarget;
+                    }
+                    else {
+                        assert(nLand > 0);
+                        assert(nLand <= c_maxLandSlots);
+
+                        Vector  centers[c_maxLandSlots];
+                        Vector  directions[c_maxLandSlots];
+
+                        const Orientation&  itsOrientation = m_pmodelTarget->GetOrientation();
+                        for (int i = 0; (i < nLand); i++)
+                        {
+                            centers[i] = phtCarrier->GetLandPosition(i, 0) * itsOrientation;
+                            directions[i] = phtCarrier->GetLandDirection(i, 0) * itsOrientation;
+                        }
+
+                        gpm = DoApproach(pship, myPosition, itsPosition,
+                            nLand, centers, directions,
+                            distanceRest,
+                            positionRest,
+                            pvectorGoto,
+                            ppmodelSkip,
+                            pvectorFacing);
+
+                        if (gpm & c_gpmEnter)
+                        {
+                            gpm |= c_gpmRoll;
+                        }
+                    }
+                }
             }
             break;
 
@@ -1496,7 +1573,7 @@ GotoPositionMask Waypoint::GetGotoPosition(IshipIGC*           pship,
  *	  Get the button control mask to thrust in a given direction
  */
 static int  getDirection(const Vector&      dP,
-                         const Orientation& orientation)
+                  const Orientation& orientation)
 {
     float   z = dP * orientation.GetBackward();
     float   y = dP * orientation.GetUp();
@@ -1607,6 +1684,8 @@ bool    Ignore(IshipIGC*   pship, ImodelIGC* pmodel)
     {
         ignore = true;
     }
+    else if (type == OT_buoy)
+        ignore = true; // No need to dodge/evade other ship's waypoints
 
     return ignore;
 }
@@ -1728,6 +1807,18 @@ bool    GotoPlan::Execute(Time  now, float  dt, bool bDodge)
                                     coastButtonIGC |
                                     oneWeaponIGC |      //Disable any weapon fire
                                     allWeaponsIGC;
+
+	//imago 10/14
+	if (m_pship->GetWantBoost()) {
+		stateM |= afterburnerButtonIGC;
+	}
+	if ((m_maskWaypoints & c_wpTarget) && !bDone && m_pship->GetWantBoost()) {
+		if ((m_wpTarget.m_pmodelTarget->GetPosition() - m_pship->GetPosition()).LengthSquared() < 4000000) {
+			stateM &= ~afterburnerButtonIGC;
+			m_pship->SetWantBoost(false);
+		}
+	}
+
 
     m_pship->SetStateBits(c_maneuverButtons, stateM);
     m_pship->SetControls(controls);
@@ -1854,6 +1945,7 @@ bool    GotoPlan::SetControls(float  dt, bool bDodge, ControlData*  pcontrols, i
             //Calculate the ship's rest position if it kills its throttle
             float   distanceRest = 0.0f;
             Vector  positionRest = myPosition;
+            double mkt = 0.0f;
             if (speed > 0.1f)
             {
                 //If we killed our throttle, where would we drift to?
@@ -1874,7 +1966,7 @@ bool    GotoPlan::SetControls(float  dt, bool bDodge, ControlData*  pcontrols, i
                 // Vmax = (speed + Vmax) exp (-kt)
                 //t = ln(vMax / (v0 + vMax)) / -k
                 double   expmkt = vMax / (speed + vMax);
-                double   mkt = log(expmkt);
+                mkt = log(expmkt);
 
                 //S(t) = Integral (0 -> t) (V(t) dt)
                 //     = s0 + Vterminal (t - 0) + (speed - Vterminal) * (1/-k) (exp(-kt) - exp(0))
@@ -1946,6 +2038,24 @@ bool    GotoPlan::SetControls(float  dt, bool bDodge, ControlData*  pcontrols, i
                 Vector path = positionGoto - myPosition;
                 if (path * path >= 0.1f)
                     turnToFace(path, dt, m_pship, pcontrols, m_fSkill);
+
+                //match speed with ships, if we really need to stop, we get c_gpmPivot instead
+                if (m_wpTarget.m_pmodelTarget->GetObjectType() == OT_ship) {
+                    float targetDirSpeed = m_pship->GetOrientation().CosForward(m_wpTarget.m_pmodelTarget->GetVelocity())*m_wpTarget.m_pmodelTarget->GetVelocity().Length();
+
+                    float actualDistance = (positionGoto - myPosition).Length() - m_pship->GetRadius() - m_wpTarget.m_pmodelTarget->GetRadius();
+                    float newSpeedRest = k*actualDistance - vMax*mkt; // speed for a distanceRest that matches actual distance
+                    if (newSpeedRest < targetDirSpeed)
+                        targetDirSpeed = newSpeedRest;
+
+                    // Set throttle for targetDirSpeed
+                    float myMaxSpeed = m_pship->GetHullType()->GetMaxSpeed();
+                    pcontrols->jsValues[c_axisThrottle] = (targetDirSpeed >= myMaxSpeed)
+                        ? 1.0f
+                        : ((2.0f * targetDirSpeed / myMaxSpeed) - 1.01f);
+                    if (pcontrols->jsValues[c_axisThrottle] < -1.0f)
+                        pcontrols->jsValues[c_axisThrottle] = -1.0f;
+                }
             }
             else if ((gpm & c_gpmEnter) != 0)
             {
@@ -2032,28 +2142,28 @@ bool    GotoPlan::SetControls(float  dt, bool bDodge, ControlData*  pcontrols, i
                             ((type != OT_ship) || (pmodel->GetVelocity().LengthSquared() < 1.0f)))
                         {
                             //Vector to the center of the object
-                            const Vector&   itsPosition = pmodel->GetPosition();
+const Vector&   itsPosition = pmodel->GetPosition();
 
-                            Vector  dp = itsPosition - myPosition;
-                            float   d2 = dp.LengthSquared();
-                            if (d2 < dMax2)             //Object is closer that our goal
-                            {
-                                float   dot = dp * path;
-                                if (dot >= 0.0f)            //Object is not behind us
-                                {
-                                    float   r = myRadius + pmodel->GetRadius() + divertOffset;
-                                    float   r2 = r*r;
+Vector  dp = itsPosition - myPosition;
+float   d2 = dp.LengthSquared();
+if (d2 < dMax2)             //Object is closer that our goal
+{
+    float   dot = dp * path;
+    if (dot >= 0.0f)            //Object is not behind us
+    {
+        float   r = myRadius + pmodel->GetRadius() + divertOffset;
+        float   r2 = r*r;
 
-                                    Vector  closest = myPosition + path * (dot / distance2);
-                                    Vector  offset = closest - itsPosition;
-                                    float   offsetLength2 = offset.LengthSquared();
-                                    if (offsetLength2 < r2)
-                                    {
-                                        pmodelDivert = pmodel;
-                                        dMax2 = d2;
-                                    }
-                                }
-                            }
+        Vector  closest = myPosition + path * (dot / distance2);
+        Vector  offset = closest - itsPosition;
+        float   offsetLength2 = offset.LengthSquared();
+        if (offsetLength2 < r2)
+        {
+            pmodelDivert = pmodel;
+            dMax2 = d2;
+        }
+    }
+}
                         }
                     }
                 }
@@ -2118,7 +2228,7 @@ bool    GotoPlan::SetControls(float  dt, bool bDodge, ControlData*  pcontrols, i
                 //Always face where we are going
                 if (path * path >= 0.1f)
                 {
-					float da = turnToFace(path, dt, m_pship, pcontrols, m_fSkill);
+                    float da = turnToFace(path, dt, m_pship, pcontrols, m_fSkill);
 
                     if (da < pi / 8.0f)
                     {
@@ -2129,6 +2239,25 @@ bool    GotoPlan::SetControls(float  dt, bool bDodge, ControlData*  pcontrols, i
                         {
                             //We are close enough to want to slow down
                             fThrottleMax = -1.0f;
+                        }
+                        else if (m_wpTarget.m_pmodelTarget->GetObjectType() == OT_ship &&
+                            m_wpTarget.m_pmodelTarget->GetCluster() == m_pship->GetCluster() &&
+                            ((positionGoto - myPosition).Length() < distanceRest*2.0f ||
+                            (positionGoto - myPosition).Length() < 200.0f))
+                        {
+                            // Match speed
+                            float newSpeed = k*(positionGoto - myPosition).Length() - vMax*mkt; // speed for a distanceRest that matches actual distance
+                            float targetDirSpeed = m_pship->GetOrientation().CosForward(m_wpTarget.m_pmodelTarget->GetVelocity())*m_wpTarget.m_pmodelTarget->GetVelocity().Length();
+                            if (newSpeed > targetDirSpeed)
+                                targetDirSpeed = newSpeed;
+
+                            // Set throttle for targetDirSpeed
+                            float myMaxSpeed = m_pship->GetHullType()->GetMaxSpeed();
+                            fThrottleMax = (targetDirSpeed >= myMaxSpeed)
+                                ? 1.0f
+                                : ((2.0f * targetDirSpeed / myMaxSpeed) - 0.99f);
+                            if (fThrottleMax > 1.0f)
+                                fThrottleMax = 1.0f;
                         }
                         else
                         {
@@ -2543,21 +2672,21 @@ void   PlayerScoreObject::CalculateScore(ImissionIGC*   pmission)
     float   kMax = m_dtPlayed / (15.0f * 60.0f);    //1.0 / 15 minutes
 
 
-    m_fScore = float(m_cWarpsSpotted)       * pmission->GetFloatConstant(c_fcidPointsWarp) +
-        float(m_cAsteroidsSpotted)           * pmission->GetFloatConstant(c_fcidPointsAsteroid) +
+    m_fScore = float(m_cWarpsSpotted)       * pmission->GetFloatConstant(c_fcidPointsWarp) + // 2 on PCore15
+        float(m_cAsteroidsSpotted)           * pmission->GetFloatConstant(c_fcidPointsAsteroid) + // 1 on PCore15
         m_cTechsRecovered                    * pmission->GetFloatConstant(c_fcidPointsTech) +
         (m_cMinerKills * kMax)               * pmission->GetFloatConstant(c_fcidPointsMiner) / (m_cMinerKills + kMax) +
         (m_cBuilderKills * kMax)             * pmission->GetFloatConstant(c_fcidPointsBuilder) / (m_cBuilderKills + kMax) +
         (m_cLayerKills * kMax)               * pmission->GetFloatConstant(c_fcidPointsLayer) / (m_cLayerKills + kMax) +
         (m_cCarrierKills * kMax)             * pmission->GetFloatConstant(c_fcidPointsCarrier) / (m_cCarrierKills + kMax) +
-        m_cPlayerKills                       * pmission->GetFloatConstant(c_fcidPointsPlayer) +
+        m_cPlayerKills                       * pmission->GetFloatConstant(c_fcidPointsPlayer) + // 10 on PCore15
         (m_cBaseKills * kMax)                * pmission->GetFloatConstant(c_fcidPointsBaseKill) / (m_cBaseKills + kMax) +
         (m_cBaseCaptures * kMax)             * pmission->GetFloatConstant(c_fcidPointsBaseCapture) / (m_cBaseCaptures + kMax) +
         float(m_cRescues)                    * pmission->GetFloatConstant(c_fcidPointsRescues) +
         float(m_cArtifacts)                  * pmission->GetFloatConstant(c_fcidPointsArtifacts) +
         float(m_cFlags)                      * pmission->GetFloatConstant(c_fcidPointsFlags) +
-        float(m_cProbeSpot)                  * 10 +
-        float(m_cRepair)                     * 10;
+        float(m_cHighValueTargetsSpotted)    * 2 +
+        m_cRepair                            * 5;
 
     if (m_bWin)
         m_fScore *= 2.0f;

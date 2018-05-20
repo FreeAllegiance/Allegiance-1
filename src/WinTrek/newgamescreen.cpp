@@ -148,7 +148,7 @@ private:
 
         m_pcomboMaxImbalance   ->SetSelection(FindClosestValue(missionparams.iMaxImbalance, "MaxImbalanceValues"));
 
-		m_bIsZoneClub = !missionparams.bObjectModelCreated;// KGJV #114   missionparams.bClubGame;
+		m_bIsZoneClub = missionparams.bClubGame; //!missionparams.bObjectModelCreated;// KGJV #114   missionparams.bClubGame;
         m_bLockGameOpen = missionparams.bLockGameOpen;
         
         if (m_bIsZoneClub) //pkk #203 - Ignore clients SkillLevel, if it's a ZG

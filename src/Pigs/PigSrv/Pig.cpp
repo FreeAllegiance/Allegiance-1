@@ -108,6 +108,7 @@ struct CPig::XShipKilled
 {
   IPigBehaviorPtr m_spBehavior;
   float           m_amount;
+	IAGCShipPtr     m_spShip;
   IAGCModelPtr    m_spModel;
   IAGCVectorPtr   m_spVector1;
   IAGCVectorPtr   m_spVector2;
@@ -133,8 +134,9 @@ TCAutoCriticalSection CPig::s_csCreate, CPig::s_csUpdate, CPig::s_csLogon;
 // Table of special chat commands
 TCLookupTable_BEGIN(CPig, ChatCommands)    
   CPig_ChatCommand_ENTRY("ruapig?",  true, 6, &OnChat_AreYouAPig)
-  CPig_ChatCommand_ENTRY("eval"   ,  true, 2, &OnChat_Evaluate)
-  CPig_ChatCommand_ENTRY("? "     , false, 1, &OnChat_Evaluate)
+	//imago 10/14
+	//CPig_ChatCommand_ENTRY("eval"   ,  true, 2, &OnChat_Evaluate)
+	//CPig_ChatCommand_ENTRY("? "     , false, 1, &OnChat_Evaluate)
 TCLookupTable_END()                      
 
 
@@ -438,11 +440,11 @@ bool CPig::WaitInTimerLoop(HANDLE hObject, DWORD dwMilliseconds)
   {
     // Compute the amount of time remaining for this time slice
     DWORD dwSliceElapsed = GetTickCount() - m_dwSliceStart;
-    DWORD dwSliceRemaining = m_msPerTick - std::min(m_msPerTick, dwSliceElapsed);
+		DWORD dwSliceRemaining = m_msPerTick - std::min(m_msPerTick, dwSliceElapsed);
 
     // Compute the timeout value for this wait iteration
     DWORD dwTimeout = (INFINITE == dwMilliseconds) ? dwSliceRemaining
-      : std::min(dwSliceRemaining, std::max(0L, long(dwWaitEnd - GetTickCount())));
+			: std::min(dwSliceRemaining, (DWORD) std::max(0L, long(dwWaitEnd - GetTickCount())));
 
     // Wait for an object to be signaled or the time slice to expire
     DWORD dwWait = MsgWaitForMultipleObjects(cHandles, &(*m_Handles.begin()),
@@ -686,8 +688,8 @@ unsigned CALLBACK CPig::ThreadThunk(void* pvParam)
   // Reinterpret the parameter as an XThreadParams structure
   XThreadParams* ptp = reinterpret_cast<XThreadParams*>(pvParam);
 
-  // Enter this thread into an STA
-  RETURN_FAILED(ptp->m_hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED));
+	// Enter this thread into an MTA
+	RETURN_FAILED(ptp->m_hr = CoInitializeEx(NULL, COINIT_MULTITHREADED));
 
   // Create an instance of the pig object
   HRESULT hr;
@@ -782,6 +784,8 @@ HRESULT CPig::ThreadCreatePig(CPig::XThreadParams* ptp, CComObject<CPig>*& pPig)
   // Set the pig's account and cache the account name
   pPig->m_spAccount = spAccount;
   RETURN_FAILED(spAccount->get_Name(&pPig->m_bstrName));
+
+  RETURN_FAILED(spAccount->get_CdKey(&pPig->m_bstrCdKey));
 
   // Create an instance of a behavior object attached to the pig
   CComObject<CPigBehaviorScript>* pBehavior = NULL;
@@ -943,7 +947,7 @@ bool CPig::HandleThreadMessage(const MSG* pMsg, HANDLE hObject)
       // Parse the message parameters
       IPigBehavior* pBehavior = reinterpret_cast<IPigBehavior*>(pMsg->wParam);
       assert(pBehavior);
-      _SVERIFYE(pBehavior->OnMissionStarted());
+			pBehavior->OnMissionStarted(); //imago 10/14
       pBehavior->Release();
       break;
     }
@@ -1020,6 +1024,7 @@ bool CPig::HandleThreadMessage(const MSG* pMsg, HANDLE hObject)
       }
 
       // Attempt to interpret the chat message as a behavior/piglet invoke command
+			/* imago 10/14
       CComBSTR bstrType(strVerb);
       CPigBehaviorScriptType* pType = GetEngine().GetBehaviorType(bstrType);
       if (pType)
@@ -1051,6 +1056,7 @@ bool CPig::HandleThreadMessage(const MSG* pMsg, HANDLE hObject)
           return false;
         }
       }
+			*/
 
       #if 0
         // Attempt to evaluate the chat message as script text
@@ -1096,8 +1102,8 @@ bool CPig::HandleThreadMessage(const MSG* pMsg, HANDLE hObject)
       std::auto_ptr<XShipKilled> apParams(pParams);
       
       // Notify the active behavior
-      HRESULT hr = pParams->m_spBehavior->OnShipKilled(pParams->m_spModel,
-        pParams->m_amount, pParams->m_spVector1, pParams->m_spVector2);
+			HRESULT hr = pParams->m_spBehavior->OnShipKilled(pParams->m_spShip, 
+				pParams->m_spModel, pParams->m_amount, pParams->m_spVector1, pParams->m_spVector2);
       VerifyScriptMethod(hr, "OnShipKilled");
       break;
     }
@@ -1121,17 +1127,27 @@ HRESULT CPig::ProcessAppMessage(FEDMESSAGE* pfm)
   // Handle messages before default processing
   const FEDMSGID fmid = pfm->fmid;
 
+	/*
   if (fmid != FM_CS_PING && 
       fmid != FM_S_LIGHT_SHIPS_UPDATE &&
+		
+		//imago 10/14
+		fmid != FM_S_ASTEROID_MINED &&
+		fmid != FM_S_BUCKET_STATUS &&
+		fmid != FM_S_EXPORT &&
+
       fmid != FM_S_HEAVY_SHIPS_UPDATE &&
       fmid != FM_CS_CHATMESSAGE && 
       fmid != FM_S_STATIONS_UPDATE && 
       fmid != FM_S_PROBES_UPDATE)
       debugf("Received %s at time %u\n", g_rgszMsgNames[fmid], Time::Now().clock());
+	*/
 
-#ifdef _DEBUG
   switch (pfm->fmid)
   {
+
+#ifdef _DEBUG
+
       case FM_S_EXPORT:
       {
         // Check for static objects
@@ -1143,8 +1159,38 @@ HRESULT CPig::ProcessAppMessage(FEDMESSAGE* pfm)
         }
         break;
       }
-  }
+	 
 #endif // _DEBUG
+
+	  case FM_S_POSITIONREQ:
+	  {
+		  CASTPFM(pfmPositionRequest, S, POSITIONREQ, pfm);
+		  // If the are joining our team and I'm the leader
+		  if (pfmPositionRequest->iSide == BaseClient::GetSideID() && BaseClient::MyPlayerInfo()->IsTeamLeader()) {
+			  // if AutoAccept is off
+			  FMD_S_MISSIONDEF myMissionDef = BaseClient::MyMission()->GetMissionDef();
+			  if (myMissionDef.rgfAutoAccept[BaseClient::GetSideID()] == false) {
+				  // Accept them if my are in our squad
+				  // get the squadTag
+				  ZString myTag = ZString(BaseClient::MyPlayerInfo()->CharacterName()).RightOf("@");
+				  ZString theirTag = ZString(BaseClient::FindPlayer(pfmPositionRequest->shipID)->CharacterName()).RightOf("@");
+
+				  BaseClient::SetMessageType(c_mtGuaranteed);
+				  BEGIN_PFM_CREATE(*BaseClient::GetNetwork(), pfmPositionAck, C, POSITIONACK)
+					  END_PFM_CREATE
+					  pfmPositionAck->iSide = pfmPositionRequest->iSide;
+				  pfmPositionAck->shipID = pfmPositionRequest->shipID;
+
+				  // If their tag = my tag, then they can join my team.
+				  pfmPositionAck->fAccepted = myTag == theirTag;
+				  
+				  BaseClient::SendMessages();
+			  }
+		  }
+		  break;
+	  }
+  }
+
 
   // Keep track of each ship's performance details
   XHeavyShips                   HeavyShips;
@@ -1199,7 +1245,7 @@ HRESULT CPig::ProcessAppMessage(FEDMESSAGE* pfm)
       CASTPFM(pfmHeavy, S, HEAVY_SHIPS_UPDATE, pfm);
       Time delta = ServerTimeFromClientTime(Time::Now()) - pfmHeavy->timeReference;
       int iExceeded =
-        findMaxThresholdExceeded(m_dwShipsUpdateLatencyThresholds,
+				findMaxThresholdExceeded<DWORD>(m_dwShipsUpdateLatencyThresholds,
           sizeofArray(m_dwShipsUpdateLatencyThresholds), delta.clock());
       if (-1 != iExceeded)
       {
@@ -1263,9 +1309,15 @@ HRESULT CPig::ProcessAppMessage(FEDMESSAGE* pfm)
     }
   }
 
-//  switch (pfm->fmid)
-//  {
-//  }
+	//imago 10/14
+	switch (pfm->fmid)
+	{
+		case FM_S_GAME_OVER:
+		{
+			CASTPFM(pfmGameOver, S, GAME_OVER, pfm);
+			GameOver(pfmGameOver->iSideWinner);
+		}
+	}
 
   // Indicate success
   return S_OK;
@@ -1404,7 +1456,7 @@ HRESULT CPig::SendBytes(FedMessaging* pfm, VARIANT* pvBytes, bool bGuaranteed)
 
   // Convert the BSTR to an LPCTSTR
   USES_CONVERSION;
-  LPCTSTR pszFileName = OLE2CT(V_BSTR(&vBytes));
+	LPCSTR pszFileName = OLE2CA(V_BSTR(&vBytes));
 
   // Open the file
   ZFile file(pszFileName);
@@ -1574,7 +1626,8 @@ void CPig::OnLogonAck(bool fValidated, bool bRetry, LPCSTR szFailureReason)
 {
   XLock lock(this);
   assert(PigState_CreatingMission == GetCurrentState()
-    || PigState_JoiningMission == GetCurrentState());
+		|| PigState_JoiningMission == GetCurrentState()
+		|| PigState_WaitingForMission == GetCurrentState()); //imago 10/14
   if (!fValidated)
   {
     m_bLogonAck = fValidated;
@@ -1645,6 +1698,9 @@ void CPig::OnDelRequest(MissionInfo* pMissionInfo, SideID sideID,
     {
       XLock lock(this);
       m_bTeamAccepted = false;
+
+	  printf("join team rejected: %ld\n", reason);
+
       m_evtJoiningTeam.Set();
     }
   }
@@ -1661,7 +1717,7 @@ TRef<ThingSite> CPig::CreateThingSite(ImodelIGC* pModel)
 
 TRef<ClusterSite> CPig::CreateClusterSite(IclusterIGC* pCluster)
 {
-  return new ClusterSite();
+  return new CPigsClusterSite(pCluster);
 }
 
 void CPig::ReceiveChat(IshipIGC* pshipSender, ChatTarget ctRecipient,
@@ -1670,7 +1726,15 @@ void CPig::ReceiveChat(IshipIGC* pshipSender, ChatTarget ctRecipient,
   ImodelIGC* pmodelTarget, bool bObjectModel)
 {
   // If we sent this message, then ignore it
-  if (BaseClient::GetShip() == pshipSender)
+	if (pshipSender && BaseClient::GetShip()->GetObjectID() == pshipSender->GetObjectID()) //imago 10/14 was BaseClient::GetShip() == pshipSender
+		return;
+
+	 //imago ignore attack commands in a lifepod 10/14
+	if (cid == c_cidAttack && BaseClient::GetShip()->GetHullType()->HasCapability(c_habmLifepod))
+		return;
+
+	//imago ignore commands to other stuff 10/14
+	if (BaseClient::GetShip()->GetObjectID() != oidRecipient && cid > 0)
     return;
 
   // Perform default processing
@@ -1765,7 +1829,7 @@ void CPig::ChangeStation(IshipIGC* pship, IstationIGC* pstationOld,
       assert (pht);
 
       //If no weapon is selected, try to select a weapon
-      if (pshipSource == BaseClient::GetShip())
+			if (pshipSource && pshipSource->GetObjectID() == BaseClient::GetShip()->GetObjectID()) //imago 10/14
       {
         if (BaseClient::m_selectedWeapon >= pht->GetMaxFixedWeapons()
           || !BaseClient::GetWeapon())
@@ -1793,7 +1857,7 @@ void CPig::ChangeStation(IshipIGC* pship, IstationIGC* pstationOld,
 void CPig::ChangeCluster(IshipIGC*  pship, IclusterIGC* pclusterOld,
   IclusterIGC* pclusterNew)
 {
-  if (pship == BaseClient::GetShip())
+	if (pship && pship->GetObjectID() == BaseClient::GetShip()->GetObjectID())
   {
     // Only notify the active behavior if both clusters are non-null
     if (pclusterOld && pclusterNew)
@@ -1871,12 +1935,11 @@ void CPig::DamageShipEvent(Time now, IshipIGC* ship, ImodelIGC* launcher,
   BaseClient::DamageShipEvent(now, ship, launcher, type, amount, leakage, p1, p2);
 }
 
+//imago changed to fire for any ship 10/14
 void CPig::KillShipEvent(Time timeCollision, IshipIGC* ship,
   ImodelIGC* launcher, float amount, const Vector& p1, const Vector& p2)
 {
-  // Only notify the behavior if the ship killed was us
-  if (BaseClient::GetShip() == ship)
-  {
+
     // Determine if there is an active behavior
     CPigBehaviorScript* pBehavior = GetActiveBehavior();
     if (pBehavior)
@@ -1886,10 +1949,14 @@ void CPig::KillShipEvent(Time timeCollision, IshipIGC* ship,
       pParams->m_spBehavior = pBehavior;
       pParams->m_amount     = amount;
 
+
+		// Get the AGCShip object that was damaged
+		if (ship)
+			GetAGCGlobal()->GetAGCObject(ship, IID_IAGCShip, (void**)&pParams->m_spShip);
+
       // Get the AGCModel object that damaged the ship
       if (launcher)
-        GetAGCGlobal()->GetAGCObject(launcher, IID_IAGCModel,
-          (void**)&pParams->m_spModel);
+			GetAGCGlobal()->GetAGCObject(launcher, IID_IAGCModel, (void**)&pParams->m_spModel);
 
       // Create AGCVectors
       _SVERIFYE(GetAGCGlobal()->MakeAGCVector(&p1, &pParams->m_spVector1));
@@ -1898,7 +1965,6 @@ void CPig::KillShipEvent(Time timeCollision, IshipIGC* ship,
       // Notify the active behavior
       m_pth->PostThreadMessage(wm_OnShipKilled, (WPARAM)pParams);
     }
-  }
 
   // Perform default processing
   BaseClient::KillShipEvent(timeCollision, ship, launcher, amount, p1, p2);
@@ -1914,7 +1980,7 @@ void CPig::HitWarpEvent(IshipIGC* ship, IwarpIGC* warp)
   _TRACE_END
 
   // Only notify the behavior if the ship was us
-  if (BaseClient::GetShip() == ship)
+		if (ship && BaseClient::GetShip()->GetObjectID() == ship->GetObjectID())
   {
     // Determine if there is an active behavior
     CPigBehaviorScript* pBehavior = GetActiveBehavior();
@@ -1943,6 +2009,13 @@ bool CPig::HitTreasureEvent(Time now, IshipIGC* ship, ItreasureIGC* treasure)
   // Perform default processing
   return BaseClient::HitTreasureEvent(now, ship, treasure);
 }
+
+//imago 10/14
+void CPig::GameOver(SideID iWinner)
+{
+	SetCurrentState(PigState_WaitingForMission);
+}
+
 
 /*
 void CPig::ActivateRipcord(IshipIGC* ship, bool activeF)
@@ -2156,8 +2229,21 @@ STDMETHODIMP CPig::Logon()
   BaseClient::GetCfgInfo().strClubLobby   = ci.strServer;
   BaseClient::GetCfgInfo().strPublicLobby = ci.strServer;
 
+  printf("%S logging in, CDKey is {%S}.\n", m_bstrName, m_bstrCdKey);
+  // Send the CDKey when we log in.
+  char cCdKey[MAX_PATH];
+  StrCpy(cCdKey, OLE2CA(m_bstrCdKey));
+  BaseClient::SetCDKey(cCdKey);
   // Copy the pig account name and password to the connection parameters
-  lstrcpy(ci.szName, OLE2CA(m_bstrName));
+	Strcpy(ci.szName, OLE2CA(m_bstrName));
+
+
+
+	//imago 10/14
+	/*CComBSTR bstrPW;
+	RETURN_FAILED(m_spAccount->get_Password(&bstrPW));
+	LPSTR pszPW = bstrPW.Length() ? OLE2A(bstrPW) : "";
+	Strcpy(ci.szPW,pszPW);*/
   
 #ifdef USEAUTH
   // Authenticate the account on the Zone authentication server, if any
@@ -2300,13 +2386,15 @@ STDMETHODIMP CPig::Logoff()
   return S_OK;
 }
 
-STDMETHODIMP CPig::CreateMission(IPigMissionParams* pMissionParams)
+STDMETHODIMP CPig::CreateMission(BSTR bstrServer, BSTR bstrAddr, IPigMissionParams* pMissionParams)
 {
+	/* Imago 10/14
   // Only allowed when the current lobby mode is Zone
   PigLobbyMode eMode;
   ZSucceeded(GetEngine().get_LobbyMode(&eMode));
   if (PigLobbyMode_Club != eMode)
     return Error(IDS_E_LOBBYMODE_OP_UNSUPPORTED, IID_IPig);
+	*/
 
   // Validate the current state
   if (PigState_MissionList != GetCurrentState())
@@ -2348,8 +2436,8 @@ STDMETHODIMP CPig::CreateMission(IPigMissionParams* pMissionParams)
 
   // Set the state to PigState_CreatingMission
   SetCurrentState(PigState_CreatingMission);
-
-  CreateMissionReq();
+	USES_CONVERSION;
+	CreateMissionReq(OLE2CA(bstrServer),OLE2CA(bstrAddr),mp.szIGCStaticFile,mp.strGameName); //Imago 10/14
 
   // Wait for the acknowledgement event
   if (!WaitInTimerLoop(m_evtCreatingMission))
@@ -2364,19 +2452,6 @@ STDMETHODIMP CPig::CreateMission(IPigMissionParams* pMissionParams)
 
   // Disconnect from the lobby
   BaseClient::DisconnectLobby();
-
-  // Change the mission parameters to those specified, if any
-  if (pMissionParams)
-  {
-    // Create and queue the message to the server
-    BaseClient::SetMessageType(c_mtGuaranteed);
-    BEGIN_PFM_CREATE(*BaseClient::GetNetwork(), pfmParams, CS, MISSIONPARAMS)
-    END_PFM_CREATE
-    CopyMemory(&pfmParams->missionparams, &mp, sizeof(mp));
-
-    // Send the message
-    BaseClient::SendMessages();
-  }
 
   // Set the state (NOTE: creating a mission automatically joins a team)
   SetCurrentState(PigState_WaitingForMission);
@@ -2481,7 +2556,7 @@ STDMETHODIMP CPig::JoinMission(BSTR bstrMissionOrPlayer)
   BaseClient::DisconnectLobby();
 
   // Wait for the acknowledgement event FOR A MAXIMUM OF 15 SECONDS
-  if (!WaitInTimerLoop(m_evtJoiningMission2, 15000))
+	if (!WaitInTimerLoop(m_evtJoiningMission2, 5000)) //imago 10/14
     return S_FALSE;
 
   // If the acknowledgement event did not get set, we are on the team lobby
@@ -2500,27 +2575,21 @@ STDMETHODIMP CPig::JoinMission(BSTR bstrMissionOrPlayer)
   return S_OK;
 }
 
-STDMETHODIMP CPig::JoinTeam(BSTR bstrTeamOrPlayer)
+STDMETHODIMP CPig::JoinTeam(BSTR bstrCivName, BSTR bstrTeamOrPlayer)
 {
+	//imago 10/14
   // Validate the current state
-  if (PigState_TeamList != GetCurrentState())
-    return Error(IDS_E_JOINTEAM_TEAMLIST, IID_IPig);
-
+	//if (PigState_TeamList != GetCurrentState())
+	//return Error(IDS_E_JOINTEAM_TEAMLIST, IID_IPig);
+	USES_CONVERSION;
   // Find a team using the specified string, if any
   SideID idSide = NA;
   if (BSTRLen(bstrTeamOrPlayer))
   {
-    // Convert the specified string to ANSI
-    USES_CONVERSION;
-    LPCSTR pszTeamOrPlayer = OLE2CA(bstrTeamOrPlayer);
-
-    // Define an iterator type for (BaseClient) ship list
-    typedef ShipList::Iterator ShipIt;
-
     // Find a team with the specified name, if any
     for (SideID i = 0; i < BaseClient::MyMission()->NumSides(); ++i)
     {
-      if (!_stricmp(pszTeamOrPlayer, BaseClient::MyMission()->SideName(i)))
+	  if (!_stricmp(OLE2CA(bstrTeamOrPlayer), BaseClient::MyMission()->SideName(i)))
       {
         if (0 < BaseClient::MyMission()->SideAvailablePositions(i))
         {
@@ -2535,10 +2604,37 @@ STDMETHODIMP CPig::JoinTeam(BSTR bstrTeamOrPlayer)
       }
     }
 
+	//printf("Found target side: %ld\n", idSide);
+
     // Error
     if (NA == idSide)
     {
-      return Error("Specified team not found or has no positions available", IID_IPig);
+		// try an empty team. Or a team where the leader is the same squad as me
+		for (SideID i = 0; i < BaseClient::MyMission()->NumSides(); ++i)
+		{
+			// if Empty team
+			if (BaseClient::MyMission()->SideLeaderShipID(i) == -1) // should be -1 if no leader
+			{
+				idSide = i;
+				break;
+			}
+			else { // check if the leader is the same squad as me
+				ShipID leaderShipId = BaseClient::MyMission()->SideLeaderShipID(i);
+				PlayerInfo* leaderPlayerInfo = BaseClient::FindPlayer(leaderShipId);
+				// get the squadTag
+				ZString leaderName = ZString(leaderPlayerInfo->CharacterName());
+				ZString leaderTag = leaderName.RightOf("@");
+				ZString myTag = ZString(OLE2CA(m_bstrName)).RightOf("@");
+				if (myTag == leaderTag) {
+					idSide = i;
+					break;
+				}
+			}
+		}
+		if (NA == idSide)
+		{
+			return Error("Specified team not found or has no positions available", IID_IPig);
+		}
     }
   }
   else
@@ -2546,6 +2642,8 @@ STDMETHODIMP CPig::JoinTeam(BSTR bstrTeamOrPlayer)
     // Setting idSide to NA will tell the server to choose the emptiest side
     idSide = NA;
   }
+
+  //printf("Empty team target side: %ld\n", idSide);
 
   // Create and queue the message to the server
   BaseClient::SetMessageType(c_mtGuaranteed);
@@ -2566,21 +2664,120 @@ STDMETHODIMP CPig::JoinTeam(BSTR bstrTeamOrPlayer)
 
   // Wait for the acknowledgement event
   if (!WaitInTimerLoop(m_evtJoiningTeam))
-    return S_FALSE;
-
+	return S_FALSE;
+ 
   // Set the state
   if (m_bTeamAccepted)
   {
-    PigState eStateNew =
-      (WAIT_TIMEOUT != WaitForSingleObject(m_evtDocked, 0)) ?
-        PigState_Docked : PigState_WaitingForMission;
+		PigState eStateNew = (WAIT_TIMEOUT != WaitForSingleObject(m_evtDocked, 0)) ? PigState_Docked : PigState_WaitingForMission;
     SetCurrentState(eStateNew);
+		//imago 10/14
+		if (eStateNew == PigState_WaitingForMission && BSTRLen(bstrCivName) && BaseClient::MyPlayerInfo()->IsTeamLeader()) {
+			char * civNames[c_cSidesMax] = {'\0'};
+			CivID civSelection = NA;
+			SideID civSide = BaseClient::GetSideID();
+			char * token;
+			int i = 0;
+			token = strtok((char *)OLE2CA(bstrCivName), ",");
+			while(token)
+			{
+				civNames[i] = token;
+				token = strtok(NULL, ",");
+				i++;
+			}
+			for (CivilizationLinkIGC* linkCiv = BaseClient::GetCore()->GetCivilizations()->first();  linkCiv != NULL; linkCiv = linkCiv->next())
+            {
+				if(!_stricmp(linkCiv->data()->GetName(),civNames[civSide])) {
+					civSelection = linkCiv->data()->GetObjectID();
+					break;
+				}
+			}
+
+			FedMessaging &fm = *BaseClient::GetNetwork();
+
+			if (BSTRLen(bstrTeamOrPlayer)) {
+				// set the team name
+				BaseClient::SetMessageType(c_mtGuaranteed);
+				BEGIN_PFM_CREATE(fm, pfmSetTeamInfo, CS, SET_TEAM_INFO)
+					END_PFM_CREATE
+					pfmSetTeamInfo->sideID = civSide;
+				pfmSetTeamInfo->squadID = NA;
+				strcpy(pfmSetTeamInfo->SideName, OLE2CA(bstrTeamOrPlayer));
+
+				//BaseClient::SendMessages();
+			}
+
+			if (civSelection != NA) {
+				BaseClient::SetMessageType(c_mtGuaranteed);
+				BEGIN_PFM_CREATE(fm, pfmChangeCiv, CS, CHANGE_TEAM_CIV)
+				END_PFM_CREATE
+				pfmChangeCiv->iSide = civSide; 
+				pfmChangeCiv->civID = civSelection;
+				pfmChangeCiv->random = false;
+				//BaseClient::SendMessages();
+			}
+			
+			// Turn off AutoAccept
+			{
+				//AUTO_ACCEPT
+				BaseClient::SetMessageType(c_mtGuaranteed);
+				BEGIN_PFM_CREATE(*BaseClient::GetNetwork(), pfmSetAutoAccept, CS, AUTO_ACCEPT)
+					END_PFM_CREATE
+				pfmSetAutoAccept->iSide = civSide;
+				pfmSetAutoAccept->fAutoAccept = false;
+				//BaseClient::SendMessages();
+			}
+			
+		}
+
+		//if (BaseClient::MyPlayerInfo()->IsTeamLeader())  
+		
+		
+		//if (BaseClient::MyPlayerInfo()->IsMissionOwner()) 
+		//{
+		//	// Make the mission configuration what the Pigs Like.
+		//	
+		//	MissionParams currentMissionParams = BaseClient::MyMission()->GetMissionParams();
+		//	BaseClient::SetMessageType(c_mtGuaranteed);
+
+		//	BEGIN_PFM_CREATE_ALLOC(*BaseClient::GetNetwork(), pfmMissionParams, CS, MISSIONPARAMS)
+		//	END_PFM_CREATE
+		//	pfmMissionParams->missionparams.Reset();
+		//	
+		//	//strcpy(pfmMissionParams->missionparams.strGameName, BaseClient::MyMission()->Name());
+		//	//strcpy(pfmMissionParams->missionparams.strGameName, "Pig Pen");
+		//	strcpy(pfmMissionParams->missionparams.strGameName, currentMissionParams.strGameName);
+		//	strcpy(pfmMissionParams->missionparams.szIGCStaticFile, currentMissionParams.szIGCStaticFile);
+		//	strcpy(pfmMissionParams->missionparams.szCustomMapFile, currentMissionParams.szCustomMapFile);
+		//	pfmMissionParams->missionparams.nTotalMaxPlayersPerGame = currentMissionParams.nTotalMaxPlayersPerGame;
+		//	pfmMissionParams->missionparams.bEjectPods = false;
+		//	pfmMissionParams->missionparams.bAllowDevelopments = false;
+		//	pfmMissionParams->missionparams.fStartCountdown = 9.0f;
+		//	pfmMissionParams->missionparams.fRestartCountdown = 9.0f;
+		//	pfmMissionParams->missionparams.mmMapType = c_mmBrawl;
+		//	pfmMissionParams->missionparams.bAllowEmptyTeams = true;
+		//	pfmMissionParams->missionparams.dtGameLength = 60.0f * 60.0f; // 1 hour
+		//	pfmMissionParams->missionparams.iMaxImbalance = 32767; // 32767 = N/A
+		//	printf("Attempting to change the mission paramerters\n");
+		//	ZString errorMsg = ZString(pfmMissionParams->missionparams.Invalid(true));
+		//	if (errorMsg.IsEmpty()) {
+		//		printf("No error message from InValid()\n");
+		//	}
+		//	else {
+		//		printf(errorMsg);
+		//	}
+		//	BaseClient::GetNetwork()->QueueExistingMsg((FEDMESSAGE *)pfmMissionParams);
+		//	PFM_DEALLOC(pfmMissionParams);
+		//}
+
+		BaseClient::SendMessages();
   }
   else
   {
     SetCurrentState(PigState_TeamList);
     return Error("The team did not accept you", IID_IPig);
   }
+
   return S_OK;
 }
 
@@ -2613,6 +2810,7 @@ STDMETHODIMP CPig::QuitGame()
 
 STDMETHODIMP CPig::Launch()
 {
+
   // Validate the current state
   if (PigState_Docked != GetCurrentState())
     return Error(IDS_E_LAUNCH_DOCKED, IID_IPig);
@@ -2656,6 +2854,30 @@ STDMETHODIMP CPig::Launch()
 
   // Indicate success
   return S_OK;
+}
+
+//imago 10/14
+STDMETHODIMP CPig::IsMissionOwner(BOOL* bOwner)
+{
+	XLock lock(this);
+	CLEAROUT(bOwner, (BOOL)BaseClient::MyPlayerInfo()->IsMissionOwner());
+	return S_OK;
+}
+
+//imago 10/14
+STDMETHODIMP CPig::IsTeamLeader(BOOL* bLeader)
+{
+	XLock lock(this);
+	CLEAROUT(bLeader, (BOOL)BaseClient::MyPlayerInfo()->IsTeamLeader());
+	return S_OK;
+}
+
+//imago 10/14
+STDMETHODIMP CPig::SetSkills(float fShoot, float fTurn, float fGoto)
+{
+	XLock lock(this);
+	BaseClient::MyPlayerInfo()->GetShip()->SetSkills(fShoot, fTurn, fGoto);
+	return S_OK;
 }
 
 STDMETHODIMP CPig::Shutdown()
@@ -2707,7 +2929,7 @@ STDMETHODIMP CPig::get_Host(IPigBehaviorHost** ppHost)
   return S_OK;
 }
 
-STDMETHODIMP CPig::StartGame()
+STDMETHODIMP CPig::StartCustomGame(IPigMissionParams* pMissionParams)
 {
   // Validate the current state
   if (PigState_WaitingForMission != GetCurrentState())
@@ -2718,6 +2940,90 @@ STDMETHODIMP CPig::StartGame()
     if (BaseClient::MyMission()->SideNumPlayers(i)
       < BaseClient::MyMission()->MinPlayersPerTeam())
         return Error(IDS_E_STARTGAME_MINPLAYERS, IID_IPig);
+
+
+	// Validate the specified mission parameters
+	if (pMissionParams)
+	{
+		RETURN_FAILED(pMissionParams->Validate());
+		// Get the stream of the specified mission parameters data
+		IPigMissionParamsPrivatePtr spPrivate(pMissionParams);
+		if (NULL == spPrivate)
+			return E_UNEXPECTED;
+		IStreamPtr spstm;
+		RETURN_FAILED(spPrivate->GetData(&spstm));
+
+		// Seek to the start of the stream
+		LARGE_INTEGER li = {0, 0};
+		RETURN_FAILED(spstm->Seek(li, STREAM_SEEK_SET, NULL));
+
+		// Read the byte count
+		UINT cb = 0;
+		RETURN_FAILED(spstm->Read(&cb, sizeof(cb), NULL));
+		if (sizeof(MissionParams) != cb)
+			return E_UNEXPECTED;
+
+		// Read the MissionParams structure from the stream
+		MissionParams mp;
+		RETURN_FAILED(spstm->Read(&mp, sizeof(mp), NULL));
+
+		// BT - Hack fix to ensure that create custom game message matches current fedsrv check. 
+		// TODO: Move this to read registry
+		mp.nTotalMaxPlayersPerGame = 200;
+
+		// Close the stream and private interface
+		spstm = NULL;
+		spPrivate = NULL;
+
+		// Create and queue the message to the server
+		BaseClient::SetMessageType(c_mtGuaranteed);
+		BEGIN_PFM_CREATE(*BaseClient::GetNetwork(), pfmParams, CS, MISSIONPARAMS)
+		END_PFM_CREATE
+		CopyMemory(&pfmParams->missionparams, &mp, sizeof(mp));
+
+		// Send the message
+		BaseClient::SendMessages();
+	}
+
+	// Create and queue the message to the server
+	BaseClient::SetMessageType(c_mtGuaranteed);
+	BEGIN_PFM_CREATE(*BaseClient::GetNetwork(), pfm, C, START_GAME)
+	END_PFM_CREATE
+
+	// Send the message
+	BaseClient::SendMessages();
+
+	// Wait (in intervals) for the game to start
+	while (PigState_WaitingForMission == GetCurrentState())
+		if (!WaitInTimerLoop(NULL, 500))
+			return S_FALSE;
+
+	// Indicate success
+	return S_OK;
+}
+
+STDMETHODIMP CPig::StartGame()
+{
+	// Validate the current state
+	//if (PigState_WaitingForMission != GetCurrentState())
+		//return Error(IDS_E_STARTGAME_MISSIONLIST, IID_IPig);
+
+	// Make which ever pig calls start game the side leader. Sometimes pigs join out of order so the mission owner is not the side leader.
+	//BaseClient::MyMission()->SetSideLeader(BaseClient::MyPlayerInfo());
+
+	// Validate that the minimum number of players exist on each team
+	for (SideID i = 0; i < BaseClient::MyMission()->NumSides(); ++i)
+	{
+		// Ensure that all sides are ready to launch, even if the humans didn't get a chance to ready up. Pigs wait for no one.
+		//BaseClient::MyMission()->SideForceReady(i);
+
+		//if (BaseClient::MyMission()->SideReady(i) == false)
+		//	return Error(IDS_E_STARTGAME_SIDE_NOT_READY, IID_IPig);
+
+		if (BaseClient::MyMission()->SideNumPlayers(i)
+			< BaseClient::MyMission()->MinPlayersPerTeam())
+			return Error(IDS_E_STARTGAME_MINPLAYERS, IID_IPig);
+	}
 
   // Create and queue the message to the server
   BaseClient::SetMessageType(c_mtGuaranteed);

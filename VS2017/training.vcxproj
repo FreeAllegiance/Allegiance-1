@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZDebug'">Debug</VcpkgConfiguration>
+    <VcpkgConfiguration Condition="'$(Configuration)' == 'FZRetail'">Release</VcpkgConfiguration>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="FZDebug|Win32">
       <Configuration>FZDebug</Configuration>
@@ -119,6 +123,7 @@
     <ClCompile Include="..\src\training\AbstractTarget.cpp" />
     <ClCompile Include="..\src\training\Action.cpp" />
     <ClCompile Include="..\src\training\actionlist.cpp" />
+    <ClCompile Include="..\src\training\AddRespawnAction.cpp" />
     <ClCompile Include="..\src\training\andcondition.cpp" />
     <ClCompile Include="..\src\training\CommandAcknowledgedCondition.cpp" />
     <ClCompile Include="..\src\training\Condition.cpp" />
@@ -151,6 +156,7 @@
     <ClCompile Include="..\src\training\GetViewSectorCondition.cpp" />
     <ClCompile Include="..\src\training\Goal.cpp" />
     <ClCompile Include="..\src\training\goallist.cpp" />
+    <ClCompile Include="..\src\training\KillsReachedCondition.cpp" />
     <ClCompile Include="..\src\training\messageaction.cpp" />
     <ClCompile Include="..\src\training\mission10.cpp" />
     <ClCompile Include="..\src\training\mission2.cpp" />
@@ -159,6 +165,7 @@
     <ClCompile Include="..\src\training\mission5.cpp" />
     <ClCompile Include="..\src\training\mission6.cpp" />
     <ClCompile Include="..\src\training\mission8.cpp" />
+    <ClCompile Include="..\src\training\ModifyCreateDroneActionAction.cpp" />
     <ClCompile Include="..\src\training\noaction.cpp" />
     <ClCompile Include="..\src\training\ntimescondition.cpp" />
     <ClCompile Include="..\src\training\objectmovingtowardscondition.cpp" />
@@ -190,7 +197,6 @@
     <ClCompile Include="..\src\training\SetHUDOverlayAction.cpp" />
     <ClCompile Include="..\src\training\SetRadarLODAction.cpp" />
     <ClCompile Include="..\src\training\SetSignatureAction.cpp" />
-    <ClCompile Include="..\src\training\SetStationDestroyedAction.cpp" />
     <ClCompile Include="..\src\training\ShipSeesObjectCondition.cpp" />
     <ClCompile Include="..\src\training\ShowEyeballAction.cpp" />
     <ClCompile Include="..\src\training\ShowPaneAction.cpp" />
@@ -210,6 +216,7 @@
     <ClInclude Include="..\src\training\AbstractTarget.h" />
     <ClInclude Include="..\src\training\Action.h" />
     <ClInclude Include="..\src\training\actionlist.h" />
+    <ClInclude Include="..\src\training\AddRespawnAction.h" />
     <ClInclude Include="..\src\training\andcondition.h" />
     <ClInclude Include="..\src\training\CommandAcknowledgedCondition.h" />
     <ClInclude Include="..\src\training\Condition.h" />
@@ -245,6 +252,7 @@
     <ClInclude Include="..\src\training\GetViewSectorCondition.h" />
     <ClInclude Include="..\src\training\Goal.h" />
     <ClInclude Include="..\src\training\goallist.h" />
+    <ClInclude Include="..\src\training\KillsReachedCondition.h" />
     <ClInclude Include="..\src\training\messageaction.h" />
     <ClInclude Include="..\src\training\mission10.h" />
     <ClInclude Include="..\src\training\Mission2.h" />
@@ -253,6 +261,7 @@
     <ClInclude Include="..\src\training\Mission5.h" />
     <ClInclude Include="..\src\training\mission6.h" />
     <ClInclude Include="..\src\training\mission8.h" />
+    <ClInclude Include="..\src\training\ModifyCreateDroneActionAction.h" />
     <ClInclude Include="..\src\training\noaction.h" />
     <ClInclude Include="..\src\training\notcondition.h" />
     <ClInclude Include="..\src\training\ntimescondition.h" />
@@ -282,7 +291,6 @@
     <ClInclude Include="..\src\training\SetHUDOverlayAction.h" />
     <ClInclude Include="..\src\training\SetRadarLODAction.h" />
     <ClInclude Include="..\src\training\SetSignatureAction.h" />
-    <ClInclude Include="..\src\training\SetStationDestroyedAction.h" />
     <ClInclude Include="..\src\training\ShipSeesObjectCondition.h" />
     <ClInclude Include="..\src\training\ShowEyeballAction.h" />
     <ClInclude Include="..\src\training\ShowPaneAction.h" />

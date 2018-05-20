@@ -256,6 +256,7 @@ public:
     ImodelIGC* launcher, float amount, const Vector& p1, const Vector& p2);
   virtual void HitWarpEvent(IshipIGC* ship, IwarpIGC* warp);
   virtual bool HitTreasureEvent(Time now, IshipIGC* ship, ItreasureIGC* treasure);
+  virtual void GameOver(SideID iWinner); //imago 10/14
   //virtual void ActivateRipcord(IshipIGC* ship, bool activeF);
 
 // IPig Interface Methods
@@ -271,16 +272,20 @@ public:
   STDMETHODIMP get_Money(AGCMoney* pnMoney);
   STDMETHODIMP Logon();
   STDMETHODIMP Logoff();
-  STDMETHODIMP CreateMission(IPigMissionParams* pMissionParams);
+  STDMETHODIMP CreateMission(BSTR bstrServer, BSTR bstrAddr, IPigMissionParams* pMissionParams); //imago 10/14
   STDMETHODIMP JoinMission(BSTR bstrMissionOrPlayer);
-  STDMETHODIMP JoinTeam(BSTR bstrTeamOrPlayer);
+  STDMETHODIMP JoinTeam(BSTR bstrCivName, BSTR bstrTeamOrPlayer);
   STDMETHODIMP QuitGame();
   STDMETHODIMP Launch();
   STDMETHODIMP Shutdown();
+  STDMETHODIMP IsMissionOwner(BOOL* bOwner); //imago 10/14
+  STDMETHODIMP IsTeamLeader(BOOL* bLeader);
+  STDMETHODIMP SetSkills(float fShoot, float fTurn, float fGoto); //imago 10/14
   STDMETHODIMP get_Game(IAGCGame** ppGame);
   STDMETHODIMP get_Me(IAGCShip** ppShip);
   STDMETHODIMP get_ChatTarget(AGCChatTarget* peChatTarget);
   STDMETHODIMP get_Host(IPigBehaviorHost** ppHost);
+  STDMETHODIMP StartCustomGame(IPigMissionParams* pMissionParams);
   STDMETHODIMP StartGame();
   STDMETHODIMP put_ShipAngleThreshold1(float rRadians);
   STDMETHODIMP get_ShipAngleThreshold1(float* prRadians);
@@ -347,6 +352,7 @@ protected:
   bool                         m_bInReceive:1;
   // Logon Parameters
   CComBSTR                     m_bstrName;
+  BSTR						   m_bstrCdKey;
   IPigAccountPtr               m_spAccount;
   // Logon Acknowledgement status
   bool                         m_bLogonAck:1;
