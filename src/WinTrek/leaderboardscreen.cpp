@@ -333,9 +333,9 @@ public:
         m_peventSearchEdit = m_peditPane->GetChangeEvent();
 // syntax error ??
         m_peventSearchEdit->AddSink(m_psinkSearchEdit = new TEvent<ZString>/*>*/::Delegate(this));
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
-        GetWindow()->SetFocus();
-        GetWindow()->SetFocus(m_peditPane);
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
+        GetEngineWindow()->SetFocus();
+        GetEngineWindow()->SetFocus(m_peditPane);
         
         m_strBasis = strCharacter.IsEmpty() ? trekClient.GetNameLogonClubServer() : strCharacter;
         m_idBasis = strCharacter.IsEmpty() ? -2 : -1;
@@ -365,7 +365,7 @@ public:
         m_peventSearchEdit->RemoveSink(m_psinkSearchEdit);
         m_peventStats->RemoveSink(m_psinkStats);
 
-        GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+        GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
         GetModeler()->UnloadNameSpace(m_pns);
 
         s_pLeaderBoard = NULL;

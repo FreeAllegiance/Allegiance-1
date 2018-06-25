@@ -229,10 +229,76 @@ ZString ReadAuthPipe()
 	return ZString(buffer);
 };
 
+class ThreadedWork {
+private:
+    std::function<void()>* m_pCallback;
 
+    HANDLE m_hThread;
 
-class TrekAppImpl : public EffectApp {
 public:
+    ThreadedWork(const std::function<void()>& callback) :
+        m_hThread(NULL)
+    {
+        //the callback needs to stay alive, copy into pointer
+        m_pCallback = new std::function<void()>(callback);
+    }
+
+    ~ThreadedWork() {
+        if (m_hThread) {
+            CloseHandle(m_hThread);
+        }
+        delete m_pCallback;
+    }
+
+    HANDLE Start() {
+        if (m_hThread != NULL) {
+            return m_hThread;
+        }
+
+        m_hThread = CreateThread(NULL, 0, [](void* pData) {
+            std::function<void()> callback = *(std::function<void()>*)pData;
+
+            callback();
+
+            debugf("Thread completed");
+            return (DWORD)0;
+        }, m_pCallback, 0, NULL);
+
+        return m_hThread;
+    }
+
+    void Wait() {
+        WaitForSingleObject(m_hThread, INFINITE);
+        CloseHandle(m_hThread);
+        m_hThread = NULL;
+    }
+
+    bool PeekIsRunning() {
+        DWORD ret = WaitForSingleObject(m_hThread, 10);
+        return ret == WAIT_TIMEOUT;
+    }
+
+};
+
+class TrekAppImpl : public TrekApp {
+private:
+    std::shared_ptr<CallsignHandler> m_pCallsignHandler;
+    TRef<GameConfigurationWrapper> m_pGameConfiguration;
+    std::shared_ptr<ModdingEngine> m_pModdingEngine;
+
+public:
+    std::shared_ptr<CallsignHandler> GetCallsignHandler() override {
+        return m_pCallsignHandler;
+    }
+
+    TRef<GameConfigurationWrapper> GetGameConfiguration() override {
+        return m_pGameConfiguration;
+    }
+
+    std::shared_ptr<ModdingEngine> GetModdingEngine() override {
+        return m_pModdingEngine;
+    }
+
     TrekAppImpl()
     {
         AddRef();
@@ -300,6 +366,97 @@ public:
 
 		return ZString(tempBuffer);
 	}
+
+    bool GetSkipMovieKeyPressState() {
+        return GetAsyncKeyState(VK_ESCAPE) || GetAsyncKeyState(VK_SPACE) || GetAsyncKeyState(VK_RETURN);
+    };
+
+    // BT - 9/17 - Made this a function to support chaining the opening microsoft splash with the longer classic
+    // allegiance movie. 
+    // Rock: Adapted to not use its own threading
+    void PlayMovieClip(EngineWindow* pengineWindow, ZString moviePath)
+    {
+        debugf("Movie (%s): Attempting to play", (const char*)moviePath);
+
+        if (::GetFileAttributes(moviePath) == INVALID_FILE_ATTRIBUTES) {
+            debugf("Movie (%s): File invalid", (const char*)moviePath);
+            return;
+        }
+        
+        if (CD3DDevice9::Get()->GetDeviceSetupParams()->iAdapterID) {
+            debugf("Movie (%s): iAdapterID problem", (const char*)moviePath);
+            return;
+        }
+
+        //Imago only check for these if we have to 8/16/09
+        HMODULE hVidTest = ::LoadLibraryA("WMVDECOD.dll");
+        HMODULE hAudTest = ::LoadLibraryA("wmadmod.dll");
+        bool bWMP = (hVidTest && hAudTest) ? true : false;
+        ::FreeLibrary(hVidTest); ::FreeLibrary(hAudTest);
+
+        if (bWMP == false) {
+            debugf("Movie (%s): Unable to load required dll", (const char*)moviePath);
+            return;
+        }
+
+        if (!CD3DDevice9::Get()->IsWindowed()) {
+            ::ShowWindow(pengineWindow->GetHWND(), SW_HIDE);
+        }
+
+        bool bWindowed = CD3DDevice9::Get()->IsWindowed();
+
+        DDVideo *DDVid = new DDVideo();
+        bool bOk = true;
+        bool bHide = false;
+        HWND hwndFound = pengineWindow->GetHWND();
+
+        DDVid->m_hWnd = hwndFound;
+
+        if (FAILED(DDVid->Play(moviePath, bWindowed))) {
+            debugf("Movie (%s): Play call failed", (const char*)moviePath);
+            DDVid->DestroyDirectDraw();
+            return;
+        }
+
+        //if we are currently pressing the skip button, we want to wait until it has been let go
+        bool bPreviousKeyPressState = GetSkipMovieKeyPressState();
+
+        ::ShowCursor(FALSE);
+
+        debugf("Movie (%s): Playing succesfully", (const char*)moviePath);
+
+        while (DDVid->m_Running && bOk) //we can now do other stuff while playing
+        {
+            if (bPreviousKeyPressState == true) {
+                //have we stopped pressing it
+                bPreviousKeyPressState = GetSkipMovieKeyPressState();
+            }
+            if (!DDVid->m_pVideo->IsPlaying() || (bPreviousKeyPressState == false && GetSkipMovieKeyPressState()))
+            {
+                debugf("Movie (%s): End reached or manual stop trigger received", (const char*)moviePath);
+
+                DDVid->m_Running = FALSE;
+                DDVid->m_pVideo->Stop();
+            } else {
+                DDVid->m_pVideo->Draw(DDVid->m_lpDDSBack);
+                if (bWindowed) {
+                    bOk = DDVid->Flip(); //windowed #112 Imagooooo
+                }
+                else {
+                    DDVid->m_lpDDSPrimary->Flip(0, DDFLIP_WAIT);
+                }
+            }
+        }
+
+        debugf("Movie (%s): Ended", (const char*)moviePath);
+
+        ::ShowCursor(TRUE);
+        DDVid->DestroyDDVid();
+
+        if (bHide) {
+            ::DestroyWindow(hwndFound);
+        }
+    }
 
     HRESULT Initialize(const ZString& strCommandLine)
     {
@@ -392,16 +549,17 @@ public:
 //		EffectApp::Initialize(strCommandLine);
 // BUILD_DX9
 
+        debugf("Creating game configuration handler");
+
+        m_pGameConfiguration = new GameConfigurationWrapper(GetConfiguration());
+
         //
         // get the artpath
         //
-        PathString pathStr = GetConfiguration()->GetStringValue(
-            "Data.Path",
-            GetConfiguration()->GetStringValue(
-                "ArtPath",
-                GetExecutablePath() + "\\Artwork" 
-            )
-        ).c_str();
+        if (m_pGameConfiguration->GetDataArtworkPath()->GetValue() == "") {
+            m_pGameConfiguration->GetDataArtworkPath()->SetValue(GetExecutablePath().c_str() + ZString("\\Artwork"));
+        }
+        PathString pathStr = m_pGameConfiguration->GetDataArtworkPath()->GetValue();
 
         bool bLogFrameData = GetConfiguration()->GetBoolValue(
             "Debug.LogFrameData",
@@ -501,13 +659,6 @@ public:
                     bMovies = false;
                 } else if (str == "nooutput") {
                     //todo, change logging based on this
-                } else if (str == "quickstart") {
-					//Imago dont quickstart if no saved name 7/21/09
-					if (trekClient.GetSavedCharacterName().GetLength())
-                    	g_bQuickstart = true;
-                    float civStart;
-                    if (token.IsNumber(civStart)) 
-                        g_civStart = (int)civStart;
                 } else if (str == "nocfgdl")  {
                     g_bDownloadNewConfig = false;
                 } else if (str == "checkfiles") {
@@ -548,9 +699,9 @@ public:
                 // wlp 2006 - added debug option to turn on debug output
 				} else if (str == "debug") {
                     //todo, change logging based on this
-                } else if (str.Left(9) == "callsign=") { // wlp - 2006, added new ASGS token
-                    trekClient.SaveCharacterName(str.RightOf(9)) ; // Use CdKey for ASGS callsign storage
-                    g_bAskForCallSign = false ; // wlp callsign was entered on commandline
+                //} else if (str.Left(9) == "callsign=") { // wlp - 2006, added new ASGS token
+                //    trekClient.SaveCharacterName(str.RightOf(9)) ; // Use CdKey for ASGS callsign storage
+                //    g_bAskForCallSign = false ; // wlp callsign was entered on commandline
                 } else if (str == "windowed") {  //imago sucked these in here to accommidate the way we now create the D3DDevice
 	                bStartFullscreen = false;
 	            } else if (str == "fullscreen") {
@@ -571,20 +722,18 @@ public:
 
 		debugf("Logging into steam.\n");
 
+        ZString personaName = "";
+
 		// BT - STEAM
 		if (SteamUser() != nullptr && SteamUser()->BLoggedOn() == true)
 		{
-			ZString personaName = SteamFriends()->GetPersonaName();
+            personaName = SteamFriends()->GetPersonaName();
 
 			debugf("Steam Persona Name: " + personaName + "\n");
 
 			personaName = CleanUpSteamName(personaName);
 
 			debugf("Cleaned Persona Name: " + personaName + "\n");
-
-			trekClient.SaveCharacterName(personaName);
-
-			debugf("trekClient - Saved persona name as character name.\n");
 
 			char steamID[64];
 			sprintf(steamID, "%" PRIu64, SteamUser()->GetSteamID().ConvertToUint64());
@@ -598,7 +747,7 @@ public:
         //
         if (bSingleInstance)
         {
-            HWND hOldInstance = FindWindow(TrekWindow::GetTopLevelWindowClassname(), 
+            HWND hOldInstance = FindWindow(EngineWindow::GetTopLevelWindowClassname(),
                 TrekWindow::GetWindowTitle());
 
             // if we found another copy of the app
@@ -644,22 +793,126 @@ public:
 		}
 
 		CD3DDevice9::Get()->UpdateCurrentMode( );
-	
-        TRef<TrekWindow> pwindow = 
-            TrekWindow::Create(
-                this, 
-                strCommandLine,
-				pathStr,
-                bMovies
-            );
 
-        if (!pwindow->IsValid()) {
+        debugf("Saved character name: %s", (const char*)m_pGameConfiguration->GetOnlineCharacterName()->GetValue());
+
+        if (m_pGameConfiguration->GetOnlineCharacterName()->GetValue() == "") {
+            debugf("Character name invalid, using steam persona name: %s", personaName);
+            if (personaName.GetLength() <= 2) {
+                personaName = "UnnamedPilot";
+                debugf("Steam persona name invalid, set to: %s", personaName);
+            }
+            m_pGameConfiguration->GetOnlineCharacterName()->SetValue(personaName);
+        }
+
+        debugf("Creating window");
+
+        TRef<EngineWindow> pengineWindow = new EngineWindow(
+            m_pGameConfiguration,
+            strCommandLine,
+            TrekWindow::GetWindowTitle(),
+            false,
+            WinRect(0 + CD3DDevice9::Get()->GetDeviceSetupParams()->iWindowOffsetX,
+                0 + CD3DDevice9::Get()->GetDeviceSetupParams()->iWindowOffsetY,
+                CD3DDevice9::Get()->GetCurrentMode()->mode.Width +
+                CD3DDevice9::Get()->GetDeviceSetupParams()->iWindowOffsetX,
+                CD3DDevice9::Get()->GetCurrentMode()->mode.Height +
+                CD3DDevice9::Get()->GetDeviceSetupParams()->iWindowOffsetY),
+            WinPoint(800, 600)
+        );
+
+        debugf("Finished creating window, graphics initialization");
+
+        ((EffectApp*)this)->Initialize(strCommandLine, pengineWindow->GetHWND());
+        pengineWindow->SetEngine(this->GetEngine());
+        this->SetMouse(pengineWindow->GetInputEngine()->GetMouse());
+
+        //Imago 6/29/09 7/28/09 now plays video in thread while load continues // BT - 9/17 - Refactored a bit.
+        //Rock: Refactored some more
+        ThreadedWork movies = ThreadedWork([this, pengineWindow, pathStr]() {
+            // BT - 9/17 - If you want to re-add an intro movie, you can uncomment this code, but it was causing some people to crash,
+            // and most didn't like having any intro at all. :(
+            // To make a movie that is compatible with the movie player, use this ffmpeg command line: 
+            // ffmpeg.exe -i intro_microsoft_original.avi -q:a 1 -q:v 1 -vcodec mpeg4 -acodec wmav2 intro_microsoft.avi
+            // Rock: Converted to configuration setting
+            auto pShowCreditsMovie = GetConfiguration()->GetBool("Ui.ShowStartupCreditsMovie", true);
+            if (pShowCreditsMovie->GetValue()) {
+                pShowCreditsMovie->SetValue(false); //only once
+                PlayMovieClip(pengineWindow, (ZString)pathStr + "/intro_microsoft.avi");
+            }
+
+            auto pShowIntroMovie = GetConfiguration()->GetBool("Ui.ShowStartupIntroMovie", true);
+            if (pShowIntroMovie->GetValue()) {
+                //only show on first run
+                pShowIntroMovie->SetValue(false);
+
+                // To make a movie that is compatible with the movie player, use this ffmpeg command line: 
+                // ffmpeg.exe -i intro_microsoft_original.avi -q:a 1 -q:v 1 -vcodec mpeg4 -acodec wmav2 intro_microsoft.avi
+                PlayMovieClip(pengineWindow, (ZString)pathStr + "/intro_movie.avi");
+            }
+        });
+
+        debugf("Finished graphics initialization, starting main game initialization");
+
+        TRef<TrekWindow> pwindow;
+        ThreadedWork threadInitialization = ThreadedWork([this, pengineWindow, pathStr, strCommandLine, bMovies, &pwindow]() {
+            m_pModdingEngine = ModdingEngine::Create();
+            m_pCallsignHandler = CreateCallsignHandlerFromSteam(m_pGameConfiguration);
+
+            pwindow =
+                TrekWindow::Create(
+                    this,
+                    pengineWindow,
+                    strCommandLine,
+                    pathStr,
+                    bMovies
+                );
+        });
+
+        //create a thread that completes when both the initialization and the movies are complete
+        ThreadedWork threadAllWork = ThreadedWork([&threadInitialization, &movies]() {
+            HANDLE handles[] = {
+                threadInitialization.Start(),
+                movies.Start()
+            };
+
+            // third argument is TRUE, so waits for all handles
+            WaitForMultipleObjects(2, handles, TRUE, INFINITE);
+        });
+
+        HANDLE handleThreadAllWork = threadAllWork.Start();
+
+        //MsgWaitForMultipleObjects returns when either the all work thread has finished, or a message is posted. third arg is FALSE, so waits until any handle.
+        DWORD ret;
+        while (WAIT_OBJECT_0 != (ret = MsgWaitForMultipleObjects(1, &handleThreadAllWork, FALSE, INFINITE, QS_ALLINPUT))) {
+            if (ret == WAIT_OBJECT_0 + 1) {
+                //message
+                MSG msg;
+                while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
+                }
+            }
+            else if (ret == WAIT_TIMEOUT) {
+                //timeout reached
+                debugf("MsgWaitForMultipleObjects timeout");
+            }
+            else {
+                //unexpected
+                debugf("Unexpected return from MsgWaitForMultipleObjects");
+                break;
+            }
+        }
+
+        if (!pwindow->GetEngineWindow()->IsValid()) {
             return E_FAIL;
         }
 
         //
         // Handling command line options
         //
+
+        pwindow->Start();
 
         if (bStartTraining)
             GetWindow ()->screen (ScreenIDTrainScreen);

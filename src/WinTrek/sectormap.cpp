@@ -710,7 +710,7 @@ public:
 
             if (bVisible)
             {
-                GetWindow()->GetTimer()->AddSink(m_peventSinkTimer, 0.2f);
+                GetEngineWindow()->GetTimer()->AddSink(m_peventSinkTimer, 0.2f);
 
                 SelectCluster(trekClient.GetChatCluster());
                 m_pSectorInfoPane->SelectMouseOverCluster(NULL);
@@ -721,7 +721,7 @@ public:
                 ZAssert(m_pSectorInfoPane);
                 m_pSectorInfoPane->SelectCluster(NULL);
                 m_pSectorInfoPane->SelectMouseOverCluster(NULL);
-                GetWindow()->GetTimer()->RemoveSink(m_peventSinkTimer);
+                GetEngineWindow()->GetTimer()->RemoveSink(m_peventSinkTimer);
             }
         }
     }

@@ -3465,8 +3465,8 @@ private:
     ) {
         TRef<DisplayImage> pdisplayImage =
             new DisplayImage(
-                GetWindow()->GetTime(),
-                GetWindow()->GetScreenRectValue(),
+                GetEngineWindow()->GetTime(),
+                GetEngineWindow()->GetScreenRectValue(),
                 pimage,
                 side,
                 ptOffScreen,

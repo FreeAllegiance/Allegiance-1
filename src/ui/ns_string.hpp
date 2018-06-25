@@ -64,23 +64,18 @@ public:
             return StringTransform::Equals(a, b);
         };
 
-        table["Switch"] = [](sol::object value, sol::table table, sol::optional<sol::object> valueDefault) {
+        table["Switch"] = [](sol::object value, sol::table table, sol::optional<TRef<StringValue>> valueDefault) {
             int count = table.size();
 
             TRef<StringValue> valueDefaultNonOptional;
-            if (valueDefault) {
-                valueDefaultNonOptional = wrapString(valueDefault.value());
-            }
-            else {
-                valueDefaultNonOptional = new StringValue(ZString(""));
-            }
+            valueDefaultNonOptional = valueDefault.value_or(new StringValue(ZString("")));
 
             if (value.is<TRef<Number>>() || value.is<float>()) {
                 //float/int problems are likely
                 std::map<float, TRef<StringValue>> mapOptions;
 
                 table.for_each([&mapOptions](sol::object key, sol::object entry_value) {
-                    int fKey = (int)key.as<float>();
+                    float fKey = key.as<float>();
                     mapOptions[fKey] = wrapString(entry_value);
                 });
 
@@ -108,6 +103,13 @@ public:
                 return (TRef<StringValue>)new ValueToMappedValue<ZString, bool>(wrapValue<bool>(value), mapOptions, valueDefaultNonOptional);
             }
             throw std::runtime_error("Expected value argument of String.Switch to be either a wrapped or unwrapped bool, int, or string");
+        };
+
+        table["ToNumber"] = [](TRef<StringValue> string) {
+            return StringTransform::ToNumber(string);
+        };
+        table["IsNumber"] = [](TRef<StringValue> string) {
+            return StringTransform::IsNumber(string);
         };
 
         context.GetLua().new_usertype<TRef<StringValue>>("StringValue", 

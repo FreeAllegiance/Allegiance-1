@@ -76,15 +76,16 @@ public:
 
 class CallbackSink : public IEventSink {
 private:
-    std::function<bool()> m_funcCallback;
+    std::function<void()> m_funcCallback;
 
 public:
-    CallbackSink(std::function<bool()> funcCallback) :
+    CallbackSink(std::function<void()> funcCallback) :
         m_funcCallback(funcCallback)
     {}
 
     bool OnEvent(IEventSource* pevent) {
-        return m_funcCallback();
+        m_funcCallback();
+        return true;
     }
 };
 

@@ -345,7 +345,7 @@ public:
       m_bSquadEditDescReset(false),
       m_bSquadEditURLReset(false)
     {
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
 
         s_column = SSC_SCORE;
         s_pSelectedSquad = NULL;
@@ -722,7 +722,7 @@ public:
         m_bLeftScreen = true;
 
         if(m_pkeyboardInputOldFocus)
-            GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+            GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
     }
 
 
@@ -1712,7 +1712,7 @@ public:
                 m_peditPaneSquadURL->SetString("");
             }
 
-            GetWindow()->SetFocus(m_peditPaneSquadURL);
+            GetEngineWindow()->SetFocus(m_peditPaneSquadURL);
         }
         else
         if (pevent == m_peventDescEdit)
@@ -1724,7 +1724,7 @@ public:
                 m_pbuttonApply->SetEnabled(true);
             }
 
-            GetWindow()->SetFocus(m_peditPaneSquadName);
+            GetEngineWindow()->SetFocus(m_peditPaneSquadName);
         }
         else
         if (pevent == m_peventURLEdit)
@@ -1735,7 +1735,7 @@ public:
                 m_peditPaneSquadDescription->SetString("");
             }
 
-            GetWindow()->SetFocus(m_peditPaneSquadDescription);
+            GetEngineWindow()->SetFocus(m_peditPaneSquadDescription);
         }
         return true;
     }
@@ -2074,7 +2074,7 @@ public:
 		    m_pbuttonApply->SetHidden(false);
 		    m_pbuttonEditSquad->SetHidden(true);
 
-        GetWindow()->SetFocus(m_peditPaneSquadDescription);
+            GetEngineWindow()->SetFocus(m_peditPaneSquadDescription);
 
         return true;
     }
@@ -2087,7 +2087,7 @@ public:
         m_bSquadEditNameReset = false;
         m_pbuttonApply->SetEnabled(true);
 
-        GetWindow()->SetFocus(m_peditPaneSquadName);
+        GetEngineWindow()->SetFocus(m_peditPaneSquadName);
         return true;
     }
 
@@ -2098,7 +2098,7 @@ public:
 
         m_bSquadEditDescReset = false;
 
-        GetWindow()->SetFocus(m_peditPaneSquadDescription);
+        GetEngineWindow()->SetFocus(m_peditPaneSquadDescription);
         return true;
     }
 
@@ -2109,13 +2109,13 @@ public:
 
         m_bSquadEditURLReset = false;
 
-        GetWindow()->SetFocus(m_peditPaneSquadURL);
+        GetEngineWindow()->SetFocus(m_peditPaneSquadURL);
         return true;
     }
 
     bool OnFindClick() 
     {
-        GetWindow()->SetFocus(m_peditPaneFind);
+        GetEngineWindow()->SetFocus(m_peditPaneFind);
         return true;
     }
 
@@ -2135,9 +2135,9 @@ public:
 
     bool OnButtonApply()
     {
-        TRef<IKeyboardInput> p = GetWindow()->GetFocus();
+        TRef<IKeyboardInput> p = GetEngineWindow()->GetFocus();
         if(p)
-            GetWindow()->RemoveFocus(p);
+            GetEngineWindow()->RemoveFocus(p);
 
         if(s_pSelectedSquad == m_psquadBeingMade // if creating (not editing)
            &&  (m_bSquadEditNameReset ||

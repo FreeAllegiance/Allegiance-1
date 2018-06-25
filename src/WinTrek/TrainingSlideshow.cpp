@@ -40,7 +40,7 @@ public:
 
         // pause to let the "starting..." box draw itself
 		// mdvalley: pause to add in another pointer and class name
-        AddEventTarget (&TrainingSlideshow::OnSwitchOut, GetWindow(), 0.1f);
+        AddEventTarget (&TrainingSlideshow::OnSwitchOut, GetEngineWindow(), 0.1f);
     }
 
     bool OnSwitchOut (void)

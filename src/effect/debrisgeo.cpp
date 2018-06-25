@@ -32,7 +32,7 @@ private:
     Vector         m_positionLast;
     float          m_distanceTravelledSinceLastParticle;
 	float		   m_speed;
-	TRef<ModifiableNumber> m_userDistancePerParticle; //user's chosen particle density modifier
+	TRef<Number> m_userDistancePerParticle; //user's chosen particle density modifier
 	float		   distancePerParticle;
 
     Number*    GetTime()     { return Number::Cast(GetChild(0));    }
@@ -42,7 +42,7 @@ private:
 
 
 public:
-    DebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport, TRef<ModifiableNumber> userDistancePerParticle) :
+    DebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport, TRef<Number> userDistancePerParticle) :
         Geo(ptime, pviewport),
         m_distanceTravelledSinceLastParticle(0.0f)
     {   
@@ -95,7 +95,7 @@ public:
 			distancePerParticle = m_userDistancePerParticle->GetValue();
 		}
 
-        if (length > 100 || distancePerParticle == 0) {
+        if (length > 100 || distancePerParticle == 0 || m_userDistancePerParticle->GetValue() == 0.0f) {
             //
             // we jumped clear everything
             //
@@ -199,7 +199,7 @@ public:
     ZString GetFunctionName() { return "DebrisGeo"; }
 };
 
-TRef<Geo> CreateDebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport, TRef<ModifiableNumber> distancePerParticle)
+TRef<Geo> CreateDebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport, TRef<Number> distancePerParticle)
 {
     return new DebrisGeo(pmodeler, ptime, pviewport, distancePerParticle);
 }

@@ -62,12 +62,14 @@ public:
 };
 
 class UiState : public UiObjectContainer {
+public:
+    typedef std::map<std::string, std::shared_ptr<Exposer>> UiState::InnerMapType;
 
 private:
     std::string m_name;
 public:
     using UiObjectContainer::UiObjectContainer;
-    UiState(std::string name, std::map<std::string, std::shared_ptr<Exposer>> map = {}) :
+    UiState(std::string name, UiState::InnerMapType map = {}) :
         m_name(name),
         UiObjectContainer(map)
     {}
@@ -153,6 +155,40 @@ public:
 typedef UiList<TRef<UiObjectContainer>> ContainerList;
 typedef UiList<TRef<Image>> ImageList;
 
+template <typename T>
+class TableUiList : public UiList<T> {
+private:
+
+public:
+    TableUiList(sol::table table) : 
+        UiList({})
+    {
+        std::vector<T> list;
+
+        table.for_each([&list](const sol::object& key, const sol::object& value) {
+            list.push_back(value.as<T>());
+        });
+
+        GetListInternal() = list;
+    }
+};
+
+template <typename EntryType, typename ...Types>
+class TransformedList : public UiList<EntryType> {
+
+private:
+    std::function<std::vector<EntryType>(Types...)> m_callback;
+
+public:
+    TransformedList(std::function<std::vector<EntryType>(Types...)> callback, TRef<TStaticValue<Types>>... values) :
+        UiList<EntryType>({}),
+        m_callback(callback)
+    {
+        AddChild(new CallbackWhenChanged<Types...>([this](Types... values) {
+            GetListInternal() = m_callback(values...);
+        }, values...));
+    }
+};
 
 template <typename ResultEntryType, typename OriginalEntryType>
 class MappedList : public UiList<ResultEntryType> {

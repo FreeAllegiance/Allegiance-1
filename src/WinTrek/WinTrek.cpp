@@ -11,7 +11,6 @@
 #include "slideshow.h"
 #include "Training.h"
 #include "CommandAcknowledgedCondition.h"
-#include "SteamClans.h" // BT - STEAM
 
 #include <Delayimp.h>   // For error handling & advanced features
 //#include "..\\icqapi\\ICQAPIInterface.h"
@@ -89,15 +88,6 @@ const float c_fMouseSensDelta = 0.01f; //Imago 7/10 #187
 
 const float g_hudBright = 0.85f;
 
-//const float g_fJoystickDeadZoneNone = 0.0f; //imago added 7/1/09 removed 7/23/09 causes crashes /w joysticks
-const float g_fJoystickDeadZoneSmallest = 0.04f; //imago added 7/13/09
-const float g_fJoystickDeadZoneSmall = 0.1f;
-const float g_fJoystickDeadZoneLarge = 0.3f;
-
-
-float g_fJoystickDeadZone = g_fJoystickDeadZoneSmall;
-float g_fInverseJoystickDeadZone = g_fJoystickDeadZone - 1.0f;
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // Joystick Helpers
@@ -141,66 +131,6 @@ float   GetThrottle(ImodelIGC*  pmodel)
 //
 //////////////////////////////////////////////////////////////////////////////
 
-//Imago 7/29/09
-DWORD WINAPI DDVidCreateThreadProc( LPVOID param ) {
-	
-	//windowed 7/10 #112
-	PlayVideoInfo * pData = (PlayVideoInfo*)param;
-	DDVideo *DDVid = new DDVideo();
-	bool bOk = true;
-	bool bHide = false;
-	HWND hwndFound = NULL;
-	if (pData->bWindowed) {
-		hwndFound=FindWindow(NULL, TrekWindow::GetWindowTitle()); // BT - 9/17 - Updated to dynamic value.
-	} else {
-		//this window will have our "intro" in it...
-		hwndFound = ::CreateWindow("MS_ZLib_Window", "Intro", WS_VISIBLE|WS_POPUP, 0, 0,
-			GetSystemMetrics(SM_CXFULLSCREEN),GetSystemMetrics(SM_CYFULLSCREEN),NULL, NULL,
-			::GetModuleHandle(NULL), NULL);
-		bHide = true;
-	}
-	
-	DDVid->m_hWnd = hwndFound;	
-
-	if( SUCCEEDED( DDVid->Play(pData->pathStr,pData->bWindowed))) //(WMV2 is good as most machines read it)
-    {
-		::ShowCursor(FALSE);
-		
-		while (DDVid->m_Running && bOk) //we can now do other stuff while playing
-		{
-			if (!DDVid->m_pVideo->IsPlaying() || GetAsyncKeyState(VK_ESCAPE) ||
-				GetAsyncKeyState(VK_SPACE) || GetAsyncKeyState(VK_RETURN) ||
-				GetAsyncKeyState(VK_LBUTTON) || GetAsyncKeyState(VK_RBUTTON))
-			{
-				DDVid->m_Running = FALSE;
-				DDVid->m_pVideo->Stop();
-			}
-			else {
-				DDVid->m_pVideo->Draw(DDVid->m_lpDDSBack);
-				if (pData->bWindowed) {
-					bOk = DDVid->Flip(); //windowed #112 Imagooooo
-				}
-				else {
-					DDVid->m_lpDDSPrimary->Flip(0, DDFLIP_WAIT);
-				}
-			}
-		}
-
-
-		::ShowCursor(TRUE);
-		DDVid->DestroyDDVid();
-	} else {
-		DDVid->DestroyDirectDraw();
-	}
-
-	delete pData;
-
-	if (bHide)
-		::DestroyWindow(hwndFound);
-
-
-	return 0;
-}
 //
 
 TRef<IMessageBox> CreateMessageBox(
@@ -240,7 +170,7 @@ TRef<IMessageBox> CreateMessageBox(
             );
     }
 
-    return CreateMessageBox(GetWindow(), GetModeler(), str, pbutton, false, pbuttonCancel, paintDelay);
+    return CreateMessageBox(GetEngineWindow(), GetModeler(), str, pbutton, false, pbuttonCancel, paintDelay);
 }
 
 ImodelIGC*  GetCurrentTarget(void)
@@ -725,8 +655,9 @@ TRef<UpdatingConfiguration> g_pConfiguration = new UpdatingConfiguration(
 );
 
 TrekWindow* GetWindow()     { return g_ptrekWindow;               }
-Engine*     GetEngine()     { return g_ptrekWindow->GetEngine();  }
-Modeler*    GetModeler()    { return g_ptrekWindow->GetModeler(); }
+EngineWindow* GetEngineWindow() { return g_ptrekWindow->GetEngineWindow(); }
+Engine*     GetEngine()     { return GetEngineWindow()->GetEngine();  }
+Modeler*    GetModeler()    { return GetEngineWindow()->GetModeler(); }
 UpdatingConfiguration* GetConfiguration() { return g_pConfiguration; }
 
 /*
@@ -769,12 +700,14 @@ LONG WINAPI DelayLoadDllExceptionFilter(PEXCEPTION_POINTERS pep)
 class TrekWindowImpl :
     public TrekWindow,
     public IIntegerEventSink,
-    public ISubmenuEventSink,
     public IMenuCommandSink,
     public IClientEventSink,
     public ModelerSite,
     public TrekInputSite
 {
+private:
+    TrekApp* m_papp;
+    TRef<ValueList> m_pConfigurationUpdater;
 public:
     const char*     m_pszCursor;
 
@@ -833,8 +766,6 @@ public:
 
         return false;
     }
-
-    TRef<SuperKeyboardInputFilter> m_psuperKeyboardInputFilter;
 
     //////////////////////////////////////////////////////////////////////////////
     //
@@ -1144,13 +1075,7 @@ public:
 	// -Imago: Last activity timer
 	Time				m_timeLastActivity;
 	
-    //Imago 7/10
-    bool					m_bFFAutoCenter;
-	TRef<ModifiableNumber>  m_pnumFFGain;
-	//8/10
-	int						m_iMouseAccel;
 	int						m_iWheelDelay; //Spunky #282
-	TRef<ModifiableNumber>  m_pnumMouseSens;
 	//
 
     //
@@ -1187,13 +1112,13 @@ public:
     TRef<ModifiableColorValue> m_pcolorHUDshadows;
     TRef<ModifiableColorValue> m_pcolorTargetHUD;
 
-    TRef<ModifiableNumber>     m_pnumSFXGain;
-    TRef<ModifiableNumber>     m_pnumMusicGain;
-    TRef<ModifiableNumber>     m_pnumVoiceOverGain;
-
     //
     // Screens
     //
+
+    TRef<InputEngine>          m_pinputEngine;
+
+    TRef<UpdatingConfiguration> m_pConfiguration;
 
     TRef<UiEngine>       m_pUiEngine;
     TRef<Image>          m_pimageScreen;
@@ -1228,7 +1153,7 @@ public:
 
     TRef<Geo>        m_pgeoDebris;
     TRef<WrapGeo>          m_pwrapGeoDebris;
-	TRef<ModifiableNumber> m_debrisDensity; //LANS
+	TRef<Number> m_debrisDensity; //LANS
     //TRef<Geo>              m_pgeoTurret;
     //TRef<MatrixTransform>  m_pmtTurret;
     TRef<WrapGeo>          m_pgeoScene;
@@ -1251,6 +1176,7 @@ public:
     TRef<WrapImage>        m_pwrapImageRadar;
     TRef<WrapImage>        m_pwrapImageConsole;
     TRef<WrapImage>        m_pwrapImageHelp;
+    TRef<WrapImage>        m_pwrapImageConfiguration;
     TRef<WrapImage>        m_pwrapImageTop;
     TRef<ConsoleImage>     m_pconsoleImage;
     TRef<RadarImage>       m_pradarImage;
@@ -1329,78 +1255,11 @@ public:
 
     TRef<IMenu>                m_pmenu;
     TRef<IMenuCommandSink>     m_pmenuCommandSink;
-    TRef<ISubmenuEventSink>    m_psubmenuEventSink;
     TRef<IIntegerEventSink>    m_pintegerEventSink;
-    TRef<IKeyboardInput>       m_pkeyboardInput;
     TRef<IClientEventSink>     m_pClientEventSink;
     TRef<IClientEventSource>   m_pClientEventSource;
 
-    TRef<IMenuItem>            m_pitemTogglePosters;
-    TRef<IMenuItem>            m_pitemToggleDebris;
-    TRef<IMenuItem>            m_pitemToggleStars;
-    TRef<IMenuItem>            m_pitemToggleEnvironment;
-    TRef<IMenuItem>			   m_pitemToggleUseOldUi;
-    TRef<IMenuItem>			   m_pitemToggleShowJoystickIndicator;
-    TRef<IMenuItem>            m_pitemToggleRoundRadar;
-    TRef<IMenuItem>            m_pitemToggleLinearControls;
-    TRef<IMenuItem>            m_pitemToggleLargeDeadZone;
-    TRef<IMenuItem>            m_pitemToggleVirtualJoystick;
-    TRef<IMenuItem>            m_pitemToggleFlipY;
-    //Imago 7/10
-    TRef<IMenuItem>            m_pitemToggleEnableFeedback; //moved around & fixed up 7/10 #187
-	TRef<IMenuItem>            m_pitemToggleFFAutoCenter; 
-	TRef<IMenuItem>            m_pitemToggleFFGainUp; 
-	TRef<IMenuItem>            m_pitemToggleFFGainDown;
-	// 8/10 #215
-	TRef<IMenuItem>            m_pitemToggleMouseSensUp;
-	TRef<IMenuItem>            m_pitemToggleMouseSensDown;
-	TRef<IMenuItem>            m_pitemToggleMouseAccel;
-	TRef<IMenuItem>            m_pitemToggleWheelDelay; //Spunky #282
-	 //
-    TRef<IMenuItem>            m_pitemToggleStrobes;
-    TRef<IMenuItem>            m_pitemToggleTrails;
-    TRef<IMenuItem>            m_pitemToggleBounds;
-    TRef<IMenuItem>            m_pitemToggleTransparentObjects;
-    TRef<IMenuItem>            m_pitemToggleSmoke;
-    TRef<IMenuItem>            m_pitemToggleLensFlare;
-    TRef<IMenuItem>            m_pitemToggleBidirectionalLighting;
-    TRef<IMenuItem>            m_pitemToggleChatHistoryHUD;
-    TRef<IMenuItem>            m_pitemToggleCenterHUD;
-    TRef<IMenuItem>            m_pitemToggleTargetHUD;
-    TRef<IMenuItem>            m_pitemStyleHUD;
-    TRef<IMenuItem>            m_pitemToggleCensorChats;
-    TRef<IMenuItem>            m_pitemToggleStickyChase;
-    TRef<IMenuItem>            m_pitemFilterChatsToAll;
-    TRef<IMenuItem>            m_pitemFilterQuickComms;
-    TRef<IMenuItem>            m_pitemFilterLobbyChats;
-	TRef<IMenuItem>			   m_pitemIncreaseChatLines;	// #294 - Turkey
-	TRef<IMenuItem>			   m_pitemReduceChatLines;		// #294 - Turkey
-    TRef<IMenuItem>            m_pitemSoundQuality;
-    TRef<IMenuItem>            m_pitemToggleSoundHardware;
-    TRef<IMenuItem>            m_pitemToggleDSound8Usage;
-    TRef<IMenuItem>            m_pitemToggleMusic;
-    TRef<IMenuItem>            m_pitemMusicVolumeUp;
-    TRef<IMenuItem>            m_pitemMusicVolumeDown;
-    TRef<IMenuItem>            m_pitemSFXVolumeUp;
-    TRef<IMenuItem>            m_pitemSFXVolumeDown;
-    TRef<IMenuItem>            m_pitemVoiceOverVolumeUp;
-    TRef<IMenuItem>            m_pitemVoiceOverVolumeDown;
-    TRef<IMenuItem>            m_pitemMaxTextureSize;		// yp Your_Persona August 2 2006 : MaxTextureSize Patch
-    /* pkk May 6th: Disabled bandwidth patch
-    TRef<IMenuItem>            m_pitemToggleBandwidth; // w0dk4 June 2007: Bandwith Patch*/
-    TRef<IMenuItem>            m_pitemMuteFilter;			//TheBored 30-JUL-07: Filter Unknown Chat patch
-    TRef<IMenuItem>            m_pitemFilterUnknownChats;	//TheBored 30-JUL-07: Filter Unknown Chat patch
-	//imago added -- 6/29/09
-	TRef<IMenuItem>            m_pitemMip;
-	TRef<IMenuItem>            m_pitemPack;
-	TRef<IMenuItem>            m_pitemAA;
-	TRef<IMenuItem>            m_pitemVsync;
-
-    bool                       m_bLensFlare;
-    bool                       m_bMusic;
     bool                       m_bRoundRadar;
-
-    bool                       m_bShowJoystickIndicator;
 
     //
     // CommandView
@@ -1433,13 +1292,6 @@ public:
     TRef<ISoundMutex>               m_psoundmutexSal;
     TRef<ISoundMutex>               m_psoundmutexVO;
 
-    //
-    // VT members.
-    //
-
-    DWORD m_cVTVersion;
-    HWND  m_hwndVTEdit;
-
     TRef<SimpleModifiableValue<bool>> m_pUseOldUi;
 
     //
@@ -1447,18 +1299,14 @@ public:
     //
 
     TRef<TrekInput> m_ptrekInput;
-    bool            m_bEnableVirtualJoystick;
-    bool            m_bFlipY;
-    bool            m_bEnableFeedback;
-    bool            m_bLinearControls;
 
     AsteroidAbilityBitMask          m_aabmInvest;
     AsteroidAbilityBitMask          m_aabmCommand;
 
 public:
 
-    bool      OnActivateApp(bool bActive) override {
-        bool result = EngineWindow::OnActivateApp(bActive);
+    bool      OnActivateApp(bool bActive) {
+        bool result = m_pEngineWindow->OnActivateApp(bActive);
         UpdateMouseEnabled();
         return result;
     }
@@ -2174,7 +2022,7 @@ public:
         // Add a caption
         //
         if (ppane) {
-            SetCaption(CreateCaption(GetModeler(), ppane, this));
+            m_pEngineWindow->SetCaption(CreateCaption(GetModeler(), ppane, m_pEngineWindow));
         }
 
         if (ppane == NULL) {
@@ -2196,8 +2044,10 @@ public:
 		);
 
 		target->SetImage(m_pimageScreen);
+
+        m_ptrekInput->SetFocus(false); //Rock: Another attempt at resolving the stuck key bug
 		
-        SetSizeable(true); // kg-: #226 always
+        m_pEngineWindow->SetSizeable(true); // kg-: #226 always
 
         //
         // keep a reference to the screen to keep it alive
@@ -2254,7 +2104,7 @@ public:
                 GetConsoleImage()->OnSwitchViewMode();
             }
 
-            SetHideCursorTimer(s == ScreenIDCombat);
+            m_pEngineWindow->SetHideCursorTimer(s == ScreenIDCombat);
 
             // destroy the old windows
 
@@ -2262,7 +2112,7 @@ public:
                 m_pwrapImageTop->SetImage(m_pgroupImageGame);
                 m_pimageScreen = NULL;
                 m_pscreen      = NULL;
-                SetCaption(NULL);
+                m_pEngineWindow->SetCaption(NULL);
             }
 
             if (s != ScreenIDCombat)
@@ -2298,7 +2148,7 @@ public:
             switch (s) {
                 case ScreenIDCombat:
                 {
-                    SetFocus();
+                    m_pEngineWindow->SetFocus();
                     m_frameID = 0;
                     m_pconsoleImage = ConsoleImage::Create(GetEngine(), m_pviewport);
                     {
@@ -2315,8 +2165,6 @@ public:
                         ? (trekClient.GetShip()->IsGhost() ? vmCommand : vmHangar)
                         : vmCombat, true);
                     PositionCommandView(NULL, 0.0f);
-
-                    VTSetText("Screen=%d", ScreenIDCombat);
 
                     //
                     // Fill in the game state dialog
@@ -2349,7 +2197,7 @@ public:
                     break;
 
                 case ScreenIDIntroScreen:
-					SetUiScreen(CreateIntroScreen(GetModeler(), *m_pUiEngine, m_pUseOldUi->GetValue()));
+					SetUiScreen(CreateIntroScreen(m_papp, GetModeler(), *m_pUiEngine, m_pUseOldUi->GetValue()));
                     break;
 
 				case ScreenIDSplashScreen:
@@ -2364,14 +2212,14 @@ public:
 							//dont' check for intro.avi, 
 							// let the screen flash so they at least know this works
 							DDVideo *DDVid = new DDVideo();
-							if (m_pengine->IsFullscreen()) {
+							if (m_pEngineWindow->GetFullscreen()) {
 								CD3DDevice9::Get()->ResetDevice(true, 0, 0, 0);
 							}
 
 							bool bWindowCreated = false;
 
 							// BT - 9/17 - Fixing the window frame that is shown around the movie when played in the intro screen.
-							if (m_pengine->IsFullscreen() == false) {
+							if (m_pEngineWindow->GetFullscreen() == false) {
 								DDVid->m_hWnd = FindWindow(NULL, TrekWindow::GetWindowTitle());
 							}
 							else {
@@ -2426,7 +2274,7 @@ public:
 							}
 						}
 						GetWindow()->screen(ScreenIDIntroScreen);
-						SetUiScreen(CreateIntroScreen(GetModeler(), *m_pUiEngine, m_pUseOldUi->GetValue()));
+						SetUiScreen(CreateIntroScreen(m_papp, GetModeler(), *m_pUiEngine, m_pUseOldUi->GetValue()));
 	                    break;
 					}
 
@@ -2436,7 +2284,7 @@ public:
                     break;
 
                 case ScreenIDZoneClubScreen:
-					SetUiScreen(CreateZoneClubScreen(GetModeler(), GetTime()));
+					SetUiScreen(CreateZoneClubScreen(m_papp, GetModeler(), m_pEngineWindow->GetTime()));
                     break;
 
                 case ScreenIDSquadsScreen:
@@ -2618,58 +2466,21 @@ public:
         return (m_screen != ScreenIDCombat) || IsProbablyNotForChat (vk) || !m_pconsoleImage->IsComposing ();
     }
 
-	// BT - 9/17 - Made this a function to support chaining the opening microsoft splash with the longer classic
-	// allegiance movie. 
-	HANDLE PlayMovieClip(bool playMovies, bool isWindowed, ZString moviePath)
-	{
-		HANDLE hDDVidThread = 0;
-
-		if (!g_bQuickstart && playMovies && !g_bReloaded &&
-			::GetFileAttributes(moviePath) != INVALID_FILE_ATTRIBUTES &&
-			!CD3DDevice9::Get()->GetDeviceSetupParams()->iAdapterID) {
-			//Imago only check for these if we have to 8/16/09
-			HMODULE hVidTest = ::LoadLibraryA("WMVDECOD.dll");
-			HMODULE hAudTest = ::LoadLibraryA("wmadmod.dll");
-			bool bWMP = (hVidTest && hAudTest) ? true : false;
-			::FreeLibrary(hVidTest); ::FreeLibrary(hAudTest);
-			if (bWMP) {
-				if (!CD3DDevice9::Get()->IsWindowed()) {
-					::ShowWindow(GetHWND(), SW_HIDE);
-				}
-
-				//#112 windowed 7/10 Imago
-				PlayVideoInfo * pData = new PlayVideoInfo;
-				pData->pathStr = moviePath;
-				pData->bWindowed = CD3DDevice9::Get()->IsWindowed();
-
-				hDDVidThread = CreateThread(NULL, 0, DDVidCreateThreadProc, (void *)pData, THREAD_PRIORITY_HIGHEST, 0);
-			}
-		}
-
-		return hDDVidThread;
-	}
-
-	TrekWindowImpl(
-		EffectApp*     papp,
-		const ZString& strCommandLine,
-		// BUILD_DX9
-		const ZString& strArtPath,
-		// BUILD_DX9
-		bool           bMovies
-	) :
-		TrekWindow(
-			papp,
-			strCommandLine,
-			false, // BT - 10/17 - Set to always start windowed, then go full screen after game is initialized. Trying to find the source of the mystery "crash on launch" issues.
-			WinRect(0 + CD3DDevice9::Get()->GetDeviceSetupParams()->iWindowOffsetX,
-				0 + CD3DDevice9::Get()->GetDeviceSetupParams()->iWindowOffsetY,
-				CD3DDevice9::Get()->GetCurrentMode()->mode.Width +
-				CD3DDevice9::Get()->GetDeviceSetupParams()->iWindowOffsetX,
-				CD3DDevice9::Get()->GetCurrentMode()->mode.Height +
-				CD3DDevice9::Get()->GetDeviceSetupParams()->iWindowOffsetY),
-			WinPoint(800, 600)
-		),
-
+    TrekWindowImpl(
+        TrekApp*     papp,
+        EngineWindow* pengineWindow,
+        const ZString& strCommandLine,
+        // BUILD_DX9
+        const ZString& strArtPath,
+        // BUILD_DX9
+        bool           bMovies
+    ) :
+        TrekWindow(
+            pengineWindow
+        ),
+        m_papp(papp),
+        m_pConfiguration(GetConfiguration()),
+        m_pConfigurationUpdater(new ValueList(nullptr)),
 		m_screen(ScreenIDSplashScreen),
 		m_bShowMeteors(true),
 		m_bShowStations(true),
@@ -2694,10 +2505,7 @@ public:
 		m_rollCommandCamera(0.0f),
 		m_bEnableDisplacementCommandView(true),
 		m_suicideCount(0),
-		m_bLensFlare(true),
 		m_bRoundRadar(false),
-		m_bLinearControls(true),
-		m_bMusic(false),
 		m_bCommandGrid(false),
 		m_radarCockpit(RadarImage::c_rlDefault),
 		m_radarCommand(RadarImage::c_rlAll),
@@ -2708,47 +2516,27 @@ public:
 		m_ctLobbyChat(CHAT_EVERYONE),
 		m_bTrackCommandView(false),
 		m_bQuitComposing(true),
-		m_bEnableVirtualJoystick(false),
-		m_bFlipY(false),
-		m_bEnableFeedback(true),
 		m_aabmInvest(0),
 		m_aabmCommand(0),
-		//Imago 7/10
-		m_bFFAutoCenter(false),
-		m_iMouseAccel(0), //#215
 		m_bShowInventoryPane(true), // BT - 10/17 - Map and Sector Panes are now shown on launch and remember the pilots settings on last dock. 
 		m_bShowSectorMapPane(true),  // BT - 10/17 - Map and Sector Panes are now shown on launch and remember the pilots settings on last dock. 
-        m_pUseOldUi(nullptr),
-        m_bShowJoystickIndicator(true)
+        m_pUseOldUi(nullptr)
     {
         HRESULT hr;
 
 		debugf("Setting up TrekWindow\n");
 
-		// DXHACKS - Could cause issues...
-		// Move this call here, so that engine initialisation is performed *AFTER* we have a valid HWND.
-		papp->Initialize(strCommandLine, GetHWND());
-		
-		m_pengine = papp->GetEngine();
+        m_pengine = papp->GetEngine();
 		m_pmodeler = papp->GetModeler();
+        m_pinputEngine = m_pEngineWindow->GetInputEngine();
 
 		debugf("Setting art path to: %s\n", (PCC) strArtPath);
 
 
         std::vector<ZString> vArtPaths;
         {
-            //Go through the mod directory and add each directory in there
-
-            std::string search_path = "./Mods/*";
-            WIN32_FIND_DATA fd;
-            HANDLE hFind = ::FindFirstFile(search_path.c_str(), &fd);
-            if (hFind != INVALID_HANDLE_VALUE) {
-                do {
-                    if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && fd.cFileName[0] != '.') {
-                        vArtPaths.push_back(ZString("./Mods/") + fd.cFileName);
-                    }
-                } while (::FindNextFile(hFind, &fd));
-                ::FindClose(hFind);
+            for (std::shared_ptr<Mod> mod : papp->GetModdingEngine()->GetMods()) {
+                vArtPaths.push_back(mod->GetArtPath().c_str());
             }
         }
 
@@ -2773,26 +2561,6 @@ public:
             UiEngine::m_stringLogPath = (std::string)"lua.log";
         }
 
-		//Imago 6/29/09 7/28/09 now plays video in thread while load continues // BT - 9/17 - Refactored a bit.
-		HANDLE hDDVidThread = NULL;
-
-		// BT - 9/17 - If you want to re-add an intro movie, you can uncomment this code, but it was causing some people to crash,
-		// and most didn't like having any intro at all. :(
-		// To make a movie that is compatible with the movie player, use this ffmpeg command line: 
-		// ffmpeg.exe -i intro_microsoft_original.avi -q:a 1 -q:v 1 -vcodec mpeg4 -acodec wmav2 intro_microsoft.avi
-        // Rock: Converted to configuration setting
-        if (m_pConfiguration->GetBool("Ui.ShowStartupCreditsMovie", false)->GetValue()) {
-            ZString pathStr = GetModeler()->GetArtPath() + "/intro_microsoft.avi";
-            hDDVidThread = PlayMovieClip(bMovies, CD3DDevice9::Get()->IsWindowed(), pathStr);
-        }
-
-		debugf("Reading FFGain, MouseSensitivity\n");
-
-		m_pnumFFGain = new ModifiableNumber((float)LoadPreference("FFGain", 10000)); //Imago #187 
-		m_pnumMouseSens = new ModifiableNumber(atof(LoadPreference("MouseSensitivity", "0.6")));
-
-        m_pinputEngine->GetMouse()->SetSensitivity(m_pnumMouseSens->GetValue());
-
 		debugf("TrekResources::Initialize() - Loading fonts.\n");
 
 		// load the fonts
@@ -2801,16 +2569,17 @@ public:
 		debugf("performing PostWindowCreationInit.\n");
 
 		// Perform post window creation initialisation. Initialise the time value.
-		PostWindowCreationInit( );
-		InitialiseTime();
+		m_pEngineWindow->SetModeler(m_pmodeler);
+        m_pEngineWindow->InitialiseTime();
+
+        // Setup the popup container
+        m_ppopupContainer = papp->GetPopupContainer();
+        IPopupContainerPrivate* ppcp; CastTo(ppcp, m_ppopupContainer);
+        ppcp->Initialize(papp->GetEngine(), m_pEngineWindow->GetScreenRectValue());
 
         if (!IsValid()) {
             return;
         }
-
-		debugf("Setting up effects window.\n");
-
-        SetEffectWindow(this);
 
 		debugf("Setting up modeler site.\n");
 
@@ -2830,10 +2599,10 @@ public:
 
         LPCTSTR pszRes = MAKEINTRESOURCE(10);
         HICON hIcon = (HICON)::LoadImage(GetModuleHandle(NULL), pszRes, IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR);
-        SendMessage(WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
+        m_pEngineWindow->SendMessage(WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)hIcon);
 
         HICON hIconSmall = (HICON)::LoadImage(GetModuleHandle(NULL), pszRes, IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
-        SendMessage(WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIconSmall);
+        m_pEngineWindow->SendMessage(WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)hIconSmall);
 
         //
         // Event sink delegates
@@ -2844,7 +2613,6 @@ public:
         m_pClientEventSink  = IClientEventSink::CreateDelegate(this);
         m_pintegerEventSink = IIntegerEventSink::CreateDelegate(this);
         m_pmenuCommandSink  = IMenuCommandSink::CreateDelegate(this);
-        m_psubmenuEventSink = ISubmenuEventSink::CreateDelegate(this);
 
         //
         // advise us of client notifications
@@ -2901,10 +2669,8 @@ public:
         pnsGamePanes->AddMember("hudColorshadows",m_pcolorHUDshadows       = new ModifiableColorValue(Color::Black()));
         pnsGamePanes->AddMember("targetHudColor", m_pcolorTargetHUD = new ModifiableColorValue(Color::Black()));
 
-        pnsGamePanes->AddMember("SFXGain", m_pnumSFXGain =
-            new ModifiableNumber(-(float)LoadPreference("SFXGain", 8)));
-        pnsGamePanes->AddMember("VoiceOverGain", m_pnumVoiceOverGain =
-            new ModifiableNumber(-(float)LoadPreference("VoiceOverGain", 13)));
+        pnsGamePanes->AddMember("SFXGain", (Number*)NumberTransform::Clamp(m_papp->GetGameConfiguration()->GetSoundEffectVolume(), new Number(c_nMinGain), new Number(0.0f)));
+        pnsGamePanes->AddMember("VoiceOverGain", (Number*)NumberTransform::Clamp(m_papp->GetGameConfiguration()->GetSoundVoiceVolume(), new Number(c_nMinGain), new Number(0.0f)));
         pnsGamePanes->AddMember("MutexSal", m_psoundmutexSal);
         pnsGamePanes->AddMember("MutexVO", m_psoundmutexVO);
 
@@ -2931,27 +2697,6 @@ public:
         );
         pnsGamePanes->AddMember("targetCamera", m_cameraControl.m_pcameraTarget);
 
-        //
-        // Keyboard input
-        //
-
-        m_psuperKeyboardInputFilter = new SuperKeyboardInputFilter(this);
-        AddKeyboardInputFilter(m_psuperKeyboardInputFilter);
-
-        //
-        // Popup keyboard input
-        //
-
-        AddKeyboardInputFilter(GetPopupContainer());
-        m_pkeyboardInput = IKeyboardInput::CreateDelegate(this);
-        SetFocus(m_pkeyboardInput);
-
-        //
-        // Filter the keyboard input
-        //
-
-        m_pkeyboardInputFilter = new KeyboardInputFilter(this);
-        AddKeyboardInputFilter(m_pkeyboardInputFilter);
 
         //
         // Create the virtual joystick image
@@ -2964,12 +2709,6 @@ public:
         //
 
         InitializeImages();
-		
-		if (hDDVidThread != NULL) { //imago 7/29/09 intro.avi
-			if (!CD3DDevice9::Get()->IsWindowed()) {
-				CD3DDevice9::Get()->ResetDevice(false,800,600,g_DX9Settings.m_refreshrate);
-			}
-		}
 
         //
         // initialize the sound engine (for the intro music if nothing else)
@@ -2981,7 +2720,7 @@ public:
 
         if (g_bEnableSound) {
             assert (m_pSoundEngine == NULL);
-            hr = CreateSoundEngine(m_pSoundEngine, GetHWND(), m_bUseDSound8);
+            hr = CreateSoundEngine(m_pSoundEngine, m_pEngineWindow->GetHWND(), m_bUseDSound8);
         }
 
         if (FAILED(hr) || !g_bEnableSound)
@@ -3000,7 +2739,7 @@ public:
 
         InitializeSoundTemplates();
 
-        m_pUiEngine = UiEngine::Create(this, m_pengine, m_pSoundEngine, [this](std::string strWebsite) {
+        m_pUiEngine = UiEngine::Create(m_pEngineWindow, m_pengine, m_pSoundEngine, [this](std::string strWebsite) {
             this->ShowWebPage(strWebsite.c_str());
         });
 
@@ -3016,18 +2755,93 @@ public:
         // Load Input toggles
         //
 
-        m_bEnableVirtualJoystick = (LoadPreference("EnableVirtualJoystick", 0) != 0);
-        m_bFlipY                 = (LoadPreference("FlipY",                 0) != 0);
-        m_bEnableFeedback        = (LoadPreference("EnableFeedback",        1) != 0);
-        m_bFFAutoCenter			 = (LoadPreference("FFAutoCenter",			0) != 0); //Imago #187
-		m_iMouseAccel			 = LoadPreference("MouseAcceleration",     0) % 3; // Imago #215 //#282 bugfix
-		m_iWheelDelay			 = LoadPreference("WheelDelay",            2) % 5; //Spunky #282
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<float>([this](float sensitivity) {
+            m_pinputEngine->GetMouse()->SetSensitivity(sensitivity);
+        }, m_papp->GetGameConfiguration()->GetMouseSensitivity()));
 
-        m_pUseOldUi = m_pConfiguration->GetBool("Ui.UseOldUi", true);
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<float>([this](float value) {
+            m_pinputEngine->GetMouse()->SetAccel((int)value);
+        }, m_papp->GetGameConfiguration()->GetMouseAcceleration()));
 
-        m_bShowJoystickIndicator = (LoadPreference("ShowJoystickIndicator", 1) != 0);
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            trekClient.FilterChatsToAll(value);
+        }, m_papp->GetGameConfiguration()->GetChatFilterChatsToAll()));
 
-        GetInputEngine()->GetMouse()->SetAccel(m_iMouseAccel);
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            trekClient.FilterQuickComms(value);
+        }, m_papp->GetGameConfiguration()->GetChatFilterVoiceChats()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            trekClient.FilterUnknownChats(value);
+        }, m_papp->GetGameConfiguration()->GetChatFilterUnknownChats()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            //1 = filter lobby except PMs
+            //2 = filter lobby including PMs (why would we want this ever?)
+            //3 = no filtering
+            trekClient.FilterLobbyChats(value ? 1 : 3);
+        }, m_papp->GetGameConfiguration()->GetChatFilterChatsFromLobby()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            if (CensorDisplay() != value) {
+                ToggleCensorDisplay();
+            }
+        }, m_papp->GetGameConfiguration()->GetChatCensorChat()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<float>([this](float value) {
+            int lines = (int)value;
+
+            m_pnumberChatLinesDesired->SetValue(value);
+            if (m_viewmode == vmLoadout)
+            {
+                m_pchatListPane->SetChatLines(std::min(lines, 6));
+                m_pnumberChatLines->SetValue(std::min(lines, 6));
+            }
+            else if (m_viewmode <= vmOverride)
+            {
+                m_pchatListPane->SetChatLines(lines);
+                m_pnumberChatLines->SetValue(lines);
+            }
+        }, m_papp->GetGameConfiguration()->GetChatNumberOfLines()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<float>([this](float value) {
+            m_pnumberStyleHUD->SetValue((float)(int)value);
+        }, m_papp->GetGameConfiguration()->GetUiHudStyle()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            m_pwrapImageEnvironment->SetImage(value ? m_pimageEnvironment : Image::GetEmpty());
+        }, m_papp->GetGameConfiguration()->GetGraphicsEnvironment()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            m_pwrapImagePosters->SetImage(value ? m_pwrapImagePostersInside : Image::GetEmpty());
+        }, m_papp->GetGameConfiguration()->GetGraphicsPosters()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            m_pwrapImageStars->SetImage(value ? m_pimageStars : Image::GetEmpty());
+        }, m_papp->GetGameConfiguration()->GetGraphicsStars()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            ThingGeo::SetShowBounds(value);
+        }, m_papp->GetGameConfiguration()->GetGraphicsBoundingBoxes()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            ThingGeo::SetTransparentObjects(value);
+        }, m_papp->GetGameConfiguration()->GetGraphicsTransparentObjects()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            ThingGeo::SetPerformance(false);
+            ThingGeo::SetShowSmoke(value ? 3 : 0);
+        }, m_papp->GetGameConfiguration()->GetGraphicsParticles()));
+
+        m_pConfigurationUpdater->PushFront(new CallbackWhenChanged<bool>([this](bool value) {
+            if (!CommandCamera(m_cm)) {
+                m_pwrapImageLensFlare->SetImage(value ? m_pimageLensFlare : Image::GetEmpty());
+            }
+        }, m_papp->GetGameConfiguration()->GetGraphicsLensFlare()));
+
+		m_iWheelDelay			 = 2; //Spunky #282 //rock: removed as an option
+
+        m_pUseOldUi = m_papp->GetGameConfiguration()->GetUiUseOldUi();
 
 // BUILD_DX9
 
@@ -3051,15 +2865,15 @@ public:
         // The viewports
         //
 
-        m_pviewport        = new Viewport(m_pcamera,        GetRenderRectValue());
-        m_pviewportPosters = new Viewport(m_pcameraPosters, GetRenderRectValue());
+        m_pviewport        = new Viewport(m_pcamera,        m_pEngineWindow->GetRenderRectValue());
+        m_pviewportPosters = new Viewport(m_pcameraPosters, m_pEngineWindow->GetRenderRectValue());
         //m_pviewportTurret  = new Viewport(m_pcameraTurret,  GetRenderRectValue());
 
         //
         // put some Debris into the scene
         //
-		m_debrisDensity = new ModifiableNumber(atof(LoadPreference("Debris", "1.0"))); //variable debris - LANS
-        m_pgeoDebris = CreateDebrisGeo(GetModeler(), GetTime(), m_pviewport, m_debrisDensity);
+        m_debrisDensity = m_papp->GetGameConfiguration()->GetGraphicsDebris(); //variable debris - LANS
+        m_pgeoDebris = CreateDebrisGeo(GetModeler(), m_pEngineWindow->GetTime(), m_pviewport, m_debrisDensity);
 
         //
         // Command View
@@ -3083,11 +2897,6 @@ public:
                 m_pviewport,
                 true
             );
-
-		//LANS - zero out debris if option is off
-		if (m_debrisDensity->GetValue() == 0.0f) {
-			m_pwrapGeoDebris->SetGeo(Geo::GetEmpty());
-		}
 
         UpdateBidirectionalLighting();
 
@@ -3128,7 +2937,7 @@ public:
         // The muzzle flare
         //
 
-        m_pmuzzleFlareImage = CreateMuzzleFlareImage(GetModeler(), GetTime());
+        m_pmuzzleFlareImage = CreateMuzzleFlareImage(GetModeler(), m_pEngineWindow->GetTime());
 
         //
         // The HUD
@@ -3138,7 +2947,7 @@ public:
 
         m_pgroupImageHUD = new GroupImage();
 
-        m_pgroupImageHUD->AddImage(CreateIndicatorImage(GetModeler(), m_pviewport, GetTime()));
+        m_pgroupImageHUD->AddImage(CreateIndicatorImage(GetModeler(), m_pviewport, m_pEngineWindow->GetTime()));
         m_pgroupImageHUD->AddImage(m_pwrapImageRadar   = new WrapImage(m_pradarImage));
         //m_pgroupImageHUD->AddImage(m_pwrapImageTurret = new WrapImage(Image::GetEmpty()));
 
@@ -3208,80 +3017,17 @@ public:
         // Load the sounds
         //
 
-        m_ptrekInput = CreateTrekInput(GetModuleHandle(NULL), GetHWND(), GetInputEngine(), m_pjoystickImage);
-
-        //
-        // Initialize VT.
-        //
-
-        m_cVTVersion = 0;
-        m_hwndVTEdit = ::CreateWindow(TEXT("EDIT"),
-                                        TEXT("VTEdit"),
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        TrekWindow::GetHWND(),
-                                        NULL,
-                                        GetModuleHandle(NULL),
-                                        NULL);
+        m_ptrekInput = CreateTrekInput(GetModuleHandle(NULL), m_pEngineWindow->GetHWND(), m_pinputEngine, m_pjoystickImage);
 
         //
         // Load saved settings
         //
 
-        if (!LoadPreference("CensorChats", TRUE))
-            ToggleCensorChats();
         if (LoadPreference ("PreferChaseView", FALSE))
             ToggleStickyChase ();
-        if (!LoadPreference("FilterChatsToAll", TRUE))
-            ToggleFilterChatsToAll();
-        if (!LoadPreference("FilterQuickComms", TRUE))
-            ToggleFilterQuickComms();
-		if (!LoadPreference("FilterUnknownChats", TRUE))
-            ToggleFilterUnknownChats(); //TheBored 30-JUL-07: Filter Unknown Chat patch
-		if (!LoadPreference("LinearControlResponse", FALSE)) // BT - 8/17 Set to quadratic by default.
-            ToggleLinearControls();
-        if (!LoadPreference("Environment", TRUE) || IsWine())  //imago 9/19/09 force env in wine 8/16/09
-            ToggleEnvironment();
-        if (!LoadPreference("Posters", TRUE))
-            TogglePosters();
-        if (!LoadPreference("Stars", TRUE))
-            ToggleStars();
-        if (!LoadPreference("Strobes", TRUE))
-            ToggleStrobes();
-        if (!LoadPreference("Trails", TRUE))
-            ToggleTrails();
-        if (!LoadPreference("Bounds", TRUE))
-            ToggleBounds();
-        if (!LoadPreference("TransparentObjects", TRUE))
-            ToggleTransparentObjects();
-        SetSmoke (LoadPreference ("SmokeEffects", 3));
-        if (!LoadPreference("Lens Flare", TRUE))
-            ToggleLensFlare();
-        if (!LoadPreference("BidirectionalLighting", TRUE))
-            ToggleBidirectionalLighting();
-        if (!LoadPreference("ChatHistory", TRUE))
-            ToggleChatHistoryHUD();
-        if (!LoadPreference("CenterHUD", TRUE))
-            ToggleCenterHUD();
-        if (!LoadPreference("TargetHUD", TRUE))
-            ToggleTargetHUD();
-        if (LoadPreference("SoftwareHUD", FALSE))  //All we need with two styles
-            CycleStyleHUD();
-		SetDeadzone(LoadPreference("DeadZone", 5)); //ToggleLargeDeadZone(); //Imago updated 7/8/09 // BT 8/17 - Small deadzone default.
 		SetRadarLOD(LoadPreference("RadarLOD", 0)); //Imago updated 7/8/09 #24 (Gamma, VirtualJoystick, RadarLOD, ShowGrid)
 		if (LoadPreference("ShowGrid", FALSE))
 			ToggleShowGrid();
-		SetGamma(LoadPreference("Gamma", "1.13"));
-	    if (LoadPreference("VirtualJoystick", TRUE)) // BT - 10/17 - Enable virtual JS by default, not many people have joysticks now-a-days.
-			ToggleVirtualJoystick();
-
-		ToggleFilterLobbyChats(LoadPreference("FilterLobbyChats", 0)); //TheBored 25-JUN-07: Mute lobby chat patch // mmf 04/08 default this to 0
-
-		// #294 - Turkey
-		SetChatLines(LoadPreference("ChatLines", 10));
 
 		/* pkk May 6th: Disabled bandwidth patch
 		ToggleBandwidth(LoadPreference("Bandwidth",32)); // w0dk4 June 2007: Bandwith Patch - Increase default to max Imago 8/10*/
@@ -3300,40 +3046,34 @@ public:
         //
         // intro.avi video moved up
         //
-		TRef<Screen> introscr = CreateIntroScreen(GetModeler(), *m_pUiEngine, m_pUseOldUi->GetValue());
+		TRef<Screen> introscr = CreateIntroScreen(m_papp, GetModeler(), *m_pUiEngine, m_pUseOldUi->GetValue());
 		SetUiScreen(introscr);
         m_screen = ScreenIDIntroScreen;
         RestoreCursor();
+    }
 
-        // if the startup credits are running, wait.
-        if (hDDVidThread != NULL) {
-            WaitForSingleObject(hDDVidThread, INFINITE);
-            CloseHandle(hDDVidThread);
-        }
+    void Start() override {
+        //
+        // Keyboard input
+        //
 
-        auto pShowIntroMovie = m_pConfiguration->GetBool("Ui.ShowStartupIntroMovie", false);
-        if (pShowIntroMovie->GetValue()) {
-            //only show on first run
-            pShowIntroMovie->SetValue(false);
+        m_pEngineWindow->AddKeyboardInputFilter(new SuperKeyboardInputFilter(this));
 
-            ZString pathMovieStr = "";
+        //
+        // Popup keyboard input
+        //
 
-            // To make a movie that is compatible with the movie player, use this ffmpeg command line: 
-            // ffmpeg.exe -i intro_microsoft_original.avi -q:a 1 -q:v 1 -vcodec mpeg4 -acodec wmav2 intro_microsoft.avi
-            pathMovieStr = GetModeler()->GetArtPath() + "/intro_movie.avi";
+        m_pEngineWindow->AddKeyboardInputFilter(GetPopupContainer());
+        m_pEngineWindow->SetFocus(IKeyboardInput::CreateDelegate(this));
 
-            hDDVidThread = PlayMovieClip(bMovies, CD3DDevice9::Get()->IsWindowed(), pathMovieStr);
+        //
+        // Filter the keyboard input
+        //
 
-            if (hDDVidThread != NULL)
-            {
-                WaitForSingleObject(hDDVidThread, INFINITE);
-                CloseHandle(hDDVidThread);
-            }
+        m_pkeyboardInputFilter = new KeyboardInputFilter(this);
+        m_pEngineWindow->AddKeyboardInputFilter(m_pkeyboardInputFilter);
 
-            if (!CD3DDevice9::Get()->IsWindowed()) {
-                ::ShowWindow(GetHWND(), SW_SHOWMAXIMIZED);
-            }
-        }
+        TrekWindow::Start();
     }
 
     void InitializeImages()
@@ -3341,14 +3081,16 @@ public:
         m_pwrapImageTop = new WrapImage(Image::GetEmpty());
         m_pwrapImageLOD = new WrapImage(Image::GetEmpty());
 		m_pwrapImageHelp = new WrapImage(Image::GetEmpty());
+        m_pwrapImageConfiguration = new WrapImage(Image::GetEmpty());
 
         m_pgroupImage = new GroupImage();
         m_pgroupImage->AddImage(m_pjoystickImage);
         m_pgroupImage->AddImage(m_pwrapImageLOD);
         m_pgroupImage->AddImage(GetPopupContainer()->GetImage());
         m_pgroupImage->AddImage(m_pwrapImageHelp);
+        m_pgroupImage->AddImage(m_pwrapImageConfiguration);
         m_pgroupImage->AddImage(m_pwrapImageTop);
-        SetImage(m_pgroupImage);
+        m_pEngineWindow->SetImage(m_pgroupImage);
     }
 
     void SetCursor(const char* pszCursor)
@@ -3357,7 +3099,7 @@ public:
         {
             m_pszCursor = pszCursor;
 
-            if (GetCursorImage() != Image::GetEmpty())
+            if (m_pEngineWindow->GetCursorImage() != Image::GetEmpty())
                 RestoreCursor();
         }
     }
@@ -3367,7 +3109,7 @@ public:
         TRef<Image> pimageCursor;
         CastTo(pimageCursor, (Value*)GetModeler()->GetNameSpace("cursor")->FindMember(m_pszCursor));
         assert(pimageCursor);
-        SetCursorImage(pimageCursor);
+        m_pEngineWindow->SetCursorImage(pimageCursor);
     }
 
     void SetWaitCursor()
@@ -3375,7 +3117,7 @@ public:
         TRef<Image> pimageCursor;
         CastTo(pimageCursor, (Value*)GetModeler()->GetNameSpace("cursor")->FindMember(AWF_CURSOR_WAIT));
         assert(pimageCursor);
-        SetCursorImage(pimageCursor);
+        m_pEngineWindow->SetCursorImage(pimageCursor);
     }
 
     void SavePreference(const ZString& szName, DWORD dwValue)
@@ -3409,17 +3151,6 @@ public:
 
     void Terminate()
     {
-		SetGamma(ZString(GetEngine()->GetGammaLevel())); //imago 7/8/09 #24
-
-        //
-        // Terminate VT.
-        //
-        if (NULL != m_hwndVTEdit)
-        {
-            if (TRUE == ::DestroyWindow(m_hwndVTEdit))
-                m_hwndVTEdit = NULL;
-        }
-
         // close all popups (a potential circular reference)
         if (!GetPopupContainer()->IsEmpty())
             GetPopupContainer()->ClosePopup(NULL);
@@ -3428,8 +3159,8 @@ public:
 
         m_pClientEventSource->RemoveSink(m_pClientEventSink);
 
-        RemoveKeyboardInputFilter(GetPopupContainer());
-        RemoveKeyboardInputFilter(m_pkeyboardInputFilter);
+        m_pEngineWindow->RemoveKeyboardInputFilter(GetPopupContainer());
+        m_pEngineWindow->RemoveKeyboardInputFilter(m_pkeyboardInputFilter);
 
         trekClient.Terminate();
 
@@ -3442,9 +3173,12 @@ public:
 
         TerminateGameStateContainer();
         m_pwrapImageTop->SetImage(Image::GetEmpty());
+        m_pwrapImageHelp->SetImage(Image::GetEmpty());
+        m_pwrapImageConfiguration->SetImage(Image::GetEmpty());
         m_pimageScreen     = NULL;
         m_pscreen          = NULL;
-        SetCaption(NULL);
+        m_pConfigurationScreen = nullptr;
+        m_pEngineWindow->SetCaption(NULL);
 
 		// BT - 10/17 - Fixing 8982261	211206	allegiance.exe	allegiance.exe	tvector.h	362	13	0	Win32 StructuredException at 0058C1DA : UNKNOWN	2017-10-08 14:33:29	0x0018C1DA	10	UNKNOWN
 		// Not sure why we need to set the image to empty when the window is closing down anyway. 
@@ -3452,7 +3186,7 @@ public:
 		// is reached. 
 		if (m_screen == ScreenIDCombat)
 		{
-			SetImage(Image::GetEmpty());
+            m_pEngineWindow->SetImage(Image::GetEmpty());
 			m_pwrapImageConsole->SetImage(Image::GetEmpty());
 			m_pwrapImageTop->SetImage(Image::GetEmpty());
 		}
@@ -3490,12 +3224,6 @@ public:
         m_ptrekInput = NULL;
     }
 
-    void OnClose()
-    {
-        Terminate();
-        EngineWindow::OnClose();
-    }
-
     void CloseMessageBox ()
     {
         m_pmessageBox = NULL;
@@ -3503,7 +3231,7 @@ public:
 
     void DoClose()
     {
-        PostMessage(WM_CLOSE);
+        m_pEngineWindow->PostMessage(WM_CLOSE);
     }
 
     TRef<IMessageBox> m_pmessageBox;
@@ -3624,7 +3352,7 @@ public:
         if (m_pimageScreen)
         {
             // center the pane on the screen
-            const Rect& rectScreen = GetScreenRectValue()->GetValue();
+            const Rect& rectScreen = m_pEngineWindow->GetScreenRectValue()->GetValue();
             Point sizeScreenBeforeScaling;
             if (m_pscreen->GetPane())
             {
@@ -3764,8 +3492,8 @@ public:
 
     void Error(const ZString& str)
     {
-        SetFullscreen(false);
-        MessageBox(str, "Error", MB_OK);
+        m_pEngineWindow->SetFullscreen(false);
+        m_pEngineWindow->MessageBox(str, "Error", MB_OK);
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -3797,7 +3525,9 @@ public:
     bool             GetRoundRadarMode(void) const  { return m_bRoundRadar;                     }
     CameraMode       GetCameraMode(void) const      { return m_cm;                              }
 
-    bool             GetShowJoystickIndicator(void) const { return m_bShowJoystickIndicator; }
+    bool             GetShowJoystickIndicator(void) const { 
+        return m_papp->GetGameConfiguration()->GetJoystickShowDirectionIndicator()->GetValue();
+    }
 
     /*
     void             TurretChange(void)
@@ -3833,7 +3563,7 @@ public:
 
     bool IsValid()
     {
-        return EngineWindow::IsValid();
+        return m_pEngineWindow->EngineWindow::IsValid();
     }
 
     void ShowWebPage(const char* szURL)
@@ -3847,19 +3577,6 @@ public:
 
         ShellExecute(NULL, NULL, szURL, NULL, NULL, SW_SHOWNORMAL);
     }
-
-    #define idmConfigure         3
-    #define idmView              5
-    #define idmOptions           6
-    #define idmHelp              7
-    #define idmExitGame          8
-    #define idmEngineOptions     9
-    #define idmSoundOptions      10
-    #define idmGameOptions       11
-    #define idmExitApp           12
-    #define idmGameDetails       13
-	#define idmVersion           14 // TE: Added Version menu
-	#define idmTags				 15 // BT - STEAM - Let the user select thier group tag.
 
     #define idmChannelN          101
     #define idmChannelShow       102
@@ -3887,109 +3604,15 @@ public:
     #define idmCMLoadout         505
     #define idmCMTeamPane        506
 
-    #define idmSound                       601
-    #define idmTogglePosters               602
-    #define idmToggleDebris                603
-    #define idmToggleStars                 604
-    #define idmToggleStrobes               605
-    #define idmToggleLensFlare             606
-    #define idmToggleTrails                609
-    #define idmToggleEnvironment           611
-    #define idmToggleBidirectionalLighting 612
-    #define idmToggleChatHistoryHUD        614
-    #define idmToggleCenterHUD             615
-    #define idmToggleTargetHUD             616
-    #define idmStyleHUD                    618
-    #define idmToggleCensorChats           619
-    #define idmToggleLinearControls        620
-    #define idmToggleSmoke                 621
-    #define idmToggleBounds                622
-    #define idmToggleTransparentObjects    623
-    #define idmFilterChatsToAll            624
-    #define idmFilterQuickComms            625
-    #define idmFilterLobbyChats            626
-    #define idmToggleLargeDeadZone         627
-    #define idmToggleVirtualJoystick       628
-    #define idmToggleFlipY                 629
-    #define idmToggleStickyChase           630
-    #define idmToggleEnableFeedback        631
-    #define idmMaxTextureSize              632 // yp Your_Persona August 2 2006 : MaxTextureSize Patch
-    #define idmPings                       633 // w0dk4 player-pings feature
-    /* pkk May 6th: Disabled bandwidth patch
-    #define idmBandwidth		       634 // w0dk4 June 2007: Bandwith Patch */
-    #define	idmMuteFilterOptions		 635 //TheBored 30-JUL-07: Filter Unknown Chat patch
-    #define idmFilterUnknownChats		 636 //TheBored 30-JUL-07: Filter Unknown Chat patch
-	#define idmScrollbar				 637 // #294 - Turkey
-	#define idmIncreaseChatLines		 638 // #294 - Turkey
-	#define idmReduceChatLines			 639 // #294 - Turkey
-	#define idmCycleTimestamp			 640 // #294 - Turkey
-
-    #define idmResetSound           701
-    #define idmSoundQuality         702
-    #define idmSoundHardware        703
-    #define idmToggleMusic          704
-    #define idmMusicVolumeUp        705
-    #define idmMusicVolumeDown      706
-    #define idmSFXVolumeUp          707
-    #define idmSFXVolumeDown        708
-    #define idmVoiceOverVolumeUp    709
-    #define idmVoiceOverVolumeDown  710
-	#define idmUseDSound8           711
-
 	#define idmContextAcceptPlayer	801
 	#define idmContextRejectPlayer	802
 	#define idmContextMakeLeader	803
 	#define idmContextMutePlayer	804
-
-	//imago 6/30/09
-	#define idmDeviceOptions		805
-	#define idmAA					806
-	#define idmMip					807
-	#define idmPack					808
-	#define idmVsync				810
-	
-    //Imago 7/10
-    #define idmFFOptions            811
-    #define idmFFGainUp             812
-    #define idmFFGainDown           813
-    #define idmFFAutoCenter         814
-
 	
 	//Xynth #48 8/2010
 	#define idmContextDockDrone		815
 	//Xynth #197 8/2010
 	#define idmContextChat			816
-
-	//Imago 8/10 #215
-	#define idmMouseOptions		817
-	#define idmMouseSensUp		818
-	#define idmMouseSensDown	819
-	#define idmMouseAccel		820
-	#define idmWheelDelay		821 //Spunky #282
-
-    #define idmOldUi	        823
-
-    #define idmShowJoystickIndicator 824
-
-	// BT - STEAM
-	#define idmCallsignTag0		900
-	#define idmCallsignTag1		901
-	#define idmCallsignTag2		902
-	#define idmCallsignTag3		903
-	#define idmCallsignTag4		904
-	#define idmCallsignTag5		905
-	#define idmCallsignTag6		906
-	#define idmCallsignTag7		907
-	#define idmCallsignTag8		908
-	#define idmCallsignTag9		909
-	#define idmCallsignTagNone	910 
-	
-	// BT - STEAM
-	#define idmToken0			920
-	#define idmToken1			921
-	#define idmToken2			922
-	#define idmToken3			923
-	#define idmToken4			924
 
 	// BT - STEAM - New player context menu options
 	#define idmContextKickPlayer	1000
@@ -4071,126 +3694,62 @@ public:
 		//DeleteObject(hCaptureBitmap);
 	}
 
-	// BT - STEAM - TODO Move these to where the other globals are hiding?
-	CallsignTagInfo m_currentCallsignTag;
-#ifdef STEAM_APP_ID
-	SteamClans m_availableSteamClans;
-#endif
+    TRef<Screen> m_pConfigurationScreen;
+    TRef<SimpleModifiableValue<bool>> m_pIsInMission;
+    void ShowConfiguration() {
+        if (m_pConfigurationScreen == nullptr) {
+            m_pIsInMission = new SimpleModifiableValue<bool>((trekClient.MyMission() != NULL) || Slideshow::IsInSlideShow());
+
+            std::unique_ptr<ConfigScreenHooks> hooks = std::make_unique<ConfigScreenHooks>();
+            hooks->CloseConfiguration = [this]() {
+                this->HideConfiguration();
+            };
+            hooks->ExitMission = [this]() {
+                if (this->m_pIsInMission->GetValue()) {
+                    this->DoQuitMission();
+                }
+                this->HideConfiguration();
+            };
+            hooks->ExitAllegiance = [this]() {
+                this->DoClose();
+            };
+            hooks->pIsInMission = m_pIsInMission;
+            hooks->OpenKeymapPopup = [this]() {
+                this->DoInputConfigure();
+            };
+            hooks->OpenPingPopup = [this]() {
+                if (this->m_pIsInMission->GetValue() && trekClient.m_fm.IsConnected()) {
+                    trekClient.SetMessageType(BaseClient::c_mtGuaranteed);
+                    BEGIN_PFM_CREATE(trekClient.m_fm, pfmPingDataReq, C, REQPINGDATA)
+                        END_PFM_CREATE
+                }
+            };
+            hooks->OpenMissionInfoPopup = [this]() {
+                if (this->m_pIsInMission->GetValue()) {
+                    OnGameState();
+                }
+            };
+            hooks->OpenHelpPopup = [this]() {
+                this->OnHelp(true);
+            };
+
+            m_pConfigurationScreen = CreateConfigScreen(m_papp, m_pUiEngine, m_pConfiguration, std::move(hooks));
+        }
+        else {
+            //bit of a hack, just check everytime the menu is shown
+            m_pIsInMission->SetValue((trekClient.MyMission() != NULL) || Slideshow::IsInSlideShow());
+        }
+        m_pwrapImageConfiguration->SetImage(m_pConfigurationScreen->GetImage());
+    }
+
+    void HideConfiguration() {
+        m_pwrapImageConfiguration->SetImage(Image::GetEmpty());
+        m_pConfigurationScreen = nullptr;
+    }
 
     void ShowMainMenu()
     {
-        m_pmenu =
-            CreateMenu(
-                GetModeler(),
-                TrekResources::SmallFont(),
-                m_pmenuCommandSink
-            );
-
-		// mmf format octal version (defined in SlmVer.h) to decimal YY.MM.DD
-		int YY,MM,DD;
-		ZString dR;
-		{
-			ZString dVer, dYY, dMM, dDD;
-			dVer = ZVersionInfo().GetStringValue("FileVersion").Right(6);
-			dR = ZVersionInfo().GetProductVersionString().Middle(3,1); //Imago good till R10
-			dDD = dVer.Right(2);
-			dMM = dVer.Middle(2,2);
-			dYY = dVer.Middle(0,2);
-
-			YY = atoi(dYY); 	
-			YY = (YY/10)*8+(YY%10);
-			
-			MM = atoi(dMM); 	
-			MM = (MM/10)*8+(MM%10);
-			
-			DD = atoi(dDD); 	
-			DD = (DD/10)*8+(DD%10);
-		}
-
-		// TE: Add version menu, mmf changed format, zero pad YY, that will last us 3 more years and saves an if
-		// TheBored 05-APR-2010: Removed leading 0 from year, hooray 2010!
-		// mmf added ifs to zero pad MM and DD
-		if (MM<10 && DD<10) m_pmenu->AddMenuItem(0, "FAZ R"+dR+" Build # " + ZString(YY) + ".0" + ZString(MM) + ".0" + ZString(DD));
-		if (MM<10 && DD>9)  m_pmenu->AddMenuItem(0, "FAZ R"+dR+" Build # " + ZString(YY) + ".0" + ZString(MM) + "." + ZString(DD));
-		if (MM>9 && DD<10)  m_pmenu->AddMenuItem(0, "FAZ R"+dR+" Build # " + ZString(YY) + "." + ZString(MM) + ".0" + ZString(DD));
-		if (MM>9 && DD>9)   m_pmenu->AddMenuItem(0, "FAZ R"+dR+" Build # " + ZString(YY) + "." + ZString(MM) + "." + ZString(DD));
-		//#62 Imago 7/10
-		if (trekClient.m_pMissionInfo) {
-			ZString zVer = UTL::GetServerVersion(trekClient.m_pMissionInfo->GetCookie());
-			if (zVer.IsEmpty() == false) {
-				m_pmenu->AddMenuItem(0, PCC("Server v" + zVer));
-			}
-		}
-		//AEM, redesigned ESC menu 7/6/07
-		// mmf 10/07 swapped position of S and G
-		m_pmenu->AddMenuItem(0               , "");
-		m_pmenu->AddMenuItem(0				 , "HELP");
-		m_pmenu->AddMenuItem(0               , "--------------------------");
-		m_pmenu->AddMenuItem(idmHelp         , "Manual & Quick Reference"            , 'H'                     );
-		m_pmenu->AddMenuItem(0               , "");
-		m_pmenu->AddMenuItem(0               , "OPTIONS");
-		m_pmenu->AddMenuItem(0               , "--------------------------");
-        m_pmenu->AddMenuItem(idmEngineOptions, "Graphics Device" , 'D', m_psubmenuEventSink);
-        m_pmenu->AddMenuItem(idmOptions      , "Graphics", 'O', m_psubmenuEventSink);
-        m_pmenu->AddMenuItem(idmGameOptions  , "Game",     'G', m_psubmenuEventSink);
-		m_pmenu->AddMenuItem(idmSoundOptions , "Sound"   , 'S', m_psubmenuEventSink);
-
-		
-		// BT - STEAM - Let the user select their steam call sign from a list of options.
-#ifdef STEAM_APP_ID
-		if (m_availableSteamClans.GetAvailableCallsignTags()->GetCount() > 0)
-		{
-			ZString menuOption = "Squad Tags";
-			if (m_currentCallsignTag.m_steamGroupID > 0)
-			{
-				ZString currentName = trekClient.GetSavedCharacterName();
-				ZString renderedName = m_currentCallsignTag.Render(currentName);
-				menuOption = ZString("Squad Tags (") + renderedName + ")   ";
-			}
-
-			if (m_screen == ScreenIDSplashScreen || m_screen == ScreenIDIntroScreen || m_screen == ScreenIDZoneClubScreen)
-			{
-
-				m_pmenu->AddMenuItem(0, "");
-				m_pmenu->AddMenuItem(0, "Only Available Before");
-				m_pmenu->AddMenuItem(0, "Connecting to the Lobby");
-				m_pmenu->AddMenuItem(0, "--------------------------");
-				m_pmenu->AddMenuItem(idmTags, menuOption, 'T', m_psubmenuEventSink);
-
-				
-				ZString tokens = m_currentCallsignTag.GetAvailableTokens();
-				if (tokens.GetLength() > 0)
-				{
-					for (int i = 0; i < tokens.GetLength(); i++)
-					{
-						if (tokens[i] == m_currentCallsignTag.m_callsignToken[0])
-							continue;
-
-						m_pmenu->AddMenuItem(idmToken0 + i, "Add Officer Token: ", tokens[i]);
-					}
-				}
-			}
-		}
-
-		// BT - STEAM - END.
-#endif
-
-        if (trekClient.MyMission() != NULL) {
-			m_pmenu->AddMenuItem(0               , "");
-			m_pmenu->AddMenuItem(0               , "INFORMATION");
-			m_pmenu->AddMenuItem(0               , "--------------------------");
-            m_pmenu->AddMenuItem(idmGameDetails, "Game Details",   'I');
-			m_pmenu->AddMenuItem(idmPings  ,     "Player Pings",   'P');	// w0dk4 player-pings feature
-		}
-
-        m_pmenu->AddMenuItem(0               , "");
-		m_pmenu->AddMenuItem(0               , "QUIT");
-		m_pmenu->AddMenuItem(0               , "--------------------------");
-        if ((trekClient.MyMission() != NULL) || Slideshow::IsInSlideShow ())
-            m_pmenu->AddMenuItem(idmExitGame , "Mission"    , 'Q'                 );
-        m_pmenu->AddMenuItem(idmExitApp      , "Allegiance" , 'X'                     );
-
-        OpenPopup(m_pmenu, Point(10, 10));
+        ShowConfiguration();
     }
 
 	// BT - Steam
@@ -4280,7 +3839,7 @@ public:
 			m_pmenu->AddMenuItem(idmContextBanPlayer, "Ban From Game", 'B');
 		}
 		
-		Point popupPosition = GetMousePosition();
+		Point popupPosition = m_pEngineWindow->GetMousePosition();
 
 
 		TRef<Pane> ppane = m_pmenu->GetPane();
@@ -4378,7 +3937,7 @@ public:
 				m_pmenu->AddMenuItem(idmContextBanPlayer, "Ban From Game", 'B');
 			}
 
-			Point popupPosition = GetMousePosition();
+			Point popupPosition = m_pEngineWindow->GetMousePosition();
 
 
 			TRef<Pane> ppane = m_pmenu->GetPane();
@@ -4392,246 +3951,7 @@ public:
 
     void ShowOptionsMenu()
     {
-        m_pmenu =
-            CreateMenu(
-                GetModeler(),
-                TrekResources::SmallFont(),
-                m_pmenuCommandSink
-            );
-
-        m_pmenu->AddMenuItem(idmEngineOptions, "Graphics Device" , 'D', m_psubmenuEventSink);
-        m_pmenu->AddMenuItem(idmOptions      , "Graphics Options", 'O', m_psubmenuEventSink);
-        m_pmenu->AddMenuItem(idmSoundOptions , "Sound Options"   , 'S', m_psubmenuEventSink);
-        m_pmenu->AddMenuItem(idmGameOptions  , "Game Options" ,    'G', m_psubmenuEventSink);
-
-        OpenPopup(m_pmenu, Point(10, 10));
-    }
-
-
-	// BT - STEAM 
-#ifdef STEAM_APP_ID
-	void AddAvailablePlayerTagsToMenu(TRef<IMenu> pmenu)
-	{
-		pmenu->AddMenuItem(0, "Squad Tags");
-		pmenu->AddMenuItem(0, "--------------------------");
-
-		pmenu->AddMenuItem(idmCallsignTagNone, "<None>", 'X');
-
-		// Allow up to 30 tags to be shown.
-		// Backing this out for now, forgot to add additional idmCallsignTag* slots. 
-		for (int i = 0; i < m_availableSteamClans.GetAvailableCallsignTags()->GetCount() && i < 10; i++)
-		{
-			CallsignTagInfo item = m_availableSteamClans.GetAvailableCallsignTags()->Get(i);
-			pmenu->AddMenuItem(idmCallsignTag0 + i, item.m_callsignTag, 48 + item.m_index); // 48 = ASCII code for '0'.
-		}
-	}
-
-	// BT - STEAM
-	void SetPlayerCallsign(int playerCallsignIndex)
-	{
-		for (int i = 0; i < m_availableSteamClans.GetAvailableCallsignTags()->GetCount(); i++)
-		{
-			CallsignTagInfo callsignTagInfo = m_availableSteamClans.GetAvailableCallsignTags()->Get(i);
-
-			if (callsignTagInfo.m_index == playerCallsignIndex - idmCallsignTag0)
-			{
-				m_currentCallsignTag.SetSteamGroupID(callsignTagInfo.m_steamGroupID, callsignTagInfo.m_callsignTag);
-				break;
-			}
-		}
-	}
-
-	// BT - STEAM
-	void UnsetPlayerCallsign()
-	{
-		m_currentCallsignTag.SetSteamGroupID(0, "");
-	}
-
-	// BT - STEAM
-	void SetPlayerToken(int playerTokenIndex)
-	{
-		ZString tokens = m_currentCallsignTag.GetAvailableTokens();
-		m_currentCallsignTag.SetToken(tokens.Middle(idmToken0 - playerTokenIndex, 1));
-	}
-#endif
-
-    TRef<IPopup> GetSubMenu(IMenuItem* pitem)
-    {
-        TRef<IMenu> pmenu =
-            CreateMenu(
-                GetModeler(),
-                TrekResources::SmallFont(),
-                m_pmenuCommandSink
-            );
-
-        switch (pitem->GetID()) {
-            case idmEngineOptions:
-                return GetEngineMenu(TrekResources::SmallFont());
-
-            case idmOptions:
-                		       		 				 pmenu->AddMenuItem(idmDeviceOptions,					"Advanced Options",				  'A', m_psubmenuEventSink);
-                m_pitemToggleEnvironment           = pmenu->AddMenuItem(idmToggleEnvironment,           GetEnvironmentMenuString()          , 'E');
-                m_pitemTogglePosters               = pmenu->AddMenuItem(idmTogglePosters,               GetPostersMenuString()              , 'P');
-                m_pitemToggleDebris                = pmenu->AddMenuItem(idmToggleDebris,                GetDebrisMenuString()               , 'D');
-                m_pitemToggleStars                 = pmenu->AddMenuItem(idmToggleStars,                 GetStarsMenuString()                , 'S');
-                m_pitemToggleStrobes               = pmenu->AddMenuItem(idmToggleStrobes,               GetStrobesMenuString()              , 'R');
-                m_pitemToggleTrails                = pmenu->AddMenuItem(idmToggleTrails,                GetTrailsMenuString()               , 'T');
-                #ifdef _DEBUG
-                    m_pitemToggleBounds                = pmenu->AddMenuItem(idmToggleBounds,                GetBoundsMenuString()               , 'N');
-                    m_pitemToggleTransparentObjects    = pmenu->AddMenuItem(idmToggleTransparentObjects,    GetTransparentObjectsMenuString()   , 'O');
-                #endif
-                m_pitemToggleSmoke                 = pmenu->AddMenuItem(idmToggleSmoke,                 GetSmokeMenuString()                ,	'L'); //was same as posters - Imago 8/8/09
-                m_pitemToggleLensFlare             = pmenu->AddMenuItem(idmToggleLensFlare,             GetLensFlareMenuString()            ,	'F');
-                m_pitemToggleBidirectionalLighting = pmenu->AddMenuItem(idmToggleBidirectionalLighting, GetBidirectionalLightingMenuString(),	'B');
-                m_pitemStyleHUD                    = pmenu->AddMenuItem(idmStyleHUD,                    GetStyleHUDMenuString()             ,	'H'); //Imago 6/30/09 adjust new dx9 settings in game
-
-                m_pitemToggleUseOldUi     = pmenu->AddMenuItem(idmOldUi, GetOldUiMenuString(), 'G');
-
-                m_pitemToggleShowJoystickIndicator = pmenu->AddMenuItem(idmShowJoystickIndicator, GetShowJoystickIndicatorMenuString(), 'J');
- 				
-				break;
-
-            case idmGameOptions:
-                m_pitemMuteFilter		           = pmenu->AddMenuItem(idmMuteFilterOptions,					"Mute/Filter",						'M', m_psubmenuEventSink); //TheBored 30-JUL-07: Filter Unknown Chat patch
-                m_pitemToggleStickyChase           = pmenu->AddMenuItem(idmToggleStickyChase,           GetStickyChaseMenuString (),        'K');
-                m_pitemToggleLinearControls        = pmenu->AddMenuItem(idmToggleLinearControls,        GetLinearControlsMenuString(),      'L');
-                m_pitemToggleLargeDeadZone         = pmenu->AddMenuItem(idmToggleLargeDeadZone,         GetDeadzoneMenuString(),       'Z'); //imago updated 7/8/09
-                m_pitemToggleVirtualJoystick       = pmenu->AddMenuItem(idmToggleVirtualJoystick,       GetVirtualJoystickMenuString(),     'J');
-                m_pitemToggleFlipY                 = pmenu->AddMenuItem(idmToggleFlipY,                 GetFlipYMenuString(),               'Y');
-                //m_pitemToggleEnableFeedback        = pmenu->AddMenuItem(idmToggleEnableFeedback,        GetEnableFeedbackMenuString(),      'E'); //imago sunk 7/10
-													 pmenu->AddMenuItem(idmFFOptions,					"Force Feedback",				  'E', m_psubmenuEventSink);
-													 pmenu->AddMenuItem(idmMouseOptions,				"Mouse Options",				  'Q', m_psubmenuEventSink);
-					
-				/* pkk May 6th: Disabled bandwidth patch // w0dk4 June 2007: Bandwith Patch
-				m_pitemToggleBandwidth			   = pmenu->AddMenuItem(idmBandwidth,					GetBandwidthMenuString(),		    'B');*/
-                                                     pmenu->AddMenuItem(idmConfigure           ,        "Map Keys and Controls"      ,      'C');
-                break;
-
-            case idmSoundOptions:
-                #ifdef _DEBUG
-                pmenu->AddMenuItem(idmResetSound, "Reset Sound", 'R');
-                #endif
-                m_pitemSoundQuality         = pmenu->AddMenuItem(idmSoundQuality, GetSoundQualityMenuString());
-                m_pitemToggleSoundHardware  = pmenu->AddMenuItem(idmSoundHardware, GetSoundHardwareMenuString());
-				m_pitemToggleDSound8Usage   = pmenu->AddMenuItem(idmUseDSound8, GetDSound8EnabledString());
-                m_pitemSFXVolumeUp          = pmenu->AddMenuItem(idmSFXVolumeUp,
-                    GetGainMenuString("Sound Effect", m_pnumSFXGain->GetValue(), c_fVolumeDelta), 'S');
-                m_pitemSFXVolumeDown        = pmenu->AddMenuItem(idmSFXVolumeDown,
-                    GetGainMenuString("Sound Effect", m_pnumSFXGain->GetValue(), -c_fVolumeDelta), 'A');
-                m_pitemVoiceOverVolumeUp    = pmenu->AddMenuItem(idmVoiceOverVolumeUp,
-                    GetGainMenuString("Voice Over", m_pnumVoiceOverGain->GetValue(), c_fVolumeDelta), 'V');
-                m_pitemVoiceOverVolumeDown  = pmenu->AddMenuItem(idmVoiceOverVolumeDown,
-                    GetGainMenuString("Voice Over", m_pnumVoiceOverGain->GetValue(), -c_fVolumeDelta), 'C');
-                break;
-
-				// BT - STEAM
-#ifdef STEAM_APP_ID
-			case idmTags:
-				AddAvailablePlayerTagsToMenu(pmenu);
-				break;
-#endif
-			//TheBored 30-JUL-07: Filter Unknown Chat patch
-			case idmMuteFilterOptions:
-                m_pitemToggleCensorChats           = pmenu->AddMenuItem(idmToggleCensorChats,           GetCensorChatsMenuString(),         'D');
-				m_pitemFilterChatsToAll            = pmenu->AddMenuItem(idmFilterChatsToAll,            GetFilterChatsToAllMenuString(),    'A');
-                m_pitemFilterQuickComms            = pmenu->AddMenuItem(idmFilterQuickComms,            GetFilterQuickCommsMenuString(),    'V');
-				m_pitemFilterUnknownChats          = pmenu->AddMenuItem(idmFilterUnknownChats,          GetFilterUnknownChatsString(),      'U');
-                m_pitemFilterLobbyChats            = pmenu->AddMenuItem(idmFilterLobbyChats,            GetFilterLobbyChatsMenuString(),    'L');
-				
-				// #294 - Turkey
-				m_pitemIncreaseChatLines		   = pmenu->AddMenuItem(idmIncreaseChatLines,			GetIncreaseChatLinesMenuString(),	'I');
-				m_pitemReduceChatLines			   = pmenu->AddMenuItem(idmReduceChatLines,				GetReduceChatLinesMenuString(),		'R');
-				break;
-			//End TB 30-JUL-07
-			//imago 6/30/09: new graphics options dx9, removed vsync 7/10
-			case idmDeviceOptions:
-				m_pitemAA				= pmenu->AddMenuItem(idmAA   			  , GetAAString()                                       , 'A');
-			    //m_pitemMip				= pmenu->AddMenuItem(idmMip    			  , GetMipString()                                      , 'M'); // BT - Disable MipMaps for now
-				m_pitemVsync			= pmenu->AddMenuItem(idmVsync  			  , GetVsyncString()                                    , 'V'); //Spunky #265 backing out //Imago 7/10
-				// yp Your_Persona August 2 2006 : MaxTextureSize Patch
-				m_pitemMaxTextureSize	= pmenu->AddMenuItem(idmMaxTextureSize,     GetMaxTextureSizeMenuString(),    					  'X');
-				break;
-
-			//Imago 7/10 #187
-			case idmFFOptions:
-				m_pitemToggleEnableFeedback         = pmenu->AddMenuItem(idmToggleEnableFeedback  , GetEnableFeedbackMenuString(),      'E'); //imago sunk 7/10
-				m_pitemToggleFFGainUp				= pmenu->AddMenuItem(idmFFGainUp			  , GetFFGainMenuString(m_pnumFFGain->GetValue(), c_fFFGainDelta)   , 'U');
-				m_pitemToggleFFGainDown				= pmenu->AddMenuItem(idmFFGainDown			  , GetFFGainMenuString(m_pnumFFGain->GetValue(), -c_fFFGainDelta)  , 'D');
-			    m_pitemToggleFFAutoCenter			= pmenu->AddMenuItem(idmFFAutoCenter		  , GetFFAutoCenterMenuString()                                     , 'C');
-				break;
-
-			//Imago 8/10 #215
-			case idmMouseOptions:
-                                 pmenu->AddMenuItem(0                     , "------------------------------------------------"     );
-                                 pmenu->AddMenuItem(0                     , "Options are only valid when in fullscreen"     );
-                                 pmenu->AddMenuItem(0                     , "------------------------------------------------"     );
-				m_pitemToggleMouseAccel		        = pmenu->AddMenuItem(idmMouseAccel			  , GetMouseAccelMenuString()										, 'A');
-				m_pitemToggleWheelDelay				= pmenu->AddMenuItem(idmWheelDelay			  ,	GetWheelDelayMenuString(), 'W'); //Spunky #282
-				m_pitemToggleMouseSensUp			= pmenu->AddMenuItem(idmMouseSensUp			  , GetMouseSensMenuString(m_pnumMouseSens->GetValue(), c_fMouseSensDelta)		, 'U');
-				m_pitemToggleMouseSensDown			= pmenu->AddMenuItem(idmMouseSensDown		  , GetMouseSensMenuString(m_pnumMouseSens->GetValue(), -c_fMouseSensDelta)		, 'D');
-				break;
-
-
-
-        }
-
-        return pmenu;
-    }
-
-    void ToggleDebris()
-    {
-		//LANS - allow off/low/medium/high debris settings
-		//lower numbers = more debris
-		if (m_debrisDensity->GetValue() == 1.5f) { //low -> medium
-			m_debrisDensity->SetValue(1.0f);
-			SavePreference("Debris", "1.0");
-		}
-		else if (m_debrisDensity->GetValue() == 1.0f) { //medium -> high
-			m_debrisDensity->SetValue(0.8f);
-			SavePreference("Debris", "0.8");
-		}
-		else if (m_debrisDensity->GetValue() == 0.8f) { //high -> off
-			m_debrisDensity->SetValue(0.0f);
-			m_pwrapGeoDebris->SetGeo(Geo::GetEmpty());
-			SavePreference("Debris", "0");
-		}
-		else { //off -> low
-			m_debrisDensity->SetValue(1.5f);
-			m_pwrapGeoDebris->SetGeo(m_pgeoDebris);
-			SavePreference("Debris", "1.5");
-		}
-		if (m_pitemToggleDebris != NULL) {
-			m_pitemToggleDebris->SetString(GetDebrisMenuString());
-		}
-    }
-
-    void ToggleEnvironment()
-    {
-		if (m_pwrapImageEnvironment->GetImage() == m_pimageEnvironment || IsWine()) { //Imago 8/17/09
-            m_pwrapImageEnvironment->SetImage(Image::GetEmpty());
-            SavePreference("Environment", FALSE);
-        } else {
-			m_pwrapImageEnvironment->SetImage(m_pimageEnvironment);
-            SavePreference("Environment", TRUE);
-        }
-
-        if (m_pitemToggleEnvironment != NULL) {
-            m_pitemToggleEnvironment->SetString(GetEnvironmentMenuString());
-        }
-    }
-
-    void ToggleCensorChats()
-    {
-        if (CensorDisplay ())
-            SavePreference("CensorChats", FALSE);
-        else
-            SavePreference("CensorChats", TRUE);
-
-        ToggleCensorDisplay ();
-
-        if (m_pitemToggleCensorChats != NULL) {
-            m_pitemToggleCensorChats->SetString(GetCensorChatsMenuString());
-        }
+        ShowConfiguration();
     }
 
     void ToggleStickyChase ()
@@ -4646,256 +3966,13 @@ public:
             m_bPreferChaseView = true;
             SavePreference ("PreferChaseView", TRUE);
         }
-
-        if (m_pitemToggleStickyChase != NULL)
-            m_pitemToggleStickyChase->SetString (GetStickyChaseMenuString ());
-    }
-
-    void ToggleFilterChatsToAll()
-    {
-        if (trekClient.FilterChatsToAll())
-        {
-            trekClient.FilterChatsToAll(false);
-            SavePreference("FilterChatsToAll", FALSE);
-        }
-        else
-        {
-            trekClient.FilterChatsToAll(true);
-            SavePreference("FilterChatsToAll", TRUE);
-        }
-
-        if (m_pitemFilterChatsToAll != NULL) {
-            m_pitemFilterChatsToAll->SetString(GetFilterChatsToAllMenuString());
-        }
-    }
-
-    void ToggleFilterQuickComms()
-    {
-        if (trekClient.FilterQuickComms())
-        {
-            trekClient.FilterQuickComms(false);
-            SavePreference("FilterQuickComms", FALSE);
-        }
-        else
-        {
-            trekClient.FilterQuickComms(true);
-            SavePreference("FilterQuickComms", TRUE);
-        }
-
-        if (m_pitemFilterQuickComms != NULL) {
-            m_pitemFilterQuickComms->SetString(GetFilterQuickCommsMenuString());
-        }
-    }
-	//TheBored 30-JUL-07: Filter Unknown Chat patch
-    void ToggleFilterUnknownChats()
-    {
-        if (trekClient.FilterUnknownChats())
-        {
-            trekClient.FilterUnknownChats(false);
-            SavePreference("FilterUnknownChats", FALSE);
-        }
-        else
-        {
-            trekClient.FilterUnknownChats(true);
-            SavePreference("FilterUnknownChats", TRUE);
-        }
-
-        if (m_pitemFilterUnknownChats != NULL) {
-            m_pitemFilterUnknownChats->SetString(GetFilterUnknownChatsString());
-        }
-    }
-	//End TB 30-JUL-07
-	//TheBored 25-JUN-07: Altered function allowing for 3 options. 1 = Filter Lobby, 2 = Filter Lobby and PMs, 3 = Dont Filter Anything
-    void ToggleFilterLobbyChats(DWORD dwLobbyChatSetting)
-    {
-		if (dwLobbyChatSetting > 3){dwLobbyChatSetting = 1;}
-		switch (dwLobbyChatSetting)
-		{
-			case 1:
-				trekClient.FilterLobbyChats(dwLobbyChatSetting);
-				SavePreference("FilterLobbyChats", dwLobbyChatSetting);
-				break;
-			case 2:
-				trekClient.FilterLobbyChats(dwLobbyChatSetting);
-				SavePreference("FilterLobbyChats", dwLobbyChatSetting);
-			case 3:
-				trekClient.FilterLobbyChats(dwLobbyChatSetting);
-				SavePreference("FilterLobbyChats", dwLobbyChatSetting);
-		}
-        if (m_pitemFilterLobbyChats != NULL) {
-            m_pitemFilterLobbyChats->SetString(GetFilterLobbyChatsMenuString());
-        }
-    }
-
-	// #294 - Turkey 8/13
-	void IncreaseChatLines()
-	{
-		int lines = (int)m_pnumberChatLinesDesired->GetValue() + 1;
-
-		if (SetChatLines(lines))
-		{
-			m_pitemIncreaseChatLines->SetString(GetIncreaseChatLinesMenuString());
-			m_pitemReduceChatLines->SetString(GetReduceChatLinesMenuString());
-
-			if (m_pchatListPane)
-			{
-				if (GetViewMode() == vmLoadout)
-				{
-					m_pchatListPane->SetChatLines(std::min(lines, 6));
-					m_pnumberChatLines->SetValue(std::min(lines, 6));
-				}
-				else if (GetViewMode() <= vmOverride)
-				{
-					m_pchatListPane->SetChatLines(lines);
-					m_pnumberChatLines->SetValue(lines);
-				}
-			}
-
-			SavePreference("ChatLines", lines);
-		}
-	}
-
-	void ReduceChatLines()
-	{
-		int lines = (int)m_pnumberChatLinesDesired->GetValue() - 1;
-
-		if (SetChatLines(lines))
-		{
-			m_pitemIncreaseChatLines->SetString(GetIncreaseChatLinesMenuString());
-			m_pitemReduceChatLines->SetString(GetReduceChatLinesMenuString());
-
-			if (m_pchatListPane)
-			{
-				if (GetViewMode() == vmLoadout)
-				{
-					m_pchatListPane->SetChatLines(std::min(lines, 6));
-					m_pnumberChatLines->SetValue(std::min(lines, 6));
-				}
-				else if (GetViewMode() <= vmOverride)
-				{
-					m_pchatListPane->SetChatLines(lines);
-					m_pnumberChatLines->SetValue(lines);
-				}
-			}
-
-
-			SavePreference("ChatLines", lines);
-		}
-	}
-
-
-
-	// end #294
-
-
-	//End TB 25-JUN-07
-    void ToggleLinearControls()
-    {
-        if (m_bLinearControls)
-        {
-            m_bLinearControls = false;
-            SavePreference("LinearControlResponse", FALSE);
-        }
-        else
-        {
-            m_bLinearControls = true;
-            SavePreference("LinearControlResponse", TRUE);
-        }
-
-        if (m_pitemToggleLinearControls != NULL) {
-            m_pitemToggleLinearControls->SetString(GetLinearControlsMenuString());
-        }
-    }
-
-    void ToggleStars()
-    {
-        if (m_pwrapImageStars->GetImage() == Image::GetEmpty()) {
-            m_pwrapImageStars->SetImage(m_pimageStars);
-            SavePreference("Stars", TRUE);
-        } else {
-            m_pwrapImageStars->SetImage(Image::GetEmpty());
-            SavePreference("Stars", FALSE);
-        }
-
-        if (m_pitemToggleStars != NULL) {
-            m_pitemToggleStars->SetString(GetStarsMenuString());
-        }
-    }
-
-    void TogglePosters()
-    {
-        if (m_pwrapImagePosters->GetImage() == Image::GetEmpty()) {
-			m_pwrapImagePosters->SetImage(m_pwrapImagePostersInside);
-			SavePreference("Posters", TRUE);
-        } else {
-            m_pwrapImagePosters->SetImage(Image::GetEmpty());
-            SavePreference("Posters", FALSE);
-        }
-
-        if (m_pitemTogglePosters != NULL) {
-            m_pitemTogglePosters->SetString(GetPostersMenuString());
-        }
-    }
-
-    void ToggleLensFlare()
-    {
-        m_bLensFlare = !m_bLensFlare;
-
-        SavePreference("Lens Flare", (DWORD)m_bLensFlare);
-
-        if (!CommandCamera(m_cm)) {
-            if (m_bLensFlare) {
-                m_pwrapImageLensFlare->SetImage(m_pimageLensFlare);
-            } else {
-                m_pwrapImageLensFlare->SetImage(Image::GetEmpty());
-            }
-        }
-
-        if (m_pitemToggleLensFlare != NULL) {
-            m_pitemToggleLensFlare->SetString(GetLensFlareMenuString());
-        }
     }
 
     void UpdateBidirectionalLighting()
     {
-        if (m_bBidirectionalLighting) {
-            m_pimageScene->SetLight(m_color, m_colorAlt);
-            m_pimageScene->SetAmbientLevel(m_ambientLevelBidirectional);
-        } else {
-            m_pimageScene->SetLight(m_color);
-            m_pimageScene->SetAmbientLevel(m_ambientLevel);
-        }
+        m_pimageScene->SetLight(m_color, m_colorAlt);
+        m_pimageScene->SetAmbientLevel(m_ambientLevelBidirectional);
     }
-
-    void ToggleBidirectionalLighting()
-    {
-        m_bBidirectionalLighting = !m_bBidirectionalLighting;
-
-        SavePreference("BidirectionalLighting", (DWORD)m_bBidirectionalLighting);
-
-        UpdateBidirectionalLighting();
-
-        if (m_pitemToggleBidirectionalLighting != NULL) {
-            m_pitemToggleBidirectionalLighting->SetString(GetBidirectionalLightingMenuString());
-        }
-    }
-
-	// yp Your_Persona August 2 2006 : MaxTextureSize Patch  //Imago OBSOLOETE REMOVE REVIEW 7/20/09
-	void ToggleMaxTextureSize(DWORD dwNewMaxSize)
-	{
-		if(dwNewMaxSize > 3){dwNewMaxSize =0;}
-        trekClient.MaxTextureSize(dwNewMaxSize); //? Imago REVIEW we use g_DX9Settings.m_iMaxTextureSize now
-
-		g_DX9Settings.m_iMaxTextureSize = dwNewMaxSize;
-
-		GetEngine()->SetMaxTextureSize(trekClient.MaxTextureSize());
-        SavePreference("MaxTextureSize", trekClient.MaxTextureSize());
-
-        if (m_pitemMaxTextureSize != NULL) {
-            m_pitemMaxTextureSize->SetString(GetMaxTextureSizeMenuString());
-        }
-	}
-
 	/* pkk May 6th: Disabled bandwidth patch
 	// w0dk4 June 2007: Bandwith Patch
 	void ToggleBandwidth(unsigned int iBandwidth)
@@ -4910,177 +3987,9 @@ public:
         }
 	}*/
 
-    void ToggleStrobes()
-    {
-        ThingGeo::SetShowLights(!ThingGeo::GetShowLights());
-
-        SavePreference("Strobes", (DWORD)ThingGeo::GetShowLights());
-
-        if (m_pitemToggleStrobes != NULL) {
-            m_pitemToggleStrobes->SetString(GetStrobesMenuString());
-        }
-    }
-
-    void ToggleTrails()
-    {
-        ThingGeo::SetShowTrails(!ThingGeo::GetShowTrails());
-
-        SavePreference("Trails", (DWORD)ThingGeo::GetShowTrails());
-
-        if (m_pitemToggleTrails != NULL) {
-            m_pitemToggleTrails->SetString(GetTrailsMenuString());
-        }
-    }
-
-    void ToggleBounds()
-    {
-        ThingGeo::SetShowBounds(!ThingGeo::GetShowBounds());
-
-        SavePreference("Bounds", (DWORD)ThingGeo::GetShowBounds());
-
-        if (m_pitemToggleBounds != NULL) {
-            m_pitemToggleBounds->SetString(GetBoundsMenuString());
-        }
-    }
-
-    void ToggleTransparentObjects()
-    {
-        ThingGeo::SetTransparentObjects(!ThingGeo::GetTransparentObjects());
-
-        SavePreference("TransparentObjects", (DWORD)ThingGeo::GetTransparentObjects());
-
-        if (m_pitemToggleTransparentObjects != NULL) {
-            m_pitemToggleTransparentObjects->SetString(GetTransparentObjectsMenuString());
-        }
-    }
-
-    void SetSmoke (DWORD value)
-    {
-        if (value == 2) { //imago 8/16/09
-			ThingGeo::SetPerformance(true);
-            ThingGeo::SetShowSmoke (1);
-        } else {
-            ThingGeo::SetShowSmoke (int (value));
-           }
-    }
-
-    void ToggleSmoke()
-    {
-        int     iSmoke = ThingGeo::GetShowSmoke();
-        if (iSmoke == 0) 
-            iSmoke = 2;
-        else if (iSmoke == 2) 
-            iSmoke = 0;
-        bool bPerformance = false;
-        switch (iSmoke)
-        {
-            case 2: //Imago 8/16/09
-                bPerformance = true;
-                iSmoke = 1;
-                break;
-            case 0:
-                iSmoke = 1;
-                break;
-            case 1:
-                iSmoke = 3;
-                break;
-            case 3:
-                iSmoke = 5;
-                break;
-            default:
-                iSmoke = 0;
-        }
-        
-		ThingGeo::SetPerformance(bPerformance);
-
-        ThingGeo::SetShowSmoke(iSmoke);
-        SavePreference("SmokeEffects", (DWORD) (bPerformance) ? 2 : iSmoke);
-
-        if (m_pitemToggleSmoke != NULL) {
-            m_pitemToggleSmoke->SetString(GetSmokeMenuString());
-        }
-    }
-
-    void ToggleChatHistoryHUD()
-    {
-        m_pboolChatHistoryHUD->SetValue(!m_pboolChatHistoryHUD->GetValue());
-        //SavePreference("ChatHistory", (DWORD)m_pboolChatHistoryHUD->GetValue());
-
-        if (m_pitemToggleChatHistoryHUD != NULL)
-            m_pitemToggleChatHistoryHUD->SetString(GetChatHistoryHUDMenuString());
-    }
-
-    void ToggleCenterHUD()
-    {
-        m_pboolCenterHUD->SetValue(!m_pboolCenterHUD->GetValue());
-        SavePreference("CenterHUD", (DWORD)m_pboolCenterHUD->GetValue());
-
-        if (m_pitemToggleCenterHUD != NULL)
-            m_pitemToggleCenterHUD->SetString(GetCenterHUDMenuString());
-    }
-
-    void ToggleTargetHUD()
-    {
-        m_pboolTargetHUD->SetValue(!m_pboolTargetHUD->GetValue());
-        SavePreference("TargetHUD", (DWORD)m_pboolTargetHUD->GetValue());
-
-        if (m_pitemToggleTargetHUD != NULL)
-            m_pitemToggleTargetHUD->SetString(GetTargetHUDMenuString());
-    }
-
-    //Something of a misnomer since there are only two styles but this may change
-	//Andon: Changed to support up to 5 styles
-    void CycleStyleHUD()
-    {
-        int style = (int(m_pnumberStyleHUD->GetValue()) + 1) % 5;
-        m_pnumberStyleHUD->SetValue(float(style));
-
-        SavePreference("SoftwareHUD", (DWORD)style);
-
-        if (m_pitemStyleHUD != NULL)
-            m_pitemStyleHUD->SetString(GetStyleHUDMenuString());
-    }
-
-	//Imago 7/8/09 7/13/09
-    void SetDeadzone(DWORD value)
-    {
-        switch (value)
-        {
-            case 0:
-			case 31:
-				//g_fJoystickDeadZone = g_fJoystickDeadZoneNone;  removed 7/23/09 causes crash imago
-				//break;
-			case 4:
-			case 1:
-				g_fJoystickDeadZone = g_fJoystickDeadZoneSmallest;
-				break;
-			case 10:
-			case 5:
-				g_fJoystickDeadZone = g_fJoystickDeadZoneSmall;
-				break;
-			case 30:
-			case 11:
-				g_fJoystickDeadZone = g_fJoystickDeadZoneLarge;
-				break;
-            default:
-                g_fJoystickDeadZone = g_fJoystickDeadZoneLarge;
-        }
-		g_fInverseJoystickDeadZone = (g_fJoystickDeadZone == 0) ? 0 : g_fJoystickDeadZone - 1.0f;
-        SavePreference("DeadZone", (DWORD) value);
-        if (m_pitemToggleLargeDeadZone != NULL) {
-           m_pitemToggleLargeDeadZone->SetString(GetDeadzoneMenuString());
-        }
-    }
-
     void ToggleVirtualJoystick()
     {
-        m_bEnableVirtualJoystick = !m_bEnableVirtualJoystick;
-
-        SavePreference("VirtualJoystick", m_bEnableVirtualJoystick);
-
-        if (m_pitemToggleVirtualJoystick != NULL) {
-            m_pitemToggleVirtualJoystick->SetString(GetVirtualJoystickMenuString());
-        }
+        m_papp->GetGameConfiguration()->GetJoystickUseMouseAsJoystick()->SetValue(!m_papp->GetGameConfiguration()->GetJoystickUseMouseAsJoystick()->GetValue());
     }
 
     class CloseNotificationSink : public IIntegerEventSink {
@@ -5099,38 +4008,6 @@ public:
         }
     };
 
-    void ToggleOldUi()
-    {
-        m_pUseOldUi->SetValue(!m_pUseOldUi->GetValue());
-
-        if (m_pitemToggleUseOldUi != NULL) {
-            m_pitemToggleUseOldUi->SetString(GetOldUiMenuString());
-        }
-
-        m_pmessageBox = CreateMessageBox("Enabling or Disabling the old UI will require you to restart Allegiance.", NULL, true, false);
-        m_pmessageBox->GetEventSource()->AddSink(new CloseNotificationSink(this));
-        GetWindow()->GetPopupContainer()->OpenPopup(m_pmessageBox, false);
-
-    }
-
-    void ToggleShowJoystickIndicator()
-    {
-        if (m_bShowJoystickIndicator)
-        {
-            m_bShowJoystickIndicator = false;
-            SavePreference("ShowJoystickIndicator", FALSE);
-        }
-        else
-        {
-            m_bShowJoystickIndicator = true;
-            SavePreference("ShowJoystickIndicator", TRUE);
-        }
-
-        if (m_pitemToggleShowJoystickIndicator != NULL) {
-            m_pitemToggleShowJoystickIndicator->SetString(GetShowJoystickIndicatorMenuString());
-        }
-    }
-
 	//Imago 7/8/09 #24
     void ToggleShowGrid()
     {
@@ -5144,80 +4021,10 @@ public:
 		m_radarCockpit = m_radarCommand = value;
     }
 
-	//Imago 7/8/09 #24
-    void SetGamma(ZString& value)
-    {
-       //we save only when loading non-default or terminate()
-		GetEngine()->SetGammaLevel(atof(ZString(value)));
-        SavePreference("Gamma", value);
-    }
-
-	// #294 - Turkey returns true if the requested value was within range (1-10), false otherwise
-	bool SetChatLines(DWORD value)
-	{
-		bool bInRange = false;
-		if (value >= 1)
-		{
-			if (value > 10) m_pnumberChatLinesDesired->SetValue(10.0f);
-			else
-			{
-				m_pnumberChatLinesDesired->SetValue((float)value);
-				bInRange = true;
-			}
-		}
-		else
-		{
-			m_pnumberChatLinesDesired->SetValue(1.0f);
-		}
-
-		m_pnumberChatLines->SetValue(m_pnumberChatLinesDesired->GetValue());
-
-		return bInRange;
-	}
-
-
-    void ToggleFlipY()
-    {
-        m_bFlipY = !m_bFlipY;
-
-        SavePreference("FlipY", m_bFlipY);
-
-        if (m_pitemToggleFlipY != NULL) {
-            m_pitemToggleFlipY->SetString(GetFlipYMenuString());
-        }
-    }
-
-    void ToggleEnableFeedback()
-    {
-        m_bEnableFeedback = !m_bEnableFeedback;
-
-        SavePreference("EnableFeedback", m_bEnableFeedback);
-
-        if (m_pitemToggleEnableFeedback != NULL) {
-            m_pitemToggleEnableFeedback->SetString(GetEnableFeedbackMenuString());
-        }
-    }
-	
-	//Imago 7/10
-    void ToggleEnableFFAutoCenter()
-    {
-		if (GetInputEngine() == NULL || GetInputEngine()->GetJoystick(0) == NULL)
-			return;
-
-        m_bFFAutoCenter = !m_bFFAutoCenter;
-
-        SavePreference("FFAutoCenter", m_bFFAutoCenter);
-
-        if (m_pitemToggleFFAutoCenter != NULL) {
-            m_pitemToggleFFAutoCenter->SetString(GetFFAutoCenterMenuString());
-        }
-		GetInputEngine()->GetJoystick(0)->SetRanges();
-    }
-
     void RenderSizeChanged(bool bSmaller)
     {
-        EngineWindow::RenderSizeChanged(bSmaller);
-        if (bSmaller && GetFullscreen()) {
+        m_pEngineWindow->RenderSizeChanged(bSmaller);
+        if (bSmaller && m_pEngineWindow->GetFullscreen()) {
             m_pwrapNumberStyleHUD->SetWrappedValue(new Number(1.0f));
         } else {
             m_pwrapNumberStyleHUD->SetWrappedValue(m_pnumberStyleHUD);
@@ -5238,226 +4045,6 @@ public:
         trekClient.ResetSound();
     }
 
-    void SwitchSoundQuality()
-    {
-        switch (m_soundquality)
-        {
-        case ISoundEngine::minQuality:
-            m_soundquality = ISoundEngine::midQuality;
-            break;
-
-        case ISoundEngine::midQuality:
-            m_soundquality = ISoundEngine::maxQuality;
-            break;
-
-        case ISoundEngine::maxQuality:
-            m_soundquality = ISoundEngine::minQuality;
-            break;
-
-        default:
-            ZAssert(false);
-            m_soundquality = ISoundEngine::minQuality;
-            break;
-        }
-
-        ZSucceeded(m_pSoundEngine->SetQuality(m_soundquality));
-        SavePreference("SoundQuality", (DWORD)m_soundquality);
-
-        if (m_pitemSoundQuality != NULL)
-            m_pitemSoundQuality->SetString(GetSoundQualityMenuString());
-    };
-
-	//Imago #215 8/10
-    void SwitchMouseAccel()
-    {
-        switch (m_iMouseAccel)
-        {
-        case 0:
-            m_iMouseAccel = 1;
-            break;
-
-        case 1:
-            m_iMouseAccel = 2;
-            break;
-
-        case 2:
-            m_iMouseAccel = 0;
-            break;
-
-        default:
-            ZAssert(false);
-            m_iMouseAccel = 0;
-            break;
-        }
-
-		GetInputEngine()->GetMouse()->SetAccel(m_iMouseAccel);
-		SavePreference("MouseAcceleration", (DWORD)m_iMouseAccel);
-
-        if (m_pitemToggleMouseAccel != NULL)
-            m_pitemToggleMouseAccel->SetString(GetMouseAccelMenuString());
-    };
-
-    void SwitchWheelDelay() //Spunky #282
-    {
-		if (++m_iWheelDelay == 5)
-			m_iWheelDelay = 0;
-
-        SavePreference("WheelDelay", (DWORD)m_iWheelDelay);
-
-		if (m_pitemToggleWheelDelay != NULL)
-            m_pitemToggleWheelDelay->SetString(GetWheelDelayMenuString());
-	};
-
-    void ToggleSoundHardware()
-    {
-        m_bEnableSoundHardware = !m_bEnableSoundHardware;
-
-        SavePreference("SoundHardwareAcceleration", (DWORD)m_bEnableSoundHardware);
-
-        ZSucceeded(m_pSoundEngine->EnableHardware(m_bEnableSoundHardware));
-
-        if (m_pitemToggleSoundHardware != NULL)
-            m_pitemToggleSoundHardware->SetString(GetSoundHardwareMenuString());
-    }
-
-	void ToggleUseDSound8()
-	{
-		m_bUseDSound8 = !m_bUseDSound8;
-
-		SavePreference("UseDSound8", (DWORD)m_bUseDSound8);
-
-		if(m_pitemToggleDSound8Usage != NULL)
-			m_pitemToggleDSound8Usage->SetString(GetDSound8EnabledString());
-	}
-
-    void AdjustSFXVolume(float fDelta)
-    {
-        float fNewValue = std::min(0.0f, std::max(c_nMinGain, m_pnumSFXGain->GetValue() + fDelta));
-        m_pnumSFXGain->SetValue(fNewValue);
-
-        SavePreference("SFXGain", (DWORD)-fNewValue);
-
-        if (m_pitemSFXVolumeUp != NULL)
-        {
-            m_pitemSFXVolumeUp->SetString(
-                GetGainMenuString("Sound Effect", m_pnumSFXGain->GetValue(), c_fVolumeDelta));
-        }
-        if (m_pitemSFXVolumeDown != NULL)
-        {
-            m_pitemSFXVolumeDown->SetString(
-                GetGainMenuString("Sound Effect", m_pnumSFXGain->GetValue(), -c_fVolumeDelta));
-        }
-    }
-
-    void AdjustVoiceOverVolume(float fDelta)
-    {
-        float fNewValue = std::min(0.0f, std::max(c_nMinGain, m_pnumVoiceOverGain->GetValue() + fDelta));
-        m_pnumVoiceOverGain->SetValue(fNewValue);
-
-        SavePreference("VoiceOverGain", (DWORD)-fNewValue);
-
-        if (m_pitemVoiceOverVolumeUp != NULL)
-        {
-            m_pitemVoiceOverVolumeUp->SetString(
-                GetGainMenuString("Voice Over", m_pnumVoiceOverGain->GetValue(), c_fVolumeDelta));
-        }
-        if (m_pitemVoiceOverVolumeDown != NULL)
-        {
-            m_pitemVoiceOverVolumeDown->SetString(
-                GetGainMenuString("Voice Over", m_pnumVoiceOverGain->GetValue(), -c_fVolumeDelta));
-        }
-    }
-
-	//Imago 7/10 #187
-    void AdjustFFGain(float fDelta)
-    {
-        float fNewValue = std::min(10000.0f, std::max(c_nMinFFGain, m_pnumFFGain->GetValue() + fDelta));
-        m_pnumFFGain->SetValue(fNewValue);
-
-        SavePreference("FFGain", fNewValue);
-
-        if (m_pitemToggleFFGainUp != NULL)
-        {
-            m_pitemToggleFFGainUp->SetString(
-                GetFFGainMenuString(m_pnumFFGain->GetValue(), c_fFFGainDelta));
-        }
-        if (m_pitemToggleFFGainDown != NULL)
-        {
-            m_pitemToggleFFGainDown->SetString(
-                GetFFGainMenuString(m_pnumFFGain->GetValue(), -c_fFFGainDelta));
-        }
-
-		if (GetInputEngine() != NULL && GetInputEngine()->GetJoystick(0) != NULL)
-			GetInputEngine()->GetJoystick(0)->SetRanges();
-    }
-
-    void AdjustMouseSens(float fDelta)
-    {
-        float fNewValue = std::min(2.0f, std::max(0.1f, m_pnumMouseSens->GetValue() + fDelta));
-        m_pnumMouseSens->SetValue(fNewValue);
-
-        SavePreference("MouseSensitivity", ZString(fNewValue));
-
-        if (m_pitemToggleMouseSensUp != NULL)
-        {
-            m_pitemToggleMouseSensUp->SetString(
-                GetMouseSensMenuString(m_pnumMouseSens->GetValue(), c_fMouseSensDelta));
-        }
-        if (m_pitemToggleMouseSensDown != NULL)
-        {
-            m_pitemToggleMouseSensDown->SetString(
-                GetMouseSensMenuString(m_pnumMouseSens->GetValue(), -c_fMouseSensDelta));
-        }
-		
-		GetInputEngine()->GetMouse()->SetSensitivity(fNewValue);
-    }
-	//Imago
-
-    ZString GetPostersMenuString()
-    {
-        return (m_pwrapImagePosters->GetImage() != Image::GetEmpty()) ? "Posters On " : "Posters Off ";
-    }
-
-    ZString GetDebrisMenuString()
-    {
-		//LANS - multiple debris options
-		static const ZString	c_strLow("Debris Low");
-		static const ZString	c_strMed("Debris Medium");
-		static const ZString	c_strHigh("Debris High");
-		static const ZString	c_strOff("Debris Off");
-
-		if (m_debrisDensity->GetValue() == 0.8f) {
-			return c_strHigh;
-		}
-		else if (m_debrisDensity->GetValue() == 1.0f) {
-			return c_strMed;
-		}
-		else if (m_debrisDensity->GetValue() == 1.5f) {
-			return c_strLow;
-		}
-		else {
-			return c_strOff;
-		}
-        //return (m_pwrapGeoDebris->GetGeo() != Geo::GetEmpty())   ? "Debris On " : "Debris Off ";
-    }
-
-    ZString GetEnvironmentMenuString()
-    {
-        return (m_pwrapImageEnvironment->GetImage() == m_pimageEnvironment) ? "Environment On " : "Environment Off ";
-    }
-
-// yp Your_Persona August 2 2006 : MaxTextureSize Patch //Imago 7/18/09
-	ZString GetMaxTextureSizeMenuString()
-    {
-		int i = 0;
-		int j = 2;
-
-		i = 8 + g_DX9Settings.m_iMaxTextureSize;
-
-		j = pow((float)j,(float)i);
-        return "Max Texture Size ("  + ZString( j)  + ") ";
-    }
-
 	/* pkk May 6th: Disabled bandwidth patch
 	// w0dk4 June 2007: Bandwith Patch
 	ZString GetBandwidthMenuString()
@@ -5476,369 +4063,6 @@ public:
 		return "Error";
 	}*/
 
-
-	// Imago #215 8/10
-    ZString GetMouseSensMenuString(float fCurrentSens, float fDelta)
-    {
-        ZString strResult = ((fDelta > 0) ? "Raise " : "Lower ") + ZString("Mouse Sensitivity ");
-        if (fCurrentSens >= 2 && fDelta > 0)
-        {
-            strResult += "(highest)";
-        }
-        else if (fCurrentSens <= 0.1f && fDelta < 0)
-        {
-            strResult += "(lowest)";
-        }
-        else
-        {
-			float value = (std::min(2.0f, std::max(0.1f, fCurrentSens + fDelta))) * 100;
-			char szValue[4] = {'\0'};
-			sprintf(szValue,"%.0f",value);
-            strResult += "to " + ZString(szValue) + " %";
-        }
-
-        return strResult;
-    }
-
-	ZString GetMouseAccelMenuString()
-	{
-		if(m_iMouseAccel == 0)
-			return "Mouse Acceleration: Off";
-		if(m_iMouseAccel == 1)
-			return "Mouse Acceleration: Low (2x)";
-		if(m_iMouseAccel == 2)
-			return "Mouse Acceleration: High (4x)";
-
-		return "Error";
-	}
-
-	//Spunky #282
-	ZString GetWheelDelayMenuString()
-	{
-		static const ZString str[] = {"Max", "High", "Med", "Min", "None"};
-		if (m_iWheelDelay >= 0 && m_iWheelDelay < 5)
-			return "Wheel & Keyboard Throttle Delay: " + str[m_iWheelDelay];
-		return "Error";
-	}
-
-	//Imago 7/10
-    ZString GetFFAutoCenterMenuString()
-    {
-        return (m_bFFAutoCenter) ? "Auto Center On" : "Auto Center Off ";
-    }
-	//
-
-    ZString GetRoundRadarMenuString()
-    {
-        return (m_bRoundRadar) ? "Round Radar" : "Square Radar";
-    }
-
-    ZString GetCensorChatsMenuString()
-    {
-        return (CensorDisplay ()) ? "Censor Display" : "Don't Censor Display";
-    }
-
-    ZString GetStickyChaseMenuString ()
-    {
-        return m_bPreferChaseView ? "Default To Chase View" : "Default To Cockpit View";
-    }
-
-    ZString GetFilterChatsToAllMenuString()
-    {
-        return trekClient.FilterChatsToAll() ? "Filter Chats Sent To All" : "Don't Filter Chats Sent To All";
-    }
-
-    ZString GetFilterQuickCommsMenuString()
-    {
-        return trekClient.FilterQuickComms() ? "Filter Voice Commands" : "Don't Filter Voice Commands";
-    }
-
-	//TheBored 30-JUL-07: Filter Unknown Chat patch
-    ZString GetFilterUnknownChatsString()
-    {
-        return trekClient.FilterUnknownChats() ? "Filter Unknown Chats" : "Don't Filter Unknown Chats";
-    }
-
-    ZString GetFilterLobbyChatsMenuString()
-    {
-		//TheBored 25-JUN-07: Added a new option so the user can choose if PMs are filtered.
-        switch (trekClient.FilterLobbyChats())
-        {
-            case 1:
-                return "Filter Chats Sent From Lobby";
-                break;
-            case 2:
-                return "Filter Chats Sent From Lobby Including PMs";
-                break;
-            case 3:
-                return "Don't Filter Chats Sent From Lobby";
-                break;
-            default:
-                return "Default Case"; //TB: Shouldn't happen, but left in for testing.
-                break;
-        }
-    }
-
-	// #294 - Turkey
-	ZString GetIncreaseChatLinesMenuString()
-	{
-		if (m_pnumberChatLinesDesired->GetValue() > 9.9f) return "Chat Lines At Maximum";
-		return "Increase To " + ZString((int)m_pnumberChatLinesDesired->GetValue() + 1) + " Chat Lines";
-	}
-
-	// #294 - Turkey
-	ZString GetReduceChatLinesMenuString()
-	{
-		if (m_pnumberChatLinesDesired->GetValue() < 1.1f) return "Chat Lines At Minimum";
-		return "Reduce To " + ZString((int)m_pnumberChatLinesDesired->GetValue() - 1) + " Chat Lines";
-	}
-
-    ZString GetLinearControlsMenuString()
-    {
-        return (m_bLinearControls) ? "Linear Joystick Control Response" : "Quadratic Joystick Control Response";
-    }
-
-    ZString GetStarsMenuString()
-    {
-        return (m_pwrapImageStars->GetImage() != Image::GetEmpty()) ? "Stars On " : "Stars Off ";
-    }
-
-    ZString GetStrobesMenuString()
-    {
-        return ThingGeo::GetShowLights() ? "Strobes On " : "Strobes Off ";
-    }
-
-    ZString GetTrailsMenuString()
-    {
-        return ThingGeo::GetShowTrails() ? "Trails On " : "Trails Off ";
-    }
-
-    ZString GetBoundsMenuString()
-    {
-        return ThingGeo::GetShowBounds() ? "Bounds On " : "Bounds Off ";
-    }
-
-    ZString GetTransparentObjectsMenuString()
-    {
-        return ThingGeo::GetTransparentObjects() ? "TransparentObjects On " : "TransparentObjects Off ";
-    }
-
-    ZString GetLensFlareMenuString()
-    {
-        return (m_bLensFlare) ? "Lens Flare On " : "Lens Flare Off ";
-    }
-
-    ZString GetSmokeMenuString()
-    {
-        switch (ThingGeo::GetShowSmoke())
-        {
-            case 0:
-                return ZString ("Particles Off");
-                break;
-            case 2: //Imago 8/16/09
-                return ZString ("Particles On - Performance");
-                break;
-            case 1:
-                return ZString ("Particles On - Low Quality");
-                break;
-            case 3:
-                return ZString ("Particles On - Medium Quality");
-                break;
-            default:
-                return ZString ("Particles On - High Quality");
-                break;
-        }
-    }
-
-    ZString GetSoundQualityMenuString()
-    {
-        switch (m_soundquality)
-        {
-        case ISoundEngine::minQuality:
-            return "Sound Quality: Low";
-
-        case ISoundEngine::midQuality:
-            return "Sound Quality: Default";
-
-        case ISoundEngine::maxQuality:
-            return "Sound Quality: High";
-
-        default:
-            ZAssert(false);
-            return "<bug>";
-        }
-    }
-
-    ZString GetSoundHardwareMenuString()
-    {
-        return m_bEnableSoundHardware ? "Sound Card Acceleration On" : "Sound Card Acceleration Off";
-    }
-
-	// mdv new sound8 or old sound engine
-	// mmf changed wording
-	ZString GetDSound8EnabledString()
-	{
-		return m_bUseDSound8 ? "DirectSound (Restart Reqd.): New" : "DirectSound (Restart Reqd.): Old";
-	}
-
-    ZString GetBidirectionalLightingMenuString()
-    {
-        return (m_bBidirectionalLighting) ? "Bidirectional Lighting On " : "Bidirectional Lighting Off ";
-    }
-
-    ZString GetChatHistoryHUDMenuString()
-    {
-        return (m_pboolChatHistoryHUD->GetValue()) ? "Chat History On " : "Chat History Off ";
-    }
-
-    ZString GetCenterHUDMenuString()
-    {
-        return (m_pboolCenterHUD->GetValue()) ? "Center HUD On " : "Center HUD Off ";
-    }
-
-    ZString GetTargetHUDMenuString()
-    {
-        return (m_pboolTargetHUD->GetValue()) ? "Target HUD On " : "Target HUD Off ";
-    }
-
-    //Andon: Expanding the number of HUD style switches available
-	const ZString& GetStyleHUDMenuString()
-    {
-        static const ZString    c_strNormal("Style: Normal");
-        static const ZString    c_strSoftware("Style: Software");
-		static const ZString    c_strCust1("Style: Custom Hud 1");//Add in the first custom one
-		static const ZString    c_strCust2("Style: Custom Hud 2");//Add in the second custom one
-		static const ZString    c_strCust3("Style: Custom Hud 3");//Add in the third custom one
-		static const ZString    c_strOops("Style: Error"); //Just in case I goofed
-
-		if (m_pnumberStyleHUD->GetValue() == 0)
-		{
-			return c_strNormal;
-		}
-		else if (m_pnumberStyleHUD->GetValue() == 1)
-		{
-			return c_strSoftware;
-		}
-		else if (m_pnumberStyleHUD->GetValue() == 2)
-		{
-			return c_strCust1;
-		}
-		else if (m_pnumberStyleHUD->GetValue() == 3)
-		{
-			return c_strCust2;
-		}
-		else
-		{
-			return c_strCust3;
-		}
-		//Andon: The old version, was simply True/False
-		//return (m_pnumberStyleHUD->GetValue()) ? c_strSoftware : c_strNormal;
-    }
-
-    const ZString& GetDeadzoneMenuString()
-    {
-		static const ZString    strLarge = "Large dead zone";
-		//static const ZString    strNone = "No dead zone";
-		static const ZString    strSmall = "Small dead zone";
-		static const ZString    strSmallest = "Smallest dead zone";
-		static const ZString    strInvalid = "Invalid dead zone";
-		int     iDZ = int(g_fJoystickDeadZone * 100);
-        switch (iDZ)
-        {
-           // case 0:
-			//	return strNone;
-			case 4:
-				return strSmallest;
-			case 10:
-				return strSmall;
-			case 30:
-				return strLarge;
-            default:
-				return strInvalid;
-        }
-    }
-
-    ZString GetVirtualJoystickMenuString()
-    {
-        return (m_bEnableVirtualJoystick ? "Use Mouse As Virtual Joystick: On " : "Use Mouse As Virtual Joystick: Off ");
-    }
-
-    ZString GetFlipYMenuString()
-    {
-        return (m_bFlipY ? "Y Axis Flipped " : "Y Axis Not Flipped ");
-    }
-
-    ZString GetOldUiMenuString()
-    {
-        return "Use old UI: " + ZString(m_pUseOldUi->GetValue() ? "On" : "Off");
-    }
-
-    ZString GetShowJoystickIndicatorMenuString()
-    {
-        return "Joystick Indicator: " + ZString(m_bShowJoystickIndicator ? "On" : "Off");
-    }
-
-    ZString GetEnableFeedbackMenuString()
-    {
-        return (m_bEnableFeedback ? "Force Feedback Enabled " : "Force Feedback Disabled ");
-    }
-
-    ZString GetGainMenuString(const ZString& strSoundType, float fCurrentGain, float fDelta)
-    {
-        ZString strResult = ((fDelta > 0) ? "Raise " : "Lower ") + strSoundType + " Volume ";
-        if (fCurrentGain >= 0 && fDelta > 0)
-        {
-            strResult += "(maxed)";
-        }
-        else if (fCurrentGain <= c_nMinGain && fDelta < 0)
-        {
-            strResult += "(off)";
-        }
-        else
-        {
-            strResult += "to " + ZString(std::min(0.0f, std::max(c_nMinGain, fCurrentGain + fDelta))) + " dB";
-        }
-
-        return strResult;
-    }
-
-	//Imago 7/10
-    ZString GetFFGainMenuString(float fCurrentGain, float fDelta)
-    {
-        ZString strResult = ((fDelta > 0) ? "Raise " : "Lower ") + ZString("Force Feedback Gain ");
-        if (fCurrentGain >= 10000 && fDelta > 0)
-        {
-            strResult += "(maxed)";
-        }
-        else if (fCurrentGain <= c_nMinFFGain && fDelta < 0)
-        {
-            strResult += "(off)";
-        }
-        else
-        {
-            strResult += "to " + ZString(std::min(10000.0f, std::max(c_nMinFFGain, fCurrentGain + fDelta) / 100)) + " %";
-        }
-
-        return strResult;
-    }
-
-	//imago WIP 6/30/09 7/18/09
-
-	ZString GetAAString()
-	{
-		return "Antialiasing (" + ZString(CD3DDevice9::Get()->GetDeviceSetupParams()->szAAType) + ")";
-	}
-	ZString GetMipString()
-	{
-		ZString strResult = (CD3DDevice9::Get()->GetDeviceSetupParams()->bAutoGenMipmap) ? "Yes" : "No";
-		return "Auto Mipmap (" + strResult + ")";
-	}
-	ZString GetVsyncString()
-	{
-		ZString strResult = (CD3DDevice9::Get()->GetDeviceSetupParams()->bWaitForVSync) ? "On" : "Off";
-		return "Vertical Sync (" + strResult + ")";
-	}
-
     void DoInputConfigure()
     {
         CloseMenu();
@@ -5846,7 +4070,7 @@ public:
             m_ptrekInput->CreateInputMapPopup(
                 GetModeler(),
                 TrekResources::SmallFont(),
-                GetTime()
+                m_pEngineWindow->GetTime()
             );
 
         GetPopupContainer()->OpenPopup(ppopup);
@@ -5993,245 +4217,6 @@ public:
     void OnMenuCommand(IMenuItem* pitem)
     {
         switch (pitem->GetID()) {
-            case idmConfigure:
-                DoInputConfigure();
-                break;
-
-            case idmHelp:
-                CloseMenu();
-                OnHelp(true);
-                break;
-
-            case idmGameDetails:
-                CloseMenu();
-                OnGameState();
-                break;
-
-			// w0dk4 player-pings feature
-			case idmPings:
-				{
-					CloseMenu();
-					if (trekClient.m_fm.IsConnected()){
-						trekClient.SetMessageType(BaseClient::c_mtGuaranteed);
-						BEGIN_PFM_CREATE(trekClient.m_fm, pfmPingDataReq, C, REQPINGDATA)
-						END_PFM_CREATE
-					}
-				}
-				break;
-
-            case idmExitGame:
-                CloseMenu();
-                StartQuitMission();
-                break;
-
-            case idmExitApp:
-                CloseMenu();
-                StartClose();
-                break;
-
-            case idmTogglePosters:
-                TogglePosters();
-                break;
-
-            case idmToggleDebris:
-                ToggleDebris();
-                break;
-
-            case idmToggleStars:
-                ToggleStars();
-                break;
-
-            case idmToggleEnvironment:
-                ToggleEnvironment();
-                break;
-
-            case idmOldUi:
-                ToggleOldUi();
-                break;
-
-            case idmShowJoystickIndicator:
-                ToggleShowJoystickIndicator();
-                break;
-
-			/* pkk May 6th: Disabled bandwidth patch
-			// w0dk4 June 2007: Bandwith Patch
-			case idmBandwidth:
-				ToggleBandwidth(trekClient.MaxBandwidth()*2);
-				if(trekClient.m_fLoggedOn) {
-					// send change to server if connected
-					trekClient.SetMessageType(BaseClient::c_mtGuaranteed);
-					BEGIN_PFM_CREATE(trekClient.m_fm, pfmBandwidth, C, BANDWIDTH)
-					END_PFM_CREATE
-					pfmBandwidth->value = trekClient.MaxBandwidth();
-				}
-                break;*/
-
-			//Imago 7/18/09
-			// yp Your_Persona August 2 2006 : MaxTextureSize Patch
-            case idmMaxTextureSize:
-				//ToggleMaxTextureSize(trekClient.MaxTextureSize()+1); Obsolete REMOVE REVIEW, extra, unneeded functions
-				GetEngine()->SetMaxTextureSize(g_DX9Settings.m_iMaxTextureSize + 1);
-				SavePreference("MaxTextureSize", g_DX9Settings.m_iMaxTextureSize);
-				if (m_pitemMaxTextureSize != NULL) {
-					m_pitemMaxTextureSize->SetString(GetMaxTextureSizeMenuString());
-				}
-				break;
-
-			case idmAA:
-				GetEngine()->SetAA(g_DX9Settings.m_dwAA + 1);
-				SavePreference("UseAntialiasing", g_DX9Settings.m_dwAA);
-				if (m_pitemAA != NULL) {
-					m_pitemAA->SetString(GetAAString());
-				}
-				break;
-			case idmMip:
-				GetEngine()->SetAutoGenMipMaps(!g_DX9Settings.m_bAutoGenMipmaps);
-				SavePreference("UseAutoMipMaps", g_DX9Settings.m_bAutoGenMipmaps);
-				if (m_pitemMip != NULL) {
-					m_pitemMip->SetString(GetMipString());
-				}
-				break;
-
-			case idmVsync:
-				//only does anything if the device is fullscreen...but we'll let them push it anyways.
-				GetEngine()->SetVSync(!g_DX9Settings.m_bVSync);
-				SavePreference("UseVSync", g_DX9Settings.m_bVSync);
-				if (m_pitemVsync != NULL) {
-					m_pitemVsync->SetString(GetVsyncString());
-				}
-				break;
-
-            case idmToggleCensorChats:
-                ToggleCensorChats ();
-                break;
-
-            case idmToggleStickyChase:
-                ToggleStickyChase ();
-                break;
-
-            case idmFilterChatsToAll:
-                ToggleFilterChatsToAll();
-                break;
-
-            case idmFilterQuickComms:
-                ToggleFilterQuickComms();
-                break;
-
-			//TheBored 30-JUL-07: Filter Unknown Chat patch
-			case idmFilterUnknownChats:
-                ToggleFilterUnknownChats();
-                break;
-
-            case idmFilterLobbyChats:
-                //TheBored 25-JUN-07: Lobby filter change.
-				ToggleFilterLobbyChats(trekClient.FilterLobbyChats() + 1);
-                break;
-
-				// #294 - Turkey
-			case idmIncreaseChatLines:
-				IncreaseChatLines();
-				break;
-
-				// #294 - Turkey
-			case idmReduceChatLines:
-				ReduceChatLines();
-				break;
-
-            case idmToggleLinearControls:
-                ToggleLinearControls ();
-                break;
-
-            case idmToggleLargeDeadZone:
-                SetDeadzone( (g_fJoystickDeadZone * 100) + 1 ); //Imago 7/8/09 //ToggleLargeDeadZone(); 7/13/09
-                break;
-
-            case idmToggleVirtualJoystick:
-                ToggleVirtualJoystick();
-                break;
-
-            case idmToggleFlipY:
-                ToggleFlipY();
-                break;
-
-            case idmToggleEnableFeedback:
-                ToggleEnableFeedback();
-                break;
-
-            case idmToggleStrobes:
-                ToggleStrobes();
-                break;
-
-            case idmToggleTrails:
-                ToggleTrails();
-                break;
-
-            case idmToggleBounds:
-                ToggleBounds();
-                break;
-
-            case idmToggleTransparentObjects:
-                ToggleTransparentObjects();
-                break;
-
-            case idmToggleSmoke:
-                ToggleSmoke();
-                break;
-
-            case idmToggleLensFlare:
-                ToggleLensFlare();
-                break;
-
-            case idmToggleBidirectionalLighting:
-                ToggleBidirectionalLighting();
-                break;
-
-            case idmToggleChatHistoryHUD:
-                ToggleChatHistoryHUD();     //Not persisted
-                break;
-
-            case idmToggleCenterHUD:
-                ToggleCenterHUD();
-                break;
-
-            case idmToggleTargetHUD:
-                ToggleTargetHUD();
-                break;
-
-            case idmStyleHUD:
-                CycleStyleHUD();
-                break;
-
-            case idmResetSound:
-                ResetSound();
-                break;
-
-            case idmSoundQuality:
-                SwitchSoundQuality();
-                break;
-
-            case idmSoundHardware:
-                ToggleSoundHardware();
-                break;
-
-			case idmUseDSound8:
-				ToggleUseDSound8();
-				break;
-
-            case idmSFXVolumeUp:
-                AdjustSFXVolume(c_fVolumeDelta);
-                break;
-
-            case idmSFXVolumeDown:
-                AdjustSFXVolume(-c_fVolumeDelta);
-                break;
-
-            case idmVoiceOverVolumeUp:
-                AdjustVoiceOverVolume(c_fVolumeDelta);
-                break;
-
-            case idmVoiceOverVolumeDown:
-                AdjustVoiceOverVolume(-c_fVolumeDelta);
-                break;
 			// YP: Add cases for rightclick lobby patch
 			case idmContextAcceptPlayer:
 				contextAcceptPlayer();	CloseMenu();
@@ -6268,70 +4253,6 @@ public:
 				contextChat();		CloseMenu();
 				break;	
 
-			//Imago #187 7/10
-			case idmFFAutoCenter:
-				ToggleEnableFFAutoCenter();
-				break;
-
-			case idmFFGainUp:
-				AdjustFFGain(c_fFFGainDelta);
-				break;
-
-			case idmFFGainDown:
-				AdjustFFGain(-c_fFFGainDelta);
-				break;
-
-			// #215 8/10
-			case idmMouseAccel:
-				SwitchMouseAccel();
-				break;
-
-			//Spunky #282
-			case idmWheelDelay: 
-				SwitchWheelDelay();
-				break;
-
-			case idmMouseSensUp:
-				AdjustMouseSens(c_fMouseSensDelta);
-				break;
-
-			case idmMouseSensDown:
-				AdjustMouseSens(-c_fMouseSensDelta);
-				break;
-			// End Imago
-
-#ifdef STEAM_APP_ID
-			// BT - STEAM
-			case idmCallsignTag0:
-			case idmCallsignTag1:
-			case idmCallsignTag2:
-			case idmCallsignTag3:
-			case idmCallsignTag4:
-			case idmCallsignTag5:
-			case idmCallsignTag6:
-			case idmCallsignTag7:
-			case idmCallsignTag8:
-			case idmCallsignTag9:
-				SetPlayerCallsign(pitem->GetID());
-				CloseMenu();
-				break;
-
-				// BT - STEAM
-			case idmCallsignTagNone:
-				UnsetPlayerCallsign();
-				CloseMenu();
-				break;
-
-				// BT - STEAM
-			case idmToken0:
-			case idmToken1:
-			case idmToken2:
-			case idmToken3:
-			case idmToken4:
-				SetPlayerToken(pitem->GetID());
-				CloseMenu();
-				break;
-#endif
         }
     }
 
@@ -6455,7 +4376,7 @@ public:
             if (!CommandCamera(cm))
             {
                 m_cameraControl.SetAnimation (InternalCamera(cm) ? 1.0f : 2.0f);
-                if (m_bLensFlare)
+                if (m_papp->GetGameConfiguration()->GetGraphicsLensFlare()->GetValue())
                     m_pwrapImageLensFlare->SetImage(m_pimageLensFlare);
             }
 
@@ -6578,7 +4499,7 @@ public:
                 break;
 
             case vmLoadout:
-				SetCombatScreen(CreateLoadout(GetModeler(), GetWindow()->GetTime()));
+				SetCombatScreen(CreateLoadout(GetModeler(), m_pEngineWindow->GetTime()));
 
                 // reset the current selected cluster
                 trekClient.RequestViewCluster(NULL);
@@ -7457,19 +5378,20 @@ public:
 
     void UpdateMouseEnabled() {
         bool bEnable =
-            m_bEnableVirtualJoystick
-            && m_bActive
+            m_papp->GetGameConfiguration()->GetJoystickUseMouseAsJoystick()->GetValue()
+            && m_pEngineWindow->GetActive()
             && GetPopupContainer()->IsEmpty()
+            && m_pConfigurationScreen == nullptr
             && trekClient.flyingF()
             && ((m_viewmode == vmCombat) || (m_viewmode == vmOverride))
             && ((m_voverlaymask[m_viewmode] & (c_omBanishablePanes & ~ofInvestment)) == 0)
             && (!m_bFreshInvestmentPane || (m_voverlaymask[m_viewmode] & ofInvestment) == 0);
 
         //enabling mouse means that we listen to the mouse manually and ignore window events
-        m_pmouse->SetEnabled((bEnable || m_pengine->IsFullscreen()));
+        m_pEngineWindow->GetInputEngine()->GetMouse()->SetEnabled((bEnable || m_pEngineWindow->GetEngine()->IsFullscreen()));
         m_pjoystickImage->SetEnabled(bEnable, bEnable);
-        SetMoveOnHide(!bEnable);
-        ShowCursor(!bEnable);
+        m_pEngineWindow->SetMoveOnHide(!bEnable);
+        m_pEngineWindow->ShowCursor(!bEnable);
     }
 
     void EvaluateFrame(Time time)
@@ -7490,6 +5412,8 @@ public:
         float dtime = m_fDeltaTime = (float)(time - m_timeLastFrame);
         ZAssert(dtime >= 0);
 
+        m_pConfigurationUpdater->Update();
+
         //
         // Turn on the virtual joystick if the right conditions are met
         //
@@ -7500,6 +5424,10 @@ public:
         // Give the current screen a chance to do something on a per frame basis
         //
 
+        if (m_pConfigurationScreen) {
+            m_pConfigurationScreen->OnFrame();
+        }
+
         if (m_pscreen) {
             m_pscreen->OnFrame();
         }
@@ -7508,7 +5436,7 @@ public:
         // Handle AutoDownload as needed, if we're not downloading, do nothing
         if (trekClient.m_pAutoDownload)
         {
-            if(GetWindow()->GetFullscreen())
+            if(m_pEngineWindow->GetFullscreen())
                 trekClient.HandleAutoDownload(50); // give smaller time slice to allow for mouse to update
             else
                 trekClient.HandleAutoDownload(500); // since the mouse is hardware in not full screen, the graphics engine doesn't need much CPU
@@ -8024,7 +5952,7 @@ public:
 
     void PlayFFEffect(ForceEffectID effectID, LONG lDirection = 0)
     {
-        if (m_bEnableFeedback) {
+        if (m_papp->GetGameConfiguration()->GetJoystickEnableForceFeedback()->GetValue()) {
             m_ptrekInput->PlayFFEffect(effectID, lDirection);
         }
     }
@@ -8045,7 +5973,7 @@ public:
 		// - Imago: Only set AFK from inactivity when logged on
 		if (trekClient.m_fLoggedOn) {
 			Time timeLastMouseMove;
-			timeLastMouseMove = GetMouseActivity();
+			timeLastMouseMove = m_pEngineWindow->GetMouseActivity();
 			if (g_bActivity || timeLastMouseMove.clock() >= m_timeLastActivity.clock()) {
 				m_timeLastActivity = now;
 				g_bActivity = false;
@@ -8152,7 +6080,8 @@ public:
                             }
                             else
                             {
-                                const float c_fAutopilotDisengage = g_fJoystickDeadZone * 2.0f;
+                                float fJoystickDeadzone = GetJoystickDeadzone();
+                                const float c_fAutopilotDisengage = fJoystickDeadzone * 2.0f;
                                 bControlsInUse = bControlsInUse ||
                                                  (js.controls.jsValues[c_axisYaw] - trekClient.trekJoyStick[c_axisYaw] < -c_fAutopilotDisengage) ||
                                                  (js.controls.jsValues[c_axisYaw] - trekClient.trekJoyStick[c_axisYaw] >  c_fAutopilotDisengage) ||
@@ -8187,13 +6116,14 @@ public:
 								bControlsInUse = bControlsInUse ||
 												 js.button1 || js.button2 || js.button3 || js.button4 || js.button5 || js.button6;
 							}
+                            float fJoystickDeadzone = GetJoystickDeadzone();
 							bControlsInUse = bControlsInUse ||
-								(js.controls.jsValues[c_axisYaw] - trekClient.trekJoyStick[c_axisYaw] < -g_fJoystickDeadZone) ||
-								(js.controls.jsValues[c_axisYaw] - trekClient.trekJoyStick[c_axisYaw] >  g_fJoystickDeadZone) ||
-								(js.controls.jsValues[c_axisPitch] - trekClient.trekJoyStick[c_axisPitch] < -g_fJoystickDeadZone) ||
-								(js.controls.jsValues[c_axisPitch] - trekClient.trekJoyStick[c_axisPitch] >  g_fJoystickDeadZone) ||
-								(js.controls.jsValues[c_axisRoll] - trekClient.trekJoyStick[c_axisRoll] < -g_fJoystickDeadZone) ||
-								(js.controls.jsValues[c_axisRoll] - trekClient.trekJoyStick[c_axisRoll] >  g_fJoystickDeadZone);
+								(js.controls.jsValues[c_axisYaw] - trekClient.trekJoyStick[c_axisYaw] < -fJoystickDeadzone) ||
+								(js.controls.jsValues[c_axisYaw] - trekClient.trekJoyStick[c_axisYaw] >  fJoystickDeadzone) ||
+								(js.controls.jsValues[c_axisPitch] - trekClient.trekJoyStick[c_axisPitch] < -fJoystickDeadzone) ||
+								(js.controls.jsValues[c_axisPitch] - trekClient.trekJoyStick[c_axisPitch] >  fJoystickDeadzone) ||
+								(js.controls.jsValues[c_axisRoll] - trekClient.trekJoyStick[c_axisRoll] < -fJoystickDeadzone) ||
+								(js.controls.jsValues[c_axisRoll] - trekClient.trekJoyStick[c_axisRoll] >  fJoystickDeadzone);
 
 							if (bControlsInUse) g_bActivity = true;
 						}
@@ -8338,18 +6268,18 @@ public:
 
                     Point point;
                     bool  bInside;
-                    Rect  rectImage = GetScreenRectValue()->GetValue();
+                    Rect  rectImage = m_pEngineWindow->GetScreenRectValue()->GetValue();
 
                     if (GetEngine()->IsFullscreen()) {
-                        point = GetMousePosition();
-                        point.SetY(GetScreenRectValue()->GetValue().YMax() - 1 - point.Y());
+                        point = m_pEngineWindow->GetMousePosition();
+                        point.SetY(m_pEngineWindow->GetScreenRectValue()->GetValue().YMax() - 1 - point.Y());
                         bInside = rectImage.Inside(point);
                         point = point - rectImage.Min();
                     } else {
                         WinPoint   xy;
                         bInside = false;
                         if (GetCursorPos(&xy)) {
-                            point   = Point::Cast(ScreenToClient(xy));
+                            point   = Point::Cast(m_pEngineWindow->ScreenToClient(xy));
                             bInside = rectImage.Inside(point);
                             point   = point - rectImage.Min();
                         }
@@ -8553,7 +6483,7 @@ public:
 
 			// //-Imago 7/13/09 we're not actually in a sector playing the game...
 			// this is the right time & place place to rest our CPU. We can also give it more of a break now.
-			if (!GetFullscreen())
+			if (!m_pEngineWindow->GetFullscreen())
 				Sleep(5);
 			else
 				Sleep(1);
@@ -9154,8 +7084,8 @@ public:
 					GetViewMode() == vmOverride &&
 					!trekClient.IsLockedDown() && 
                     (m_pconsoleImage == NULL || !m_pconsoleImage->IsComposing())) {
-						m_bEnableVirtualJoystick = !m_bEnableVirtualJoystick;
-						if(m_bEnableVirtualJoystick) m_ptrekInput->ClearButtonStates();//#56
+                        ToggleVirtualJoystick();
+						if(m_papp->GetGameConfiguration()->GetJoystickUseMouseAsJoystick()->GetValue()) m_ptrekInput->ClearButtonStates();//#56
 						return true;
 					}
 					return false;
@@ -9165,6 +7095,12 @@ public:
                     return true;
 
                 case TK_MainMenu:
+                    //hacking this in here for now
+                    if (m_pConfigurationScreen != nullptr) {
+                        HideConfiguration();
+                        return true;
+                    }
+
                     if (
                            (
                                !trekClient.IsInGame()
@@ -9285,12 +7221,12 @@ public:
             {
                 if (m_voverlaymask[m_viewmode] & (c_omBanishablePanes & ~ofInvestment)) {
                     TurnOffOverlayFlags(c_omBanishablePanes & ~ofInvestment);
-                    m_bEnableVirtualJoystick = true;
+                    m_papp->GetGameConfiguration()->GetJoystickUseMouseAsJoystick()->SetValue(true);
                 }
                 else if (m_bFreshInvestmentPane && (m_voverlaymask[m_viewmode] & ofInvestment))
                     m_bFreshInvestmentPane = false;
                 else
-                    m_bEnableVirtualJoystick = !m_bEnableVirtualJoystick;
+                    ToggleVirtualJoystick();
             }
             break;
 
@@ -10642,18 +8578,23 @@ public:
         return m_ctLobbyChat;
     }
 
+    float GetJoystickDeadzone() {
+        return 0.01f * std::max(1.0f, std::min(30.0f, m_papp->GetGameConfiguration()->GetJoystickDeadzoneSize()->GetValue()));
+    }
 
     float MapJoystick(float value)
     {
-        if (value > g_fJoystickDeadZone)
-            value = (value - g_fJoystickDeadZone) / g_fInverseJoystickDeadZone;
-        else if (value < -g_fJoystickDeadZone)
-            value = (value + g_fJoystickDeadZone) / g_fInverseJoystickDeadZone;
+        float fJoystickDeadzone = GetJoystickDeadzone();
+        if (value > fJoystickDeadzone)
+            value = (value - fJoystickDeadzone) / (fJoystickDeadzone - 1.0f);
+        else if (value < -fJoystickDeadzone)
+            value = (value + fJoystickDeadzone) / (fJoystickDeadzone - 1.0f);
         else
             value = 0.0f;
 
-        if (!m_bLinearControls)
-            value *= fabsf (value);
+        if (m_papp->GetGameConfiguration()->GetJoystickControlsLinear()->GetValue() == false) {
+            value *= fabsf(value);
+        }
 
         return value;
     }
@@ -10709,7 +8650,7 @@ public:
         // Flip the y axis if requested
         //
 
-        if (m_bFlipY) {
+        if (m_papp->GetGameConfiguration()->GetJoystickFlipYAxis()->GetValue() == true) {
             js->controls.jsValues[c_axisPitch] = -js->controls.jsValues[c_axisPitch];
         }
 
@@ -10726,7 +8667,7 @@ public:
             trekClient.fOldJoyThrottle = js->controls.jsValues[c_axisThrottle];
             trekClient.bInitTrekThrottle = false;
         }
-        else if (fabs(js->controls.jsValues[c_axisThrottle] - trekClient.fOldJoyThrottle) > g_fJoystickDeadZone)
+        else if (fabs(js->controls.jsValues[c_axisThrottle] - trekClient.fOldJoyThrottle) > GetJoystickDeadzone())
         {
             bThrottleChange = true;
             trekClient.joyThrottle = true;
@@ -11087,27 +9028,6 @@ public:
         return false;
     }
 
-    //
-    // VT functions.
-    //
-
-    VOID VTSetText(LPSTR szFormat, ...)
-    {
-        TCHAR szText[1024];
-        va_list vaList;
-        INT cchText;
-
-        if (NULL != m_hwndVTEdit)
-        {
-            cchText = sprintf(szText, "Version=%d,", ++m_cVTVersion);
-            va_start(vaList, szFormat);
-            vsprintf(szText + cchText, szFormat, vaList);
-            va_end(vaList);
-
-            ::SetWindowText(m_hwndVTEdit, szText);
-        }
-    }
-
     void  SoundEngineUpdate (void)
     {
         ZSucceeded(m_pSoundEngine->Update ());
@@ -11179,7 +9099,8 @@ TrekWindowImpl::ArtifactsWinConditionInfo      TrekWindowImpl::s_artifactsWinCon
 TrekWindowImpl::FlagsWinConditionInfo          TrekWindowImpl::s_flagsWinConditionInfo;
 
 TRef<TrekWindow> TrekWindow::Create(
-    EffectApp*     papp,
+    TrekApp*     papp,
+    EngineWindow* pengineWindow,
     const ZString& strCommandLine,
 // BUILD_DX9
 	const ZString& strArtPath,					// Added for DX9 build, due to reordered startup.
@@ -11189,6 +9110,7 @@ TRef<TrekWindow> TrekWindow::Create(
     return
         new TrekWindowImpl(
             papp,
+            pengineWindow,
             strCommandLine,
 // BUILD_DX9
 			strArtPath,

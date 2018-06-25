@@ -136,12 +136,12 @@ public:
         AddEventTarget(&ChatListPaneImpl::OnScroll, m_pListPane->GetScrollEvent());
         UpdateContents();
         m_keyboardDelegate = IKeyboardInput::CreateDelegate(this);
-        GetWindow()->AddKeyboardInputFilter(m_keyboardDelegate);
+        GetEngineWindow()->AddKeyboardInputFilter(m_keyboardDelegate);
     }
 
     ~ChatListPaneImpl()
     {
-        GetWindow()->RemoveKeyboardInputFilter(m_keyboardDelegate);
+        GetEngineWindow()->RemoveKeyboardInputFilter(m_keyboardDelegate);
         if (m_targetAutoscrollOn)
             m_targetAutoscrollOn->Disconnect();
     }
@@ -161,7 +161,7 @@ public:
             m_targetAutoscrollOn->Disconnect();
 
         m_targetAutoscrollOn = 
-            new TEventTarget<ChatListPaneImpl>(this, &ChatListPaneImpl::OnAutoscrollTimeout, GetWindow(), 10);
+            new TEventTarget<ChatListPaneImpl>(this, &ChatListPaneImpl::OnAutoscrollTimeout, GetEngineWindow(), 10);
     }
 
     void AutoscrollOn()

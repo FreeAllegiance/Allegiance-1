@@ -951,9 +951,9 @@ void ExportPaneFactories(INameSpace* pns)
     pns->AddMember("ButtonPane",   new ButtonPaneFactory(GetModeler()));
     pns->AddMember("SoundButtonPane",   new SoundButtonPaneFactory(GetModeler()));
     pns->AddMember("ButtonBarPane",new ButtonBarPaneFactory(GetModeler()));
-    pns->AddMember("ImageComboPane", new ImageComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetWindow()->GetMousePositionModifiable()));
-    pns->AddMember("StringComboPane", new StringComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetWindow()->GetMousePositionModifiable()));
-    pns->AddMember("StringColorComboPane", new StringColorComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetWindow()->GetMousePositionModifiable()));
+    pns->AddMember("ImageComboPane", new ImageComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetEngineWindow()->GetMousePositionModifiable()));
+    pns->AddMember("StringComboPane", new StringComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetEngineWindow()->GetMousePositionModifiable()));
+    pns->AddMember("StringColorComboPane", new StringColorComboPaneFactory(GetModeler(), GetWindow()->GetPopupContainer(), GetEngineWindow()->GetMousePositionModifiable()));
 
     // add our 'specialty' panes
 #ifndef MARKCU1

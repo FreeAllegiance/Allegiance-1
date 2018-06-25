@@ -105,6 +105,8 @@ public:
     static void AddNamespace(LuaScriptContext& context) {
         sol::table table = context.GetLua().create_table();
 
+        context.GetLua().new_usertype<TRef<UiList<sol::object>>>("TRef<UiList<sol::object>>");
+
         table["Map"] = [&context](TRef<UiList<sol::object>> list, sol::function callback) {
             auto wrapped_callback = context.WrapCallback<sol::object, sol::object, TRef<Number>>(callback, sol::nil);
 

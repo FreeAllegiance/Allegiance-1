@@ -304,8 +304,6 @@ class  WinTrekClient :
         virtual void      EndLockDown(LockdownCriteria criteria);
 
         int               GetGrooveLevel();
-        ZString           GetSavedCharacterName();
-        void              SaveCharacterName(ZString strName);
 
 		int GetSavedWingAssignment(); // kolie 6/10
 		void SaveWingAssignment(int wing); // kolie 6/10

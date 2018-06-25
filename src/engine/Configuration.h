@@ -105,3 +105,45 @@ public:
     void SetStringValue(std::string key, const std::string& value);
 
 };
+
+class UpdatingConfigurationStoreTransformer : public IConfigurationStore {
+
+private:
+    TRef<UpdatingConfiguration> m_pinner;
+
+public:
+    UpdatingConfigurationStoreTransformer(TRef<UpdatingConfiguration> pinner) :
+        m_pinner(pinner)
+    {
+    }
+
+    void Commit() {}
+
+    bool ReadBool(std::string key, bool valueDefault) {
+        return m_pinner->GetBoolValue(key, valueDefault);
+    }
+    void SetBool(std::string key, bool value) {
+        m_pinner->SetBoolValue(key, value);
+    }
+
+    float ReadFloat(std::string key, float valueDefault) {
+        return m_pinner->GetFloatValue(key, valueDefault);
+    }
+    void SetFloat(std::string key, float value) {
+        m_pinner->SetFloatValue(key, value);
+    }
+
+    int ReadInt(std::string key, int valueDefault) {
+        return m_pinner->GetIntValue(key, valueDefault);
+    }
+    void SetInt(std::string key, int value) {
+        m_pinner->SetIntValue(key, value);
+    }
+
+    std::string ReadString(std::string key, std::string valueDefault) {
+        return m_pinner->GetStringValue(key, valueDefault);
+    }
+    void SetString(std::string key, std::string value) {
+        m_pinner->SetStringValue(key, value);
+    }
+};

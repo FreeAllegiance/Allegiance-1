@@ -11,8 +11,6 @@
 // effect panes
 //
 //////////////////////////////////////////////////////////////////////////////
-class Window;
-void SetEffectWindow(Window* pwindow);
 
 class Modeler;
 class IPopupContainer;

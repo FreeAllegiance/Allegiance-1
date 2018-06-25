@@ -10,26 +10,6 @@
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// ScreenPane
-//
-/////////////////////////////////////////////////////////////////////////////
-
-class ScreenPane : public ImagePane {
-private:
-    Window*  m_pwindow;
-    WinPoint m_pointWindowStart;
-    WinPoint m_pointMouseStart;
-
-public:
-    ScreenPane(Window* pwindow, Image* pimage) :
-        m_pwindow(pwindow),
-        ImagePane(pimage)
-    {
-    }
-};
-
-/////////////////////////////////////////////////////////////////////////////
-//
 // Gauge Pane
 //
 /////////////////////////////////////////////////////////////////////////////
@@ -628,63 +608,6 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 //
-// ScreenPane
-//
-//////////////////////////////////////////////////////////////////////////////
-
-Window* g_pwindow;
-
-void SetEffectWindow(Window* pwindow)
-{
-    g_pwindow = pwindow;
-}
-
-class ScreenPaneFactory : public IFunction {
-private:
-    TRef<Modeler> m_pmodeler;
-
-public:
-    ScreenPaneFactory(Modeler* pmodeler) :
-        m_pmodeler(pmodeler)
-    {
-    }
-
-    void AddChildren(Pane* ppaneParent, ObjectStack& stack)
-    {
-        TRef<IObjectList> plist; CastTo(plist, (IObject*)stack.Pop());
-
-        plist->GetFirst();
-
-        while (plist->GetCurrent() != NULL) {
-            IObjectPair*      ppair;       CastTo(ppair,       plist->GetCurrent());
-            TRef<Pane>        ppaneChild;  CastTo(ppaneChild,  ppair->GetFirst()  );
-            TRef<PointValue>  ppointChild; CastTo(ppointChild, ppair->GetSecond() );
-
-            ppaneParent->InsertAtBottom(ppaneChild);
-            ppaneChild->SetOffset(
-                WinPoint(
-                    (int)ppointChild->GetValue().X(),
-                    (int)ppointChild->GetValue().Y()
-                )
-            );
-
-            plist->GetNext();
-        }
-    }
-
-    TRef<IObject> Apply(ObjectStack& stack)
-    {
-        TRef<Image> pimage; CastTo(pimage, (Value*)(IObject*)stack.Pop());
-        TRef<Pane>  ppane = new ScreenPane(g_pwindow, pimage);
-
-        AddChildren(ppane, stack);
-
-        return ppane;
-    }
-};
-
-//////////////////////////////////////////////////////////////////////////////
-//
 // Hover Site
 //
 //////////////////////////////////////////////////////////////////////////////
@@ -1050,7 +973,7 @@ void AddPaneFactories(
     pns->AddMember("ListWithScrollBarPane",           new ListWithScrollBarPaneFactory(pmodeler));
     pns->AddMember("ListHorizontalWithScrollBarPane", new ListHorizontalWithScrollBarPaneFactory(pmodeler));
     pns->AddMember("ImagePane",                       new ImagePaneFactory(pmodeler));
-    pns->AddMember("ScreenPane",                      new ScreenPaneFactory(pmodeler));
+    pns->AddMember("ScreenPane",                      new ImagePaneFactory(pmodeler));
     pns->AddMember("HoverSite",                       new HoverSiteFactory());
     pns->AddMember("HoverPane",                       new HoverPaneFactory());
 	pns->AddMember("HoverPaneColumns",                new HoverPaneColumnsFactory());

@@ -397,9 +397,9 @@ public:
 
         m_peventChatEdit = m_peditPane->GetChangeEvent();
         m_peventChatEdit->AddSink(m_psinkChatEdit = new TEvent<ZString>::Delegate(this));
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
-        GetWindow()->SetFocus();
-        GetWindow()->SetFocus(m_peditPane);
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
+        GetEngineWindow()->SetFocus();
+        GetEngineWindow()->SetFocus(m_peditPane);
 
         AddEventTarget(&GameOverScreen::OnButtonSend, m_pbuttonSend->GetEventSource());
 
@@ -430,7 +430,7 @@ public:
         m_peventStats->RemoveSink(m_psinkStats);
         m_peventStatsSide->RemoveSink(m_psinkStatsSide);
 
-        GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+        GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
         GetWindow()->SetChatListPane(NULL);
     }
 

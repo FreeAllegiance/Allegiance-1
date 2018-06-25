@@ -128,7 +128,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='FZDebug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='FZRetail|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\src\effect\efwindow.cpp" />
     <ClCompile Include="..\src\effect\explosion.cpp" />
     <ClCompile Include="..\src\effect\framedata.cpp" />
     <ClCompile Include="..\src\effect\gamestate.cpp" />
@@ -161,7 +160,6 @@
     <ClInclude Include="..\src\effect\efimage.h" />
     <ClInclude Include="..\src\effect\efpane.h" />
     <ClInclude Include="..\src\effect\efpopup.h" />
-    <ClInclude Include="..\src\effect\efwindow.h" />
     <ClInclude Include="..\src\effect\explosion.h" />
     <ClInclude Include="..\src\effect\framedata.h" />
     <ClInclude Include="..\src\effect\gamestate.h" />

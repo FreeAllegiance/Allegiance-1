@@ -11,6 +11,66 @@
 
 #include "Configuration.h"
 
+class EngineConfigurationWrapper : public Value {
+protected:
+    TRef<UpdatingConfiguration> m_pconfiguration;
+
+public:
+    EngineConfigurationWrapper(TRef<UpdatingConfiguration> pconfiguration) :
+        Value(pconfiguration),
+        m_pconfiguration(pconfiguration)
+    {
+    }
+
+    TRef<SimpleModifiableValue<bool>> GetGraphicsFullscreen() {
+        return m_pconfiguration->GetBool("Graphics.Fullscreen", false);
+    }
+
+    TRef<SimpleModifiableValue<float>> GetGraphicsResolutionX() {
+        return m_pconfiguration->GetInt("Graphics.ResolutionX", m_pconfiguration->GetIntValue("CombatFullscreenXSize", 0));
+    }
+
+    TRef<SimpleModifiableValue<float>> GetGraphicsResolutionY() {
+        return m_pconfiguration->GetInt("Graphics.ResolutionY", m_pconfiguration->GetIntValue("CombatFullscreenYSize", 0));
+    }
+
+    TRef<SimpleModifiableValue<bool>> GetGraphicsUseVSync() {
+        return m_pconfiguration->GetBool("Graphics.UseVSync", m_pconfiguration->GetBoolValue("UseVSync", true));
+    }
+
+    TRef<SimpleModifiableValue<bool>> GetGraphicsUseAntiAliasing() {
+        return m_pconfiguration->GetBool("Graphics.UseAntiAliasing", m_pconfiguration->GetBoolValue("UseAntialiasing", false));
+    }
+
+    TRef<SimpleModifiableValue<float>> GetGraphicsMaxTextureSizeLevel() {
+        return m_pconfiguration->GetInt("Graphics.MaxTextureSizeLevel", m_pconfiguration->GetIntValue("MaxTextureSize", 3));
+    }
+
+    TRef<SimpleModifiableValue<float>> GetGraphicsGamma() {
+        return m_pconfiguration->GetFloat("Graphics.Gamma", m_pconfiguration->GetFloatValue("Gamma", 1.13f));
+    }
+
+    TRef<SimpleModifiableValue<bool>> GetDebugLogToOutput() {
+        return m_pconfiguration->GetBool("Debug.LogToOutput", m_pconfiguration->GetBoolValue("OutputDebugString", true));
+    }
+
+    TRef<SimpleModifiableValue<bool>> GetDebugLogToFile() {
+        return m_pconfiguration->GetBool("Debug.LogToFile", m_pconfiguration->GetBoolValue("LogToFile", false));
+    }
+
+    TRef<SimpleModifiableValue<bool>> GetDebugMdl() {
+        return m_pconfiguration->GetBool("Debug.Mdl", false);
+    }
+
+    TRef<SimpleModifiableValue<bool>> GetDebugWindow() {
+        return m_pconfiguration->GetBool("Debug.Window", false);
+    }
+
+    TRef<SimpleModifiableValue<bool>> GetDebugLua() {
+        return m_pconfiguration->GetBool("Debug.Lua", false);
+    }
+};
+
 class Context;
 class EngineApp;
 class GroupImage;
@@ -88,7 +148,8 @@ protected:
     //
     //////////////////////////////////////////////////////////////////////////////
 
-    TRef<UpdatingConfiguration> m_pConfiguration;
+    TRef<EngineConfigurationWrapper> m_pConfiguration;
+    TRef<ValueList> m_pConfigurationUpdater;
 
     TRef<Engine>               m_pengine;
     TRef<Modeler>              m_pmodeler;
@@ -96,7 +157,6 @@ protected:
     TRef<ButtonEvent::Sink>    m_pbuttonEventSink;
     TRef<MouseInputStream>     m_pmouse;
     TRef<ModifiablePointValue> m_ppointMouse;
-	EngineApp *					m_pEngineApp;
 
     TRef<Surface>              m_psurface;
     TRef<ICaption>             m_pcaption;
@@ -109,7 +169,6 @@ protected:
     TRef<TransformImage>       m_ptransformImageCursor;
     TRef<TranslateTransform2>  m_ptranslateTransform;
     TRef<Image>                m_pimageCursor;
-    TRef<IPopupContainer>      m_ppopupContainer;
 
     WinPoint                   m_offsetWindowed;
 
@@ -149,6 +208,9 @@ protected:
     //
 
     TRef<ButtonEvent::Sink>    m_peventSink;
+
+    TRef<EventSourceImpl> m_pcloseEventSource;
+    TRef<TEvent<Time>::SourceImpl> m_pevaluateFrameEventSource;
 
     //
     // menu
@@ -231,8 +293,7 @@ protected:
 
 public:
     EngineWindow(
-              EngineApp*   papp,
-        UpdatingConfiguration* pConfiguration,
+        EngineConfigurationWrapper* pConfiguration,
         const ZString&     strCommandLine,
         const ZString&     strTitle         = ZString(),
               bool         bStartFullscreen = false,
@@ -255,7 +316,10 @@ public:
 
 	// Added so that we could reorganise the device creation order.
 	void			InitialiseTime();
-	void			PostWindowCreationInit();
+
+    // These need to be set here before this object is fully functional
+    void SetEngine(Engine* pengine);
+    void SetModeler(Modeler* modeler);
 
     Number*          GetTime()           { return m_pnumberTime;             }
     Time             GetTimeStart()      { return m_timeStart;               }
@@ -263,12 +327,20 @@ public:
     Modeler*         GetModeler()        { return m_pmodeler;                }
     bool             GetFullscreen()     { return m_pengine->IsFullscreen(); }
     bool             GetShowFPS()        { return m_bFPS;                    }
-    IPopupContainer* GetPopupContainer() { return m_ppopupContainer;         }
     InputEngine*     GetInputEngine()    { return m_pinputEngine;            }
     const Point&     GetMousePosition()  { return m_ppointMouse->GetValue(); }
     ModifiablePointValue* GetMousePositionModifiable() { return m_ppointMouse; }
 	Time&		   	 GetMouseActivity()  { return m_timeLastMouseMove;		 } //Imago: Added to adjust AFK status from mouse movment
     bool             GetActive()         { return m_bActive;                 }
+    const TRef<IKeyboardInput>& GetKeyboardInput() { return m_pkeyboardInput; };
+
+    IEventSource* GetOnCloseEventSource() {
+        return m_pcloseEventSource;
+    }
+
+    TEvent<Time>::Source* GetEvaluateFrameEventSource() {
+        return m_pevaluateFrameEventSource;
+    }
 
     TRef<IPopup> GetEngineMenu(IEngineFont* pfont);
 
@@ -279,7 +351,6 @@ public:
     void SetSizeable(bool bSizeable);
     void SetFullscreenSize(const Vector& point);
     void ChangeFullscreenSize(bool bLarger);
-    void SetMouseEnabled(bool bEnable);
 
     WinPoint GetSize();
     WinPoint GetWindowedSize();
@@ -308,12 +379,11 @@ public:
 
     virtual ZString GetFPSString(float dtime, float mspf, Context* pcontext);
 
-    virtual void EvaluateFrame(Time time) {}
     virtual void RenderSizeChanged(bool bSmaller) {
         int x = (int)m_pengine->GetResolutionSizeModifiable()->GetValue().X();
         int y = (int)m_pengine->GetResolutionSizeModifiable()->GetValue().Y();
-        m_pConfiguration->GetInt("Graphics.ResolutionX", x)->SetValue((float)x);
-        m_pConfiguration->GetInt("Graphics.ResolutionY", y)->SetValue((float)y);
+        m_pConfiguration->GetGraphicsResolutionX()->SetValue((float)x);
+        m_pConfiguration->GetGraphicsResolutionY()->SetValue((float)y);
     }
 
     //

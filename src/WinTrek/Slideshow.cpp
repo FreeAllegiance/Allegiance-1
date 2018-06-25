@@ -13,7 +13,7 @@ void    Slideshow::CleanUpTimers (void)
     if (m_bInTimer)
     {
         // if a timer event had already been fired, then we need to remove it now
-        ITimerEventSource*  pTimer = GetWindow ()->GetTimer ();
+        ITimerEventSource*  pTimer = GetEngineWindow()->GetTimer ();
         pTimer->RemoveSink (m_pEventSink);
         m_bInTimer = false;
     }
@@ -50,8 +50,8 @@ m_bInTimer (false)
     m_pEventSink = IEventSink::CreateDelegate(this);
 
     // make the keyboard inputs come to us
-    m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
-    GetWindow()->SetFocus(IKeyboardInput::CreateDelegate(this));
+    m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
+    GetEngineWindow()->SetFocus(IKeyboardInput::CreateDelegate(this));
 
     // set the flag to indicate we are in a slideshow
     m_bIsInSlideShow = true;
@@ -73,7 +73,7 @@ Slideshow::~Slideshow (void)
     StopSound ();
 
     // reset the focus for inputs
-    GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+    GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
 }
 
 // do the work
@@ -123,7 +123,7 @@ void    Slideshow::Dismiss (void)
 bool    Slideshow::OnEvent (IEventSource* pEventSource)
 {
     // get the timer event source
-    ITimerEventSource*  pTimer = GetWindow ()->GetTimer ();
+    ITimerEventSource*  pTimer = GetEngineWindow()->GetTimer ();
 
     // XXX something strange, in that timers are not passing the event source in,
     // so I am assuming that if there is an event source, then it is from the

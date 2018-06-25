@@ -110,7 +110,6 @@ public:
             }
         }
 
-
         return false;
     }
 
@@ -126,8 +125,7 @@ public:
 //
 //////////////////////////////////////////////////////////////////////////////
 
-EngineWindow::EngineWindow(	EngineApp *			papp,
-                            UpdatingConfiguration* pConfiguration,
+EngineWindow::EngineWindow(	EngineConfigurationWrapper* pConfiguration,
 							const ZString&		strCommandLine,
 							const ZString&		strTitle,
 							bool				bStartFullscreen,
@@ -136,8 +134,8 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 							HMENU				hmenu
 ) :
 				Window(NULL, rect, strTitle, ZString(), 0, hmenu),
-				m_pengine(papp->GetEngine()),
-				m_pmodeler(papp->GetModeler()),
+				m_pengine(nullptr),
+				m_pmodeler(nullptr),
 				m_offsetWindowed(rect.Min()),
 				m_bSizeable(true),
 				m_bMinimized(false),
@@ -155,17 +153,40 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 				m_bWindowStateMinimised(false),
 				m_bWindowStateRestored(false),
 				m_bClickBreak(true), //Imago 7/10 #37
-				m_pEngineApp(papp),
-                m_pConfiguration(pConfiguration)
+                m_pConfiguration(pConfiguration),
+                m_pConfigurationUpdater(new ValueList(nullptr))
 {
     GlobalConfigureLoggers(
-        m_pConfiguration->GetBool("Debug.LogToOutput", m_pConfiguration->GetBoolValue("OutputDebugString", true))->GetValue(),
-        m_pConfiguration->GetBool("Debug.LogToFile", m_pConfiguration->GetBoolValue("LogToFile", false))->GetValue()
+        m_pConfiguration->GetDebugLogToOutput()->GetValue(),
+        m_pConfiguration->GetDebugLogToFile()->GetValue()
     );
 
-    g_bMDLLog = m_pConfiguration->GetBool("Debug.Mdl", false)->GetValue();
-    g_bWindowLog = m_pConfiguration->GetBool("Debug.Window", false)->GetValue();
-    g_bLuaDebug = m_pConfiguration->GetBool("Debug.Lua", false)->GetValue();
+    g_bMDLLog = m_pConfiguration->GetDebugMdl()->GetValue();
+    g_bWindowLog = m_pConfiguration->GetDebugWindow()->GetValue();
+    g_bLuaDebug = m_pConfiguration->GetDebugLua()->GetValue();
+
+    m_pConfigurationUpdater->PushEnd(new CallbackWhenChanged<bool>([this](bool bFullscreen) {
+        SetFullscreen(bFullscreen);
+    }, m_pConfiguration->GetGraphicsFullscreen()));
+
+    m_pConfigurationUpdater->PushEnd(new CallbackWhenChanged<float, float>([this](float x, float y) {
+        m_pengine->SetFullscreenSize(WinPoint((int)x, (int)y));
+    }, m_pConfiguration->GetGraphicsResolutionX(), m_pConfiguration->GetGraphicsResolutionY()));
+
+    m_pConfigurationUpdater->PushEnd(new CallbackWhenChanged<float>([this](float gamma) {
+        m_pengine->SetGammaLevel(gamma);
+    }, m_pConfiguration->GetGraphicsGamma()));
+
+    m_pConfigurationUpdater->PushEnd(new CallbackWhenChanged<bool>([this](bool vsync) {
+        m_pengine->SetVSync(vsync);
+    }, m_pConfiguration->GetGraphicsUseVSync()));
+
+    m_pConfigurationUpdater->PushEnd(new CallbackWhenChanged<bool>([this](bool aa) {
+        m_pengine->SetAA(aa ? 1 : 0);
+    }, m_pConfiguration->GetGraphicsUseAntiAliasing()));
+
+    m_pcloseEventSource = new EventSourceImpl();
+    m_pevaluateFrameEventSource = new TEvent<Time>::SourceImpl();
 
     //
     // Button Event Sink
@@ -189,7 +210,7 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
     // Should we start fullscreen?
 	CD3DDevice9 * pDev = CD3DDevice9::Get();
 
-    m_pPreferredFullscreen = m_pConfiguration->GetBool("Graphics.Fullscreen", pDev->GetDeviceSetupParams()->bRunWindowed ? false : true);
+    m_pPreferredFullscreen = m_pConfiguration->GetGraphicsFullscreen();
 
     bool bStartFullScreen = m_pPreferredFullscreen->GetValue();
     ParseCommandLine(strCommandLine, bStartFullScreen);
@@ -203,7 +224,6 @@ EngineWindow::EngineWindow(	EngineApp *			papp,
 
     m_pmouse = m_pinputEngine->GetMouse();
     m_pmouse->SetEnabled(bStartFullscreen);
-    papp->SetMouse(m_pmouse);
 
     m_pmouse->GetEventSource()->AddSink(m_peventSink = new ButtonEvent::Delegate(this));
 
@@ -270,47 +290,34 @@ EngineWindow::~EngineWindow()
 {
 }
 
-void EngineWindow::PostWindowCreationInit()
-{
+void EngineWindow::SetEngine(Engine* pengine) {
+    debugf("EngineWindow: Setting engine");
+
+    m_pengine = pengine;
+
     // Tell the engine we are the window
     GetEngine()->SetFocusWindow(this, m_pPreferredFullscreen->GetValue());
 
     //
     // These rects track the size of the window
     //
-
-    m_prectValueScreen     = new ModifiableRectValue(GetClientRect());
-    m_prectValueRender     = new ModifiableRectValue(Rect(0, 0, 640, 480));
+    m_prectValueScreen = new ModifiableRectValue(GetClientRect());
+    m_prectValueRender = new ModifiableRectValue(Rect(0, 0, 640, 480));
     m_pwrapRectValueRender = new WrapRectValue(m_prectValueScreen);
-    m_modeIndex            = s_countModes;
+    m_modeIndex = s_countModes;
 
-    //
-    // Intialize all the Image stuff
- /*   m_pgroupImage =
-        new GroupImage(
-            CreateUndetectableImage(
-                m_ptransformImageCursor = new TransformImage(
-                    Image::GetEmpty(),
-                    m_ptranslateTransform = new TranslateTransform2(
-                        m_ppointMouse
-                    )
-                )
-            ),
-            m_pwrapImage = new WrapImage(Image::GetEmpty())
-        );*/
+    m_ptranslateTransform = new TranslateTransform2(m_ppointMouse);
+    m_ptransformImageCursor = new TransformImage(Image::GetEmpty(), m_ptranslateTransform);
+    m_pwrapImage = new WrapImage(Image::GetEmpty());
+    m_pgroupImage = new GroupImage(CreateUndetectableImage(m_ptransformImageCursor), m_pwrapImage);
+}
 
-	m_ptranslateTransform	= new TranslateTransform2( m_ppointMouse );
-	m_ptransformImageCursor = new TransformImage( Image::GetEmpty(), m_ptranslateTransform );
-	m_pwrapImage			= new WrapImage(Image::GetEmpty());
-    m_pgroupImage			= new GroupImage( CreateUndetectableImage( m_ptransformImageCursor ), m_pwrapImage );
+void EngineWindow::SetModeler(Modeler* pmodeler) {
+    debugf("EngineWindow: Setting modeler");
 
-    //
-    // Setup the popup container
-    m_ppopupContainer = m_pEngineApp->GetPopupContainer();
-    IPopupContainerPrivate* ppcp; CastTo(ppcp, m_ppopupContainer);
-    ppcp->Initialize(m_pengine, GetScreenRectValue());
+    m_pmodeler = pmodeler;
 
-	m_pfontFPS = GetModeler()->GetNameSpace("model")->FindFont("defaultFont");
+    m_pfontFPS = GetModeler()->GetNameSpace("model")->FindFont("defaultFont");
 }
 
 void EngineWindow::StartClose()
@@ -325,6 +332,8 @@ bool EngineWindow::IsValid()
 
 void EngineWindow::OnClose()
 {
+    m_pcloseEventSource->Trigger();
+
     RemoveKeyboardInputFilter(m_pkeyboardInput);
 
     m_pgroupImage           = NULL;
@@ -436,17 +445,12 @@ void EngineWindow::UpdateWindowStyle()
         //
         // Size the window to cover the entire desktop
         // Win32 doesn't recognize the style change unless we resize the window
-        //
+        // or use SetWindowPos
 
         WinRect rect = GetRect();
-        SetClientRect(
-            WinRect(
-                rect.Min(),
-                rect.Max() + WinPoint(1, 1)
-            )
-        );
 
         SetClientRect(rect);
+        SetPosition(WinPoint(0, 0));
     } else {
         WinPoint size = m_pengine->GetFullscreenSize();
 
@@ -456,37 +460,24 @@ void EngineWindow::UpdateWindowStyle()
         LONG screenWidth = rectWindow.right - rectWindow.left;
         LONG screenHeight = rectWindow.bottom - rectWindow.top;
 
-        if (screenWidth <= size.X() && screenHeight <= size.Y()) {
-            //windowed, but we do not fit with the selected resolution, switch to borderless
-            //set to monitor resolution
-            
-            SetFullscreenSize(Vector(screenWidth, screenHeight, g_DX9Settings.m_refreshrate));
-            size = m_pengine->GetFullscreenSize();
-            SetClientRect(WinRect(WinPoint(0, 0), size));
+        //windowed, but we do not fit with the selected resolution, switch to borderless
+        bool bMakeBorderless = screenWidth <= size.X() && screenHeight <= size.Y();
 
-            //set window properties
-            SetHasMinimize(false);
-            SetHasMaximize(false);
-            SetHasSysMenu(false);
-            Window::SetSizeable(false);
-
-            //make sure we are on top of everything
-            SetTopMost(true);
-        }
-        else
-        {
-            SetHasMinimize(true);
-            SetHasMaximize(true);
-            SetHasSysMenu(true);
-            Window::SetSizeable(m_bSizeable);
-            SetTopMost(false);
-        }
-
-        // Win32 doesn't recognize the style change unless we resize the window
+        //set window properties
         m_bMovingWindow = true;
-        SetClientSize(size + WinPoint(1, 1));
-        SetClientSize(size);
+
+        SetHasMinimize(!bMakeBorderless);
+        SetHasMaximize(!bMakeBorderless);
+        SetHasSysMenu(!bMakeBorderless);
+
+        Window::SetSizeable(!bMakeBorderless && m_bSizeable);
+
+        //make sure we are on top of everything if we are borderless
+        SetTopMost(bMakeBorderless);
+
+        // Win32 doesn't recognize the style change unless we make a call to SetWindowPos
         SetPosition(m_offsetWindowed);
+        SetClientSize(size);
         m_bMovingWindow = false;
     }
 
@@ -702,7 +693,7 @@ void EngineWindow::Invalidate()
 
 void EngineWindow::RectChanged()
 {
-	ZDebugOutput("EngineWindow::RectChanged() moving="+ZString(m_bMovingWindow)+"\n");
+	ZDebugOutput("EngineWindow::RectChanged() moving="+ZString(m_bMovingWindow) + " WindowRect=" + GetRect().GetString() + " ClientRect=" + GetClientRect().GetString());
     if (
            (!m_bMovingWindow)
         && (m_pengine && !m_pengine->IsFullscreen())
@@ -909,18 +900,6 @@ void EngineWindow::OnEngineWindowMenuCommand(IMenuItem* pitem)
         case idmLowerResolution:
             ChangeFullscreenSize(false);
             break;
-
-        case idmBrightnessUp:
-            GetEngine()->SetGammaLevel(
-                GetEngine()->GetGammaLevel() * 1.01f
-            );
-			break;
-
-        case idmBrightnessDown:
-            GetEngine()->SetGammaLevel(
-                GetEngine()->GetGammaLevel() / 1.01f
-            );
-            break;
     }
 }
 
@@ -1046,11 +1025,13 @@ void EngineWindow::SetHideCursorTimer(bool bHideCursor)
 
 void EngineWindow::UpdateFrame()
 {
-    m_pConfiguration->Update();
-
     m_timeCurrent = Time::Now();
-    m_pnumberTime->SetValue(m_timeCurrent - m_timeStart);
-    EvaluateFrame(m_timeCurrent);
+    if (m_pnumberTime) {
+        m_pnumberTime->SetValue(m_timeCurrent - m_timeStart);
+    }
+
+    m_pevaluateFrameEventSource->Trigger(m_timeCurrent);
+
     m_pgroupImage->Update();
 }
 
@@ -1130,6 +1111,9 @@ void EngineWindow::DoIdle()
     //
     // Switch fullscreen state if requested
     //
+    m_pConfigurationUpdater->Update();
+
+    m_pConfiguration->Update();
 
 	//Imago 7/10 #37 - Added a "clicker breaker outter", a dirty trick to get Win 5+ to give up the mouse?
     if (m_bRestore || (m_bWindowStateMinimised && !m_bClickBreak && m_pengine->IsFullscreen())) {
@@ -1154,7 +1138,7 @@ void EngineWindow::DoIdle()
     //
 
     bool bChanges = false;
-    if (m_pengine->IsDeviceReady(bChanges)) 
+    if (m_pengine && m_pengine->IsDeviceReady(bChanges))
 	{
         if (bChanges || m_bInvalid) 
 		{

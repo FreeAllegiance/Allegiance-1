@@ -10,6 +10,8 @@
 
 #include "pch.h"
 
+#include "enginewindow.h"
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // The main entry point
@@ -107,7 +109,7 @@ public:
 //////////////////////////////////////////////////////////////////////////////
 
 class MDLEditWindow :
-    public EffectWindow,
+    public EngineWindow,
     public IIntegerEventSink,
     //public IEventSink,
     public IMenuCommandSink,
@@ -515,15 +517,14 @@ public:
 
     MDLEditWindow(
         EffectApp* papp, 
-        UpdatingConfiguration* pConfiguration,
+        EngineConfigurationWrapper* pConfiguration,
         const ZString& strCommandLine, 
         bool bImageTest,
         bool bTest, 
         int initialTest,
 		const ZString& strArtPath
     ) :
-        EffectWindow(
-            papp,
+        EngineWindow(
             pConfiguration,
             strCommandLine,
             "MDLEdit",
@@ -552,10 +553,10 @@ public:
 		TrekResources::Initialize(GetModeler());
 
 		// Perform post window creation initialisation. Initialise the time value.
-		PostWindowCreationInit( );
+        SetEngine(m_pengine);
+        SetModeler(m_pmodeler);
 		InitialiseTime();
 
-        SetEffectWindow(this);
         GetModeler()->SetSite(new ModelerSiteImpl());
 
         //
@@ -1460,6 +1461,10 @@ public:
         return GetModeler()->GetNameSpace("model")->FindFont("defaultFont");
     }
 
+    TRef<IPopupContainer> GetPopupContainer() {
+        return CreatePopupContainer(); //todo: Rock is breaking things badly
+    }
+
     void ShowMenu()
     {
          m_pmenu =
@@ -1710,7 +1715,7 @@ public:
         // Create the window
         //
 
-        m_pwindow = new MDLEditWindow(this, pConfiguration, strCommandLine, bImageTest, bTest, initialTest, pathStr);
+        m_pwindow = new MDLEditWindow(this, new EngineConfigurationWrapper(pConfiguration), strCommandLine, bImageTest, bTest, initialTest, pathStr);
 
         //
         // Parse the command line

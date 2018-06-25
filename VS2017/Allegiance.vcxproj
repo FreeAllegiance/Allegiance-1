@@ -169,6 +169,7 @@ xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
     <ClCompile Include="..\src\WinTrek\CharInfoScreen.cpp" />
     <ClCompile Include="..\src\WinTrek\chatpane.cpp" />
     <ClCompile Include="..\src\WinTrek\cmdview.cpp" />
+    <ClCompile Include="..\src\WinTrek\configscreen.cpp" />
     <ClCompile Include="..\src\WinTrek\console.cpp" />
     <ClCompile Include="..\src\WinTrek\consoledata.cpp" />
     <ClCompile Include="..\src\WinTrek\CreateGameDialog.h" />
@@ -205,7 +206,6 @@ xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
     <ClCompile Include="..\src\WinTrek\soundinit.cpp" />
     <ClCompile Include="..\src\WinTrek\splashscreen.cpp" />
     <ClCompile Include="..\src\WinTrek\SquadsScreen.cpp" />
-    <ClCompile Include="..\src\WinTrek\SteamClans.cpp" />
     <ClCompile Include="..\src\WinTrek\teampane.cpp" />
     <ClCompile Include="..\src\WinTrek\teamscreen.cpp" />
     <ClCompile Include="..\src\WinTrek\teleportpane.cpp" />
@@ -247,7 +247,6 @@ xcopy $(ProjectDir)..\src\Inc\steam_appid.txt $(OutDir) /s /d /y</Command>
     <ClInclude Include="..\src\WinTrek\screen.h" />
     <ClInclude Include="..\src\WinTrek\sectorvw.h" />
     <ClInclude Include="..\src\WinTrek\Slideshow.h" />
-    <ClInclude Include="..\src\WinTrek\SteamClans.h" />
     <ClInclude Include="..\src\WinTrek\trekctrls.h" />
     <ClInclude Include="..\src\WinTrek\TrekDlgs.h" />
     <ClInclude Include="..\src\WinTrek\Treki.h" />

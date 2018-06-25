@@ -198,7 +198,7 @@ public:
                 //Skip slideshow -- Let stuff load before changing it
                 TRef<IMessageBox>   pMsgBox = CreateMessageBox("Training simulation initiated...", NULL, false);
                 GetWindow()->GetPopupContainer()->OpenPopup(pMsgBox, false);
-                AddEventTarget(&TrainingScreen::OnFreeFlightSwitchOut, GetWindow(), 0.1f);
+                AddEventTarget(&TrainingScreen::OnFreeFlightSwitchOut, GetEngineWindow(), 0.1f);
                 break;
         }
         return true;

@@ -51,6 +51,10 @@ public:
 
     static TRect GetZero() { return TRect(0, 0, 0, 0); }
 
+    ZString GetString() const {
+        return "(min=" + RectType::Min().GetString() + ", max=" + RectType::Max().GetString() + ")";
+    }
+
     typename RectType::Number XSize() const { return RectType::XMax() - RectType::XMin(); }
     typename RectType::Number YSize() const { return RectType::YMax() - RectType::YMin(); }
     typename RectType::PointType Size() const { return RectType::Max() - RectType::Min(); }

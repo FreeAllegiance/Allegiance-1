@@ -975,7 +975,7 @@ private:
         virtual void OnClose()
         {
             if (m_pkeyboardInputOldFocus)
-                GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+                GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
             m_pkeyboardInputOldFocus = NULL;
             m_pparent->m_bTeamSettingsPopupOpen = false;
 
@@ -985,9 +985,9 @@ private:
 
         virtual void SetContainer(IPopupContainer* pcontainer)
         {      
-            m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
+            m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
             IPopup::SetContainer(pcontainer);
-            GetWindow()->SetFocus(m_peditPaneTeamName);
+            GetEngineWindow()->SetFocus(m_peditPaneTeamName);
             m_pparent->m_bTeamSettingsPopupOpen = true;
 
             // add the squads list
@@ -1229,9 +1229,9 @@ public:
 
         m_peventChatEdit = m_peditPane->GetChangeEvent();
         m_peventChatEdit->AddSink(m_psinkChatEdit = new TEvent<ZString>::Delegate(this));
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
-        GetWindow()->SetFocus();
-        GetWindow()->SetFocus(m_peditPane);
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
+        GetEngineWindow()->SetFocus();
+        GetEngineWindow()->SetFocus(m_peditPane);
 
 
         //
@@ -1377,7 +1377,7 @@ public:
         UpdateButtonStates();
 
         m_peventSinkTimer = IEventSink::CreateDelegate(this);
-        GetWindow()->GetTimer()->AddSink(m_peventSinkTimer, 0.25f);
+        GetEngineWindow()->GetTimer()->AddSink(m_peventSinkTimer, 0.25f);
         
         memset(&m_vbUncheckedMessages, 0, sizeof(m_vbUncheckedMessages));
 
@@ -1449,9 +1449,9 @@ public:
         m_peventChatEdit->RemoveSink(m_psinkChatEdit);
 
         if (m_peventSinkTimer)
-            GetWindow()->GetTimer()->RemoveSink(m_peventSinkTimer);
+            GetEngineWindow()->GetTimer()->RemoveSink(m_peventSinkTimer);
 
-        GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+        GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
         GetWindow()->SetChatListPane(NULL);
     }
 
@@ -2291,7 +2291,7 @@ public:
 		}
         m_pmenu->AddMenuItem(NA , "Cancel");
 
-		Point popupPosition = GetWindow()->GetMousePosition();
+		Point popupPosition = GetEngineWindow()->GetMousePosition();
 		
 		TRef<Pane> ppane = m_pmenu->GetPane();
 		ppane->UpdateLayout();

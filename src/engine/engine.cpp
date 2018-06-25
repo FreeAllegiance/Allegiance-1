@@ -171,31 +171,8 @@ public:
 			width = CD3DDevice9::Get()->GetDeviceSetupParams()->pFullScreenResArray[i].iWidth;
 			height = CD3DDevice9::Get()->GetDeviceSetupParams()->pFullScreenResArray[i].iHeight;
 			rate = CD3DDevice9::Get()->GetDeviceSetupParams()->pFullScreenResArray[i].iFreq;
-			//OutputDebugString("Found valid full screen rez: "+ZString(width)+"x"+ZString(height)+" @ "+ZString(rate));
-			if (width == 640 && height == 480)
-				m_modes.PushEnd((Vector(width,height,rate))); //VGA				
-			if (width == 800 && height == 600)
-				m_modes.PushEnd((Vector(width,height,rate))); //SVGA (default)	
-			if (width == 1024 && height == 768)
-				m_modes.PushEnd((Vector(width,height,rate))); //XGA
-			if (width == 1280 && height == 1024)
-				m_modes.PushEnd((Vector(width,height,rate))); //SXGA			
-			if (width == 1366 && height == 768)
-				m_modes.PushEnd((Vector(width,height,rate))); //WXGA (720p widescreen mode)
-			if (width == 1400 && height == 1050)
-				m_modes.PushEnd((Vector(width,height,rate))); //SXGA+
-			if (width == 1440 && height == 900)
-				m_modes.PushEnd((Vector(width,height,rate))); //WSXGA+ (widescreen)
-			if (width == 1600 && height == 1200)
-				m_modes.PushEnd((Vector(width,height,rate))); //UXGA
-			if (width == 1680 && height == 1050)
-				m_modes.PushEnd((Vector(width,height,rate))); //WSXGA+ (widescreen)
-			if (width == 1920 && height == 1080)
-				m_modes.PushEnd((Vector(width,height,rate))); //WUXGA (1080p widescreen mode)
-            if (width == 1920 && height == 1200)
-                m_modes.PushEnd((Vector(width, height, rate)));
-            if (width == 2560 && height == 1440)
-                m_modes.PushEnd((Vector(width, height, rate)));
+			debugf("Found valid full screen rez: "+ZString(width)+"x"+ZString(height)+" @ "+ZString(rate));
+            m_modes.PushEnd((Vector(width, height, rate)));
 		}
 #pragma warning(default:4244)
     }

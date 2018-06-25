@@ -11,6 +11,9 @@ public:
     virtual std::string GetPath() = 0;
     virtual IEventSink& GetEventSink(std::string) = 0;
 
+    static std::shared_ptr<UiScreenConfiguration> Create(std::string path, std::map<std::string, std::shared_ptr<Exposer>> map);
+
+    //deprecated:
     static std::shared_ptr<UiScreenConfiguration> Create(std::string path, std::map<std::string, std::function<bool()>> event_listeners, std::map<std::string, std::shared_ptr<Exposer>> map);
 }; 
 

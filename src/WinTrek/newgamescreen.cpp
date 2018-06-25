@@ -148,7 +148,7 @@ private:
 
         m_pcomboMaxImbalance   ->SetSelection(FindClosestValue(missionparams.iMaxImbalance, "MaxImbalanceValues"));
 
-		m_bIsZoneClub = missionparams.bClubGame; //!missionparams.bObjectModelCreated;// KGJV #114   missionparams.bClubGame;
+		m_bIsZoneClub = !missionparams.bObjectModelCreated;// KGJV #114   missionparams.bClubGame;
         m_bLockGameOpen = missionparams.bLockGameOpen;
         
         if (m_bIsZoneClub) //pkk #203 - Ignore clients SkillLevel, if it's a ZG
@@ -547,10 +547,10 @@ public:
         // set the keyboard focus
         //
 
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
 
         if (CanEdit())
-            GetWindow()->SetFocus(m_peditPaneGameName);
+            GetEngineWindow()->SetFocus(m_peditPaneGameName);
 
         if (g_bQuickstart) {
             OnButtonCreate();
@@ -570,7 +570,7 @@ public:
     {
         m_pmodeler->UnloadNameSpace("newgamescreen");
         if (m_pkeyboardInputOldFocus) {
-            GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+            GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
         }
     }
 
@@ -882,13 +882,13 @@ public:
 
     bool OnGameNameClick()
     {
-        GetWindow()->SetFocus(m_peditPaneGameName);
+        GetEngineWindow()->SetFocus(m_peditPaneGameName);
         return true;
     }
 
     bool OnGamePasswordClick()
     {
-        GetWindow()->SetFocus(m_peditPaneGamePassword);
+        GetEngineWindow()->SetFocus(m_peditPaneGamePassword);
         return true;
     }
 

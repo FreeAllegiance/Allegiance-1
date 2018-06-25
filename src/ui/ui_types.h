@@ -242,6 +242,10 @@ namespace sol {
                     tracking.use(1);
                     return true;
                 }
+                if (stack::check<table>(L, absolute_index, sol::no_panic) && sol::type_of(L, absolute_index) == sol::type::table) {
+                    tracking.use(1);
+                    return true;
+                }
                 handler(L, index, type::userdata, type::userdata, "Expected a list");
                 return false;
             }
@@ -271,6 +275,21 @@ namespace sol {
                 }
                 if (stack::check_usertype<TRef<UiList<TRef<UiObjectContainer>>>>(L, absolute_index)) {
                     return ConvertListTypeToGenericList<TRef<UiObjectContainer>>(L, stack::get_usertype<TRef<UiList<TRef<UiObjectContainer>>>>(L, absolute_index, tracking));
+                }
+                //table. Makes a copy.
+                if (stack::check<table>(L, absolute_index) && sol::type_of(L, absolute_index) == sol::type::table) {
+                    sol::table table_list = stack::get<sol::table>(L, absolute_index, tracking);
+                        
+                    int count = table_list.size();
+
+                    std::vector<sol::object> result_list = {};
+
+                    for (int i = 1; i <= count; ++i) {
+                        result_list.push_back(table_list.get<sol::object>(i));
+                    }
+
+                    return_type result = new UiList<sol::object>(result_list);
+                    return result;
                 }
 
                 throw std::runtime_error("Unknown type to cast");

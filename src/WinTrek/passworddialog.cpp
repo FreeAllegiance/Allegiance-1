@@ -62,7 +62,7 @@ public:
     virtual void OnClose()
     {
         if (m_pkeyboardInputOldFocus)
-            GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+            GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
 
         m_pkeyboardInputOldFocus = NULL;
 
@@ -71,8 +71,8 @@ public:
 
     virtual void SetContainer(IPopupContainer* pcontainer)
     {
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
-        GetWindow()->SetFocus(m_peditPane);
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
+        GetEngineWindow()->SetFocus(m_peditPane);
         m_peditPane->SetString("");
 
         IPopup::SetContainer(pcontainer);
@@ -98,7 +98,7 @@ public:
 
     bool OnButtonOK()
     {
-        GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+        GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
         m_pkeyboardInputOldFocus = NULL;
 
         PasswordDialogSink* pparent = m_pparent;
@@ -117,7 +117,7 @@ public:
 
     bool OnButtonCancel()
     {
-        GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+        GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
         m_pkeyboardInputOldFocus = NULL;
 
         m_pMission = NULL;
@@ -138,7 +138,7 @@ public:
         if (m_pMission == pmission)
         {
             // our mission has ended - bail.
-            GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+            GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
             m_pkeyboardInputOldFocus = NULL;
 
             if (m_ppopupOwner) {

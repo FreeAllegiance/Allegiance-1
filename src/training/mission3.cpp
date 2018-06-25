@@ -626,7 +626,7 @@ namespace Training
         // wait for weapons to fire
         {
             Goal*   pGoal = new Goal(new GetStateBitsCondition(trekClient.GetShip(), weaponsMaskIGC));
-            if (GetWindow()->GetInputEngine()->GetJoystickCount() > 0)
+            if (GetEngineWindow()->GetInputEngine()->GetJoystickCount() > 0)
             {
                 // tm_3_18
                 // Press the trigger button on your joystick to fire your main 
@@ -839,7 +839,7 @@ namespace Training
         // Go ahead and fire.
         {
             Goal*   pGoal = new Goal(new GetStateBitsCondition(trekClient.GetShip(), weaponsMaskIGC));
-            if (GetWindow()->GetInputEngine()->GetJoystickCount() > 0)
+            if (GetEngineWindow()->GetInputEngine()->GetJoystickCount() > 0)
                 pGoal->AddStartAction(new MessageAction("Fire the main weapon by pressing the trigger button on your joystick."));
             else
                 pGoal->AddStartAction(new MessageAction("Left click to fire your main weapon."));
@@ -926,7 +926,7 @@ namespace Training
         // wait for missilies to fire
         {
             Goal*   pGoal = new Goal(new GetStateBitsCondition(trekClient.GetShip(), missileFireIGC));
-            if (GetWindow()->GetInputEngine()->GetJoystickCount() > 0)
+            if (GetEngineWindow()->GetInputEngine()->GetJoystickCount() > 0)
             {
                 // tm_3_37
                 // Fire your missiles by pressing button 2 on your joystick.

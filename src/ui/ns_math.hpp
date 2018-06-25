@@ -8,7 +8,7 @@ template<typename TypeResult, typename A, typename B>
 auto createAutoWrappingFunction(std::function<TypeResult(A, B)> callback) {
 
     return [callback](sol::object a, sol::object b) {
-        return (TStaticValue<TypeResult>*)new TransformedValue2<TypeResult, A, B>(callback, wrapValue<A>(a), wrapValue<B>(b));
+        return (TStaticValue<TypeResult>*)new TransformedValue<TypeResult, A, B>(callback, wrapValue<A>(a), wrapValue<B>(b));
     };
 };
 
@@ -55,11 +55,8 @@ public:
         table["Max"] = [](sol::object a, sol::object b) {
             return NumberTransform::Max(wrapValue<float>(a), wrapValue<float>(b));
         };
-        table["Clamp"] = [](sol::object min, sol::object max, sol::object value) {
-            return NumberTransform::Min(
-                wrapValue<float>(max),
-                NumberTransform::Max(wrapValue<float>(value), wrapValue<float>(min))
-            );
+        table["Clamp"] = [](TRef<Number> value, TRef<Number> min, TRef<Number> max) {
+            return NumberTransform::Clamp(value, min, max);
         };
         table["Round"] = [](sol::object a, sol::optional<int> decimals) {
             return NumberTransform::Round(wrapValue<float>(a), decimals.value_or(0));

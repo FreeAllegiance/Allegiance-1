@@ -14,7 +14,7 @@
 
 class Surface;
 class Viewport;
-TRef<Geo> CreateDebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport, TRef<ModifiableNumber> distancePerParticle);
+TRef<Geo> CreateDebrisGeo(Modeler* pmodeler, Number* ptime, Viewport* pviewport, TRef<Number> distancePerParticle);
 TRef<Geo> CreateCullGeo(Geo* pgeo);
 TRef<Geo> CreateCopyModeGeo(Geo* pgeo);
 TRef<Geo> CreateWireSphereGeo(float minDot, int hSegments);

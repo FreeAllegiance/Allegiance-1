@@ -4,6 +4,7 @@
 #include "value.h"
 #include "event.h"
 #include <functional>
+#include <utility>
 
 class NumberTransform {
 public:
@@ -16,6 +17,7 @@ public:
     static TRef<Number> Multiply(Number* a, Number* b);
     static TRef<Number> Min(Number* a, Number* b);
     static TRef<Number> Max(Number* a, Number* b);
+    static TRef<Number> Clamp(Number* a, Number* b, Number* c);
     static TRef<Number> Mod(Number* a, Number* b);
 
     static TRef<Number> Round(Number* a, int decimals);
@@ -66,6 +68,9 @@ public:
 
 class StringTransform {
 public:
+    static TRef<Number> ToNumber(StringValue* string);
+    static TRef<Boolean> IsNumber(StringValue* string);
+
     static TRef<Number> Length(StringValue* a);
     static TRef<Boolean> Equals(StringValue* a, StringValue* b);
 
@@ -73,101 +78,49 @@ public:
     static TRef<StringValue> Slice(StringValue* string, Number* start, Number* length);
 };
 
-template<class TransformedType, class OriginalType>
+template<typename... Types>
+class CallbackWhenChanged : public Value {
+
+    std::function<void(Types...)> m_callback;
+
+public:
+    CallbackWhenChanged(std::function<void(Types...)> callback, TStaticValue<Types>*... values) :
+        m_callback(callback),
+        Value(values...)
+        //Value(std::forward<TStaticValue<Types>*>(values)...)
+    {}
+
+    template<int... Indices>
+    void GetEvaluatedValue(std::index_sequence<Indices...>) {
+        m_callback(((TStaticValue<Types>*)GetChild(Indices))->GetValue()...);
+    }
+
+    void Evaluate() override
+    {
+        GetEvaluatedValue(std::make_index_sequence<sizeof...(Types)>{});
+    }
+};
+
+template<class TransformedType, class... Types>
 class TransformedValue : public TStaticValue<TransformedType> {
 
-    std::function<TransformedType(OriginalType)> m_callback;
+    std::function<TransformedType(Types...)> m_callback;
 
 protected:
-    TransformedType GetEvaluatedValue(OriginalType value) {
-        return m_callback(value);
+    template<int... Indices>
+    TransformedType GetEvaluatedValue(std::index_sequence<Indices...>) {
+        return m_callback(((TStaticValue<Types>*)GetChild(Indices))->GetValue()...);
     }
 
 public:
-    TransformedValue(std::function<TransformedType(OriginalType)> callback, TStaticValue<OriginalType>* value) :
+    TransformedValue(std::function<TransformedType(Types...)> callback, TStaticValue<Types>*... values) :
         m_callback(callback),
-        TStaticValue(value)
+        TStaticValue<TransformedType>(values...)
     {}
 
-    void Evaluate()
+    void Evaluate() override
     {
-        OriginalType value = ((TStaticValue<OriginalType>*)GetChild(0))->GetValue();
-
-        TransformedType evaluated = GetEvaluatedValue(value);
-
-        GetValueInternal() = evaluated;
-    }
-};
-
-template<class TransformedType, class OriginalType, class OriginalType2>
-class TransformedValue2 : public TStaticValue<TransformedType> {
-    typedef std::function<TransformedType(OriginalType, OriginalType2)> CallbackType;
-    CallbackType m_callback;
-
-protected:
-    TransformedType GetEvaluatedValue(OriginalType value, OriginalType2 value2) {
-        return m_callback(value, value2);
-    }
-
-public:
-    TransformedValue2(CallbackType callback, TStaticValue<OriginalType>* value, TStaticValue<OriginalType2>* value2) :
-        m_callback(callback),
-        TStaticValue(value, value2)
-    {}
-
-    void Evaluate()
-    {
-        OriginalType value = ((TStaticValue<OriginalType>*)GetChild(0))->GetValue();
-        OriginalType2 value2 = ((TStaticValue<OriginalType2>*)GetChild(1))->GetValue();
-
-        TransformedType evaluated = GetEvaluatedValue(value, value2);
-
-        GetValueInternal() = evaluated;
-    }
-};
-
-template<class TransformedType, class OriginalType, class OriginalType2, class OriginalType3>
-class TransformedValue3 : public TStaticValue<TransformedType> {
-    typedef std::function<TransformedType(OriginalType, OriginalType2, OriginalType3)> CallbackType;
-    CallbackType m_callback;
-
-public:
-    TransformedValue3(CallbackType callback, TStaticValue<OriginalType>* value, TStaticValue<OriginalType2>* value2, TStaticValue<OriginalType3>* value3) :
-        m_callback(callback),
-        TStaticValue(value, value2, value3)
-    {}
-
-    void Evaluate()
-    {
-        OriginalType value = ((TStaticValue<OriginalType>*)GetChild(0))->GetValue();
-        OriginalType2 value2 = ((TStaticValue<OriginalType2>*)GetChild(1))->GetValue();
-        OriginalType3 value3 = ((TStaticValue<OriginalType3>*)GetChild(2))->GetValue();
-
-        TransformedType evaluated = m_callback(value, value2, value3);
-
-        GetValueInternal() = evaluated;
-    }
-};
-
-template<class TransformedType, class OriginalType, class OriginalType2, class OriginalType3, class OriginalType4>
-class TransformedValue4 : public TStaticValue<TransformedType> {
-    typedef std::function<TransformedType(OriginalType, OriginalType2, OriginalType3, OriginalType4)> CallbackType;
-    CallbackType m_callback;
-
-public:
-    TransformedValue4(CallbackType callback, TStaticValue<OriginalType>* value, TStaticValue<OriginalType2>* value2, TStaticValue<OriginalType3>* value3, TStaticValue<OriginalType4>* value4) :
-        m_callback(callback),
-        TStaticValue(value, value2, value3, value4)
-    {}
-
-    void Evaluate()
-    {
-        OriginalType value = ((TStaticValue<OriginalType>*)GetChild(0))->GetValue();
-        OriginalType2 value2 = ((TStaticValue<OriginalType2>*)GetChild(1))->GetValue();
-        OriginalType3 value3 = ((TStaticValue<OriginalType3>*)GetChild(2))->GetValue();
-        OriginalType4 value4 = ((TStaticValue<OriginalType4>*)GetChild(3))->GetValue();
-
-        TransformedType evaluated = m_callback(value, value2, value3, value4);
+        TransformedType evaluated = GetEvaluatedValue(std::make_index_sequence<sizeof...(Types)>{});
 
         GetValueInternal() = evaluated;
     }

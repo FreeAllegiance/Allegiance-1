@@ -248,7 +248,7 @@ public:
 
         g_pCharInfoScreen = this;
 
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
 
 #ifndef NO_CLUB_SERVER_CONNECTION 
 
@@ -479,7 +479,7 @@ public:
             delete[] m_pCivIds;
 
         if(m_pkeyboardInputOldFocus)
-            GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+            GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
 
         g_pCharInfoScreen = NULL;
 
@@ -871,7 +871,7 @@ public:
         m_pbuttonEdit->SetEnabled(false);
 		    m_pbuttonEdit->SetHidden(true);
 
-        GetWindow()->SetFocus(m_peditPaneCharDescription);
+        GetEngineWindow()->SetFocus(m_peditPaneCharDescription);
 
         return true;
     }
@@ -880,7 +880,7 @@ public:
 
     bool OnDescriptionClick()
     {
-        GetWindow()->SetFocus(m_peditPaneCharDescription);
+        GetEngineWindow()->SetFocus(m_peditPaneCharDescription);
 
         return true;
     }

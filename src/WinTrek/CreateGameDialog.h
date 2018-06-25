@@ -337,7 +337,7 @@ public:
     virtual void OnClose()
     {
         if (m_pkeyboardInputOldFocus)
-            GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+            GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
 
         m_pkeyboardInputOldFocus = NULL;
 
@@ -391,8 +391,8 @@ public:
 
         m_peditGameName->SetString(szPlayerName + ZString("'s game"));
 
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
-        GetWindow()->SetFocus(m_peditGameName);
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
+        GetEngineWindow()->SetFocus(m_peditGameName);
 
         IPopup::SetContainer(pcontainer);
     }

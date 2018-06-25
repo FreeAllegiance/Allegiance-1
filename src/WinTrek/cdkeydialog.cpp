@@ -70,7 +70,7 @@ public:
     virtual void OnClose()
     {
         if (m_pkeyboardInputOldFocus)
-            GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+            GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
 
         m_pkeyboardInputOldFocus = NULL;
 
@@ -79,8 +79,8 @@ public:
 
     virtual void SetContainer(IPopupContainer* pcontainer)
     {
-        m_pkeyboardInputOldFocus = GetWindow()->GetFocus();
-        GetWindow()->SetFocus(m_peditPane);
+        m_pkeyboardInputOldFocus = GetEngineWindow()->GetFocus();
+        GetEngineWindow()->SetFocus(m_peditPane);
         m_peditPane->SetString(FormatKey(trekClient.GetCDKey()));
 
         IPopup::SetContainer(pcontainer);
@@ -129,7 +129,7 @@ public:
         }
         else
         {
-            GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+            GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
             m_pkeyboardInputOldFocus = NULL;
 
             trekClient.SetCDKey(strCDKey);
@@ -146,7 +146,7 @@ public:
 
     bool OnButtonCancel()
     {
-        GetWindow()->SetFocus(m_pkeyboardInputOldFocus);
+        GetEngineWindow()->SetFocus(m_pkeyboardInputOldFocus);
         m_pkeyboardInputOldFocus = NULL;
 
         if (m_ppopupOwner) {
