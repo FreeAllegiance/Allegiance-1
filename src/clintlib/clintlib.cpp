@@ -2682,7 +2682,7 @@ ZString BaseClient::LookupRankName(RankID rank, CivID civ)
 		// BT - 7/15 CSS Integration - TODO STEAM: Modify to work with steam ranks.
 		if (rank >= 0)
 		{
-			if (rank <= m_cRankInfo)
+			if (rank < m_cRankInfo)
 			{
 				nClosestRank = rank;
 				szRankNameTemplate = m_vRankInfo[rank].RankName;
@@ -2690,7 +2690,7 @@ ZString BaseClient::LookupRankName(RankID rank, CivID civ)
 			else
 			{
 				nClosestRank = m_cRankInfo;
-				szRankNameTemplate = m_vRankInfo[m_cRankInfo].RankName;
+				szRankNameTemplate = m_vRankInfo[m_cRankInfo - 1].RankName;
 			}
 		}
 

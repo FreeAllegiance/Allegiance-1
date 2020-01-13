@@ -1029,6 +1029,7 @@ void GotLogonDetails(CQLogonStats * pquery)
 
   g.fm.SendMessages(pcnxn, FM_GUARANTEED, FM_FLUSH);
   g.fm.CheckOdometer(flDTime, cMsgsOdometer, cBytesOdometer);
+  SteamGameServer_ReleaseCurrentThreadMemory();
   debugf("Player %s logon %s. Sent %d msgs and %dB to them in %1.3fs, "
          "and %d msgs and %dB to others in the process.\n",
          pqd->szCharacterName, fValid ? "succeeded" : "failed",
@@ -4786,7 +4787,7 @@ static DWORD WINAPI LogonThread(LPVOID threadData)
 	// When it completes, it calls PostThreadMessage to complete the login.
 
 	delete steamValidation;
-
+	SteamGameServer_ReleaseCurrentThreadMemory(); 
 	return 0;
 }
 
@@ -6783,7 +6784,12 @@ HRESULT FedSrvSiteBase::OnAppMessage(FedMessaging * pthis, CFMConnection & cnxnF
 		  if (FM_VAR_REF(pfmQuitMission, szMessageParam))
 			  lstrcpy(szMessageParam, FM_VAR_REF(pfmQuitMission, szMessageParam));
 
-		  pfsMission->RemovePlayerFromMission(pfspAck, pfmQuitMission->reason, szMessageParam);
+		  try {
+			  pfsMission->RemovePlayerFromMission(pfspAck, pfmQuitMission->reason, szMessageParam);
+		  }
+		  catch (...) {
+			  debugf("RemovePlayerFromMission threw an exception of some kind!\n");
+		  }
 		  break;
 	  }
 
@@ -9362,11 +9368,10 @@ DWORD WINAPI ReceiveThread(LPVOID pThreadParameter)
 
   Time timeStartIteration = Time::Now();
   Time timeEndIteration = timeStartIteration;
+  Time timeLastSteamCallback = Time::Now();
   DWORD dwWait = WAIT_TIMEOUT;
   while (dwWait != WAIT_OBJECT_0)
   {
-	// BT - STEAM
-	SteamGameServer_RunCallbacks();
 
     timerReceiveIterations.Stop();
     timerReceiveIterations.Start();
@@ -9386,6 +9391,17 @@ DWORD WINAPI ReceiveThread(LPVOID pThreadParameter)
     DWORD   dwSleep = dwIteration < dwUpdateInterval
                       ? (dwUpdateInterval - dwIteration)
                       : 0;
+
+	// BT - STEAM
+	if (Time::Now().clock() - timeLastSteamCallback.clock() > 200) {
+		try {
+			SteamGameServer_RunCallbacks();
+		}
+		catch(...) {
+			debugf("SteamGameServer_RunCallbacks() threw an exception of some kind!\n");
+		}
+		timeLastSteamCallback = Time::Now();
+	}
 
     dwWait = ProcessMsgPump(dwSleep, 1, rgeventHandles);
   }
@@ -9507,7 +9523,7 @@ void LoadSettings()
 		if (ERROR_SUCCESS == ::RegQueryValueEx(hKey, "nUpdatesPerSecond", NULL, &dwType, (unsigned char*)&dwValue, &cbValue))
             g.nUpdatesPerSecond = dwValue;
         else
-            g.nUpdatesPerSecond = 10;
+            g.nUpdatesPerSecond = 20;
 
 
 // mmf log to file on SRVLOG define as well as _DEBUG

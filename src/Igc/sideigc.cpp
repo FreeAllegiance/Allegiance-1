@@ -399,13 +399,16 @@ void CsideIGC::HandleNewEnemyCluster(IclusterIGC* pcluster) {
                     CommandID tempCid = s->GetCommandID(c_cmdPlan);
                     ImodelIGC* tempModel = s->GetCommandTarget(c_cmdPlan);
                     tempModel->AddRef();
-                    if (tempModel->GetObjectType() == OT_buoy)
-                        ((IbuoyIGC*)tempModel)->AddConsumer();
-                    s->SetCommand(c_cmdAccepted, NULL, c_cidNone); //Also sets current & plan
-                    s->SetCommand(c_cmdPlan, tempModel, tempCid);
-                    tempModel->Release();
-                    if (tempModel->GetObjectType() == OT_buoy)
-                        ((IbuoyIGC*)tempModel)->ReleaseConsumer();
+					if (tempModel != nullptr)
+					{
+						if (tempModel->GetObjectType() == OT_buoy)
+							((IbuoyIGC*)tempModel)->AddConsumer();
+						s->SetCommand(c_cmdAccepted, NULL, c_cidNone); //Also sets current & plan
+						s->SetCommand(c_cmdPlan, tempModel, tempCid);
+						tempModel->Release();
+						if (tempModel->GetObjectType() == OT_buoy)
+							((IbuoyIGC*)tempModel)->ReleaseConsumer();
+					}
                 }
             }
         }

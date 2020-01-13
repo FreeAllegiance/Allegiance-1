@@ -469,7 +469,7 @@ static DWORD WINAPI UpdateLeaderboardThread(LPVOID pThreadParameter)
 	int response = client.getResponseCode();
 
 	debugf("Leaderboard Update(%ld): %s\n", response, pUrl);
-
+	SteamGameServer_ReleaseCurrentThreadMemory();
 	delete pUrl;
 
 	return 0;
